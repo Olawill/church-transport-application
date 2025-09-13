@@ -39,7 +39,7 @@ A comprehensive web application for managing church transportation services, con
 
 ### Technical Features
 
-- **Modern Tech Stack**: NextJS 14, React 18, TypeScript, Tailwind CSS
+- **Modern Tech Stack**: NextJS 15, React 19, TypeScript, Tailwind CSS
 - **Database**: PostgreSQL with Prisma ORM
 - **Authentication**: NextAuth.js with JWT tokens
 - **Responsive Design**: Mobile-first approach with beautiful UI
@@ -70,7 +70,7 @@ Password: user123
 
 ### Prerequisites
 
-- Node.js 18+ and npm/yarn
+- Node.js 19+ and npm/yarn
 - PostgreSQL database
 - (Optional) WhatsApp Cloud API account for notifications
 
@@ -79,30 +79,30 @@ Password: user123
 1. **Clone and Install Dependencies**
 
 ```bash
-git clone <repository-url>
-cd church_transportation_app/app
-yarn install
+git clone git@github.com:Olawill/church-transport-application.git
+cd church-transport-application
+bun install
 ```
 
 2. **Database Setup**
    The PostgreSQL database and environment variables are already configured. Generate Prisma client and run migrations:
 
 ```bash
-npx prisma generate
-npx prisma db push
+bun run generate
+bun runpush
 ```
 
 3. **Seed Database**
    Populate the database with initial data:
 
 ```bash
-yarn prisma db seed
+bun prisma db seed
 ```
 
 4. **Start Development Server**
 
 ```bash
-yarn dev
+bun run dev
 ```
 
 The application will be available at `http://localhost:3000`
