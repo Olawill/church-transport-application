@@ -1,0 +1,466 @@
+"use client";
+
+import { zodResolver } from "@hookform/resolvers/zod";
+import { format } from "date-fns";
+import { ArrowLeft, CalendarIcon, Clock, MapPin, Send } from "lucide-react";
+import { useSession } from "next-auth/react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+
+import { Address, NewRequestResponse, ServiceDay } from "@/lib/types";
+import {
+  cn,
+  formatAddress,
+  formatDate,
+  formatTime,
+  getNextServiceDate,
+} from "@/lib/utils";
+import { newRequestSchema, NewRequestSchema } from "@/types/newRequestSchema";
+
+export const NewRequestForm = () => {
+  const router = useRouter();
+  const { data: session } = useSession();
+  const [loading, setLoading] = useState(false);
+  const [serviceDays, setServiceDays] = useState<ServiceDay[]>([]);
+  const [addresses, setAddresses] = useState<Address[]>([]);
+
+  const [selectedService, setSelectedService] = useState<ServiceDay | null>(
+    null
+  );
+  const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
+
+  const form = useForm<NewRequestSchema>({
+    resolver: zodResolver(newRequestSchema),
+    defaultValues: {
+      serviceDayId: "",
+      addressId: "",
+      requestDate: "",
+      notes: "",
+    },
+  });
+
+  useEffect(() => {
+    fetchServiceDays();
+    fetchAddresses();
+  }, []);
+
+  const serviceDayId = useWatch({
+    control: form.control,
+    name: "serviceDayId",
+  });
+  useEffect(() => {
+    if (serviceDayId && serviceDays.length > 0) {
+      const service = serviceDays.find((s) => s.id === serviceDayId);
+      setSelectedService(service || null);
+
+      if (service) {
+        // Set default request date to next occurrence of this service
+        const nextDate = getNextServiceDate(service.dayOfWeek);
+        // form.setValue("requestDate", nextDate.toISOString().split("T")[0]);
+        form.setValue("requestDate", nextDate.toLocaleDateString("en-CA"));
+      }
+      // }
+    }
+  }, [serviceDayId, serviceDays]);
+
+  const addressId = form.watch("addressId");
+  useEffect(() => {
+    if (addressId && addresses.length > 0) {
+      const address = addresses.find((a) => a.id === addressId);
+      setSelectedAddress(address || null);
+    }
+  }, [addressId, addresses]);
+
+  const fetchServiceDays = async () => {
+    try {
+      const response = await fetch("/api/service-days");
+      if (response.ok) {
+        const data = await response.json();
+        setServiceDays(data);
+      }
+    } catch (error) {
+      console.error("Error fetching service days:", error);
+    }
+  };
+
+  const fetchAddresses = async () => {
+    try {
+      // For now, we'll fetch the user's default address
+      // In a full implementation, you might have a user addresses API
+      // This is a simplified version using the user's info
+      if (session?.user?.id) {
+        // const response = await fetch(`/api/users?id=${session.user.id}`);
+        const response = await fetch(`/api/users`);
+        if (response.ok) {
+          const userData: NewRequestResponse[] = await response.json();
+          // console.log({ userData });
+          if (userData.length > 0) {
+            setAddresses(
+              userData.find((d) => d.id === session.user.id)?.addresses || []
+            );
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching addresses:", error);
+      // For demo, create a mock address if fetching fails
+      const mockAddress: Address = {
+        id: "mock-address",
+        userId: session?.user?.id || "",
+        street: "123 Main Street",
+        city: "Toronto",
+        province: "ON",
+        postalCode: "M1M 1M1",
+        country: "Canada",
+        latitude: 43.6532,
+        longitude: -79.3832,
+        isDefault: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      setAddresses([mockAddress]);
+    }
+  };
+
+  const handleSubmit = async (values: NewRequestSchema) => {
+    const validatedFields = newRequestSchema.safeParse(values);
+
+    if (!validatedFields.success) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/pickup-requests", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(validatedFields.data),
+      });
+      if (response.ok) {
+        toast.success("Pickup request created successfully!");
+        router.push("/requests");
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || "Failed to create request");
+      }
+    } catch (error) {
+      console.error("Error creating request:", error);
+      toast.error("An error occurred while creating the request");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="flex items-center space-x-3 mb-2">
+            <Link href="/requests">
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </Link>
+            <h1 className="text-2xl font-bold">New Pickup Request</h1>
+          </div>
+          <p className="text-primary">
+            Request transportation to church services
+          </p>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Request Details</CardTitle>
+          <CardDescription>
+            Please provide the details for your pickup request
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(handleSubmit)}
+              className="space-y-6"
+            >
+              {/* Service Selection */}
+              <FormField
+                control={form.control}
+                name="serviceDayId"
+                render={({ field }) => (
+                  <FormItem className="space-y-2">
+                    <FormLabel>Church Service</FormLabel>
+                    <Select
+                      defaultValue={field.value}
+                      onValueChange={field.onChange}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select a service" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {serviceDays.map((service) => (
+                          <SelectItem key={service.id} value={service.id}>
+                            <div className="flex items-center space-x-2">
+                              <CalendarIcon className="h-4 w-4" />
+                              <span>
+                                {service.name} - {formatTime(service.time)}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedService && (
+                      <FormDescription className="mt-2 p-3 bg-blue-50 rounded-lg">
+                        <div className="flex items-center space-x-2 text-sm text-blue-700">
+                          <Clock className="h-4 w-4" />
+                          <span>
+                            Service starts at {formatTime(selectedService.time)}{" "}
+                            every{" "}
+                            {
+                              [
+                                "Sunday",
+                                "Monday",
+                                "Tuesday",
+                                "Wednesday",
+                                "Thursday",
+                                "Friday",
+                                "Saturday",
+                              ][selectedService.dayOfWeek]
+                            }
+                          </span>
+                        </div>
+                      </FormDescription>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Date Selection */}
+              <FormField
+                control={form.control}
+                name="requestDate"
+                render={({ field }) => {
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+
+                  return (
+                    <FormItem className="space-y-2">
+                      <FormLabel>Service Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild className="w-full">
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(
+                                  new Date(formatDate(new Date(field.value))),
+                                  "PPP"
+                                )
+                              ) : (
+                                <span>Select a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={
+                              new Date(formatDate(new Date(field.value)))
+                            }
+                            onSelect={field.onChange}
+                            disabled={(date) => date < today}
+                            captionLayout="dropdown"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormDescription className="text-xs text-gray-500">
+                        Requests must be made at least 1 hour before the service
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
+              />
+
+              {/* Address Selection */}
+              <FormField
+                control={form.control}
+                name="addressId"
+                render={({ field }) => (
+                  <FormItem className="space-y-2">
+                    <FormLabel>Pickup Address</FormLabel>
+                    <Select
+                      defaultValue={field.value}
+                      onValueChange={field.onChange}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select pickup address" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {addresses.map((address) => (
+                          <SelectItem key={address.id} value={address.id}>
+                            <div className="flex items-center space-x-2">
+                              <MapPin className="h-4 w-4" />
+                              <span>{formatAddress(address)}</span>
+                              {address.isDefault && (
+                                <span className="text-xs text-blue-600">
+                                  (Default)
+                                </span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedAddress && (
+                      <FormDescription className="mt-2 p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center space-x-2 text-sm text-gray-700">
+                          <MapPin className="h-4 w-4" />
+                          <span>{formatAddress(selectedAddress)}</span>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          Please ensure this address is correct before
+                          submitting your request
+                        </div>
+                      </FormDescription>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Notes */}
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem className="space-y-2">
+                    <FormLabel>Additional Notes</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        id="notes"
+                        placeholder="Any special instructions or requirements..."
+                        className="resize-none"
+                        rows={5}
+                      />
+                    </FormControl>
+                    <FormDescription className="text-xs text-gray-500">
+                      Optional: Let your driver know about any special
+                      requirements or instructions
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {/* <div className="space-y-2">
+                <Label htmlFor="notes">Additional Notes</Label>
+                <Textarea
+                  id="notes"
+                  value={formData.notes}
+                  onChange={(e) => handleInputChange('notes', e.target.value)}
+                  placeholder="Any special instructions or requirements..."
+                  rows={3}
+                />
+                <p className="text-xs text-gray-500">
+                  Optional: Let your driver know about any special requirements or instructions
+                </p>
+              </div> */}
+
+              {/* Important Information */}
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <h4 className="font-semibold text-yellow-800 mb-2">
+                  Important Information
+                </h4>
+                <ul className="text-sm text-yellow-700 space-y-1">
+                  <li>
+                    • Pickup requests must be submitted latest 1 hour before the
+                    service
+                  </li>
+                  <li>
+                    • A driver will accept your request and contact you with
+                    details
+                  </li>
+                  <li>
+                    • Please be ready at your pickup address 10 minutes early
+                  </li>
+                  <li>• Cancel your request if your plans change</li>
+                </ul>
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex justify-end space-x-3 pt-4">
+                <Link href="/requests">
+                  <Button type="button" variant="outline">
+                    Cancel
+                  </Button>
+                </Link>
+                <Button type="submit" disabled={loading}>
+                  {loading ? (
+                    "Creating Request..."
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Submit Request
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
