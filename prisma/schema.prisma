@@ -15,6 +15,8 @@ datasource db {
 }
 
 enum UserRole {
+  PLATFORM_ADMIN
+  PLATFORM_USER
   ADMIN
   TRANSPORTATION_TEAM
   USER
@@ -43,7 +45,52 @@ enum SubscriptionStatus {
   ACTIVE
   CANCELLED
   EXPIRED
+  SUSPENDED
+  TRIAL
   FREE_FOR_LIFE
+}
+
+enum BillingPlan {
+  STARTER    // Basic plan
+  PROFESSIONAL // Mid-tier plan
+  ENTERPRISE // Full-featured plan
+  CUSTOM     // Custom enterprise plan
+}
+
+enum BillingInterval {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum OrganizationType {
+  CHURCH
+  NONPROFIT
+  CORPORATE
+  EDUCATIONAL
+  GOVERNMENT
+}
+
+enum RouteStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+  PUSH
 }
 
 enum OTPType {
@@ -82,6 +129,7 @@ model Session {
 
 model User {
   id            String      @id @default(cuid())
+  organizationId   String?     // Platform admins and users don't belong to an org
   firstName     String
   lastName      String
   email         String      @unique
@@ -100,9 +148,14 @@ model User {
   bannedAt      DateTime?
   bannedBy      String?
   banReason     String?
+  isOAuthSignup    Boolean     @default(false)
+  lastLoginAt      DateTime?
+  currentLocation  String?     // JSON for latitude/longitude
+  fcmToken         String?     // For push notifications
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
+  organization     Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   accounts        Account[]
   sessions        Session[]
   addresses       Address[]
@@ -110,7 +163,13 @@ model User {
   acceptedRequests PickupRequest[] @relation("DriverRequests")
   cancelledRequests DriverRequestCancel[] @relation("DriverRequestsCancel")
   otps            OTP[]
-  subscription    Subscription?
+  routes           Route[]
+  reportGenerated  Report[] @relation("ReportCreator")
+  managedOrgs      Organization[] @relation("OrgOwner")
+
+  @@index([organizationId])
+  @@index([email])
+  @@index([role])
 
   @@map("users")
 }
@@ -125,6 +184,7 @@ model VerificationToken {
 
 model Address {
   id         String  @id @default(cuid())
+  organizationId String
   userId     String
   name       String  // e.g., "Home", "Work", "Other"
   street     String
@@ -139,15 +199,18 @@ model Address {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   pickupRequests PickupRequest[]
 
   @@unique([userId, name]) // Prevent duplicate address names per user
+  @@index([organizationId])
   @@map("addresses")
 }
 
 model ServiceDay {
   id          String      @id @default(cuid())
+  organizationId String
   name        String
   dayOfWeek   Int         // 0 = Sunday, 1 = Monday, etc.
   time        String      // Format: "HH:MM" (24-hour)
@@ -156,59 +219,80 @@ model ServiceDay {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   pickupRequests PickupRequest[]
 
+  @@index([organizationId])
   @@map("service_days")
 }
 
 model PickupRequest {
   id          String        @id @default(cuid())
+  organizationId String
   userId      String
   driverId    String?
   serviceDayId String
   addressId   String
+  routeId        String?       // For route optimization
   requestDate DateTime      // The date of the service
   status      RequestStatus @default(PENDING)
   notes       String?
   distance    Float?        // Distance from driver to pickup location
+  estimatedTime  Int?          // Estimated pickup time in minutes
+  actualPickupTime DateTime?   // Actual pickup time
+  priority       Int           @default(0) // Higher priority = picked up first
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user       User        @relation("UserRequests", fields: [userId], references: [id])
   driver     User?       @relation("DriverRequests", fields: [driverId], references: [id])
   serviceDay ServiceDay  @relation(fields: [serviceDayId], references: [id])
   address    Address     @relation(fields: [addressId], references: [id])
+  route        Route?       @relation(fields: [routeId], references: [id])
 
   cancelledRequests DriverRequestCancel[]
 
+  @@index([organizationId])
+  @@index([status, requestDate])
+  @@index([driverId])
   @@map("pickup_requests")
 }
 
 model DriverRequestCancel {
   id          String        @id @default(cuid())
+  organizationId String
   driverId    String
   requestId String
   note       String
   createdAt   DateTime      @default(now())
 
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   driver     User       @relation("DriverRequestsCancel", fields: [driverId], references: [id])
   request PickupRequest  @relation(fields: [requestId], references: [id])
 
+  @@index([organizationId])
   @@map("driver_requests_cancel")
 }
 
 model SystemConfig {
   id    String @id @default(cuid())
+  organizationId String? // NULL for platform-wide configs
   key   String @unique
   value String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, key])
+  @@index([organizationId])
   @@map("system_config")
 }
 
 model OTP {
   id        String   @id @default(cuid())
+  organizationId String?
   userId    String
   code      String
   type      OTPType
@@ -218,32 +302,16 @@ model OTP {
   attempts  Int      @default(0)
   createdAt DateTime @default(now())
 
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, type])
+  @@index([organizationId])
   @@map("otps")
 }
-
-model Subscription {
-  id               String             @id @default(cuid())
-  userId           String             @unique
-  status           SubscriptionStatus @default(ACTIVE)
-  isFreeForLife    Boolean            @default(false)
-  currentPeriodStart DateTime?
-  currentPeriodEnd   DateTime?
-  cancelledAt      DateTime?
-  trialEnd         DateTime?
-  metadata         String?            // JSON for additional subscription info
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("subscriptions")
-}
-
 model Analytics {
   id          String   @id @default(cuid())
+  organizationId String?  // NULL for platform-wide analytics
   eventType   String   // e.g., "pickup_request", "user_registration", "driver_acceptance"
   userId      String?
   metadata    String?  // JSON data for additional context
@@ -251,15 +319,19 @@ model Analytics {
   date        DateTime @default(now())
   createdAt   DateTime @default(now())
 
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@index([eventType, date])
   @@index([userId, eventType])
+  @@index([organizationId])
   @@map("analytics")
 }
 
 model Notification {
   id          String   @id @default(cuid())
+  organizationId String
   userId      String
-  type        String   // "whatsapp", "email", "push"
+  channel        NotificationChannel @default(EMAIL)
   title       String
   message     String
   status      String   @default("pending") // "pending", "sent", "failed"
@@ -268,7 +340,273 @@ model Notification {
   metadata    String?  // JSON for additional notification data
   createdAt   DateTime @default(now())
 
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@index([userId, status])
   @@index([scheduledFor])
+  @@index([organizationId])
   @@map("notifications")
+}
+
+// ============================================================================
+// MULTI-TENANT ORGANIZATION MODELS
+// ============================================================================
+
+model Organization {
+  id                    String           @id @default(cuid())
+  name                  String
+  slug                  String           @unique // for subdomain routing
+  type                  OrganizationType @default(CHURCH)
+  description           String?
+  website               String?
+  logo                  String?
+  primaryColor          String?          @default("#3B82F6")
+  secondaryColor        String?          @default("#1E40AF")
+  
+  // Contact Information
+  contactEmail          String
+  contactPhone          String?
+  
+  // Address Information
+  street                String?
+  city                  String?
+  province              String?
+  postalCode            String?
+  country               String           @default("Canada")
+  
+  // Settings
+  timezone              String           @default("America/Toronto")
+  currency              String           @default("CAD")
+  isActive              Boolean          @default(true)
+  isSuspended           Boolean          @default(false)
+  suspensionReason      String?
+  
+  // Features enabled
+  enableWhatsApp        Boolean          @default(true)
+  enableSMS             Boolean          @default(true)
+  enableEmail           Boolean          @default(true)
+  enableRouteOptimization Boolean        @default(false)
+  enableAdvancedReports Boolean          @default(false)
+  enableMobileApp       Boolean          @default(true)
+  
+  // Limits
+  maxUsers              Int              @default(100)
+  maxDrivers            Int              @default(10)
+  maxMonthlyRequests    Int              @default(1000)
+  
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  // Relations
+  owner                 User             @relation("OrgOwner", fields: [ownerId], references: [id])
+  ownerId               String
+  users                 User[]
+  subscription          Subscription?
+  countries             OrganizationCountry[]
+  addresses             Address[]
+  serviceDays           ServiceDay[]
+  pickupRequests        PickupRequest[]
+  driverCancelledRequests        DriverRequestCancel[]
+  systemConfigs         SystemConfig[]
+  otps                  OTP[]
+  analytics             Analytics[]
+  notifications         Notification[]
+  routes                Route[]
+  invoices              Invoice[]
+  reports               Report[]
+
+  @@index([slug])
+  @@index([isActive])
+  @@map("organizations")
+}
+
+model OrganizationCountry {
+  id             String @id @default(cuid())
+  organizationId String
+  countryCode    String // ISO 3166-1 alpha-2 (e.g., "CA", "US")
+  countryName    String
+  isActive       Boolean @default(true)
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, countryCode])
+  @@index([organizationId])
+  @@map("organization_countries")
+}
+
+// ============================================================================
+// SUBSCRIPTION & BILLING MODELS
+// ============================================================================
+model Subscription {
+  id                    String             @id @default(cuid())
+  organizationId        String             @unique
+  plan                  BillingPlan        @default(STARTER)
+  status                SubscriptionStatus @default(TRIAL)
+  interval              BillingInterval    @default(MONTHLY)
+  
+  // Pricing
+  basePrice             Decimal            @default(0) // Base price per month
+  countryMultiplier     Decimal            @default(1) // Multiplier based on countries
+  totalPrice            Decimal            @default(0) // Final calculated price
+  
+  // Usage tracking
+  currentUsers          Int                @default(0)
+  currentDrivers        Int                @default(0)
+  monthlyRequests       Int                @default(0)
+  
+  // Billing periods
+  currentPeriodStart    DateTime?
+  currentPeriodEnd      DateTime?
+  trialStart            DateTime?
+  trialEnd              DateTime?
+  cancelledAt           DateTime?
+  cancelAtPeriodEnd     Boolean            @default(false)
+  
+  // Payment info
+  stripeCustomerId      String?
+  stripeSubscriptionId  String?
+  lastPaymentAt         DateTime?
+  nextBillingDate       DateTime?
+  
+  metadata              String?            // JSON for additional subscription info
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invoices     Invoice[]
+  usageRecords UsageRecord[]
+
+  @@map("subscriptions")
+}
+
+model Invoice {
+  id                String        @id @default(cuid())
+  organizationId    String
+  subscriptionId    String?
+  number            String        @unique // Invoice number
+  status            PaymentStatus @default(PENDING)
+  
+  // Amounts
+  subtotal          Decimal
+  taxRate           Decimal       @default(0)
+  taxAmount         Decimal       @default(0)
+  total             Decimal
+  amountPaid        Decimal       @default(0)
+  
+  // Billing period
+  periodStart       DateTime
+  periodEnd         DateTime
+  
+  // Payment details
+  stripeInvoiceId   String?
+  paidAt            DateTime?
+  dueDate           DateTime
+  
+  // File storage
+  pdfUrl            String?       // Generated PDF invoice
+  
+  metadata          String?       // JSON for line items and additional data
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id])
+
+  @@index([organizationId])
+  @@index([status])
+  @@map("invoices")
+}
+
+model UsageRecord {
+  id             String   @id @default(cuid())
+  organizationId String
+  subscriptionId String
+  metric         String   // "users", "drivers", "requests", etc.
+  value          Int
+  date           DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId, metric, date])
+  @@map("usage_records")
+}
+
+// ============================================================================
+// ROUTE OPTIMIZATION MODELS
+// ============================================================================
+
+model Route {
+  id               String      @id @default(cuid())
+  organizationId   String
+  driverId         String
+  serviceDayId     String
+  routeDate        DateTime
+  status           RouteStatus @default(PLANNED)
+  
+  // Route details
+  startLocation    String      // JSON: {lat, lng, address}
+  endLocation      String?     // JSON: {lat, lng, address} (usually same as start)
+  totalDistance    Float       // Total distance in kilometers
+  estimatedTime    Int         // Total estimated time in minutes
+  actualStartTime  DateTime?
+  actualEndTime    DateTime?
+  
+  // Optimization data
+  optimizedOrder   String      // JSON array of pickup request IDs in order
+  optimizationScore Float?     // Efficiency score (0-100)
+  
+  notes            String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  driver         User            @relation(fields: [driverId], references: [id])
+  pickupRequests PickupRequest[]
+
+  @@index([organizationId])
+  @@index([driverId, routeDate])
+  @@map("routes")
+}
+
+// ============================================================================
+// REPORTING & EXPORT MODELS
+// ============================================================================
+
+model Report {
+  id             String   @id @default(cuid())
+  organizationId String
+  creatorId      String
+  name           String
+  description    String?
+  type           String   // "pickup_summary", "driver_performance", "usage_stats", etc.
+  
+  // Report configuration
+  filters        String   // JSON configuration for filters
+  dateRange      String   // JSON: {start, end}
+  groupBy        String?  // Field to group results by
+  
+  // Export settings
+  format         String   @default("pdf") // "pdf", "excel", "csv"
+  status         String   @default("generating") // "generating", "ready", "failed"
+  
+  // File storage
+  fileUrl        String?  // Generated report file URL
+  fileSize       Int?     // File size in bytes
+  
+  // Metadata
+  recordCount    Int?     // Number of records in report
+  generatedAt    DateTime?
+  expiresAt      DateTime? // When to delete the file
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  creator      User         @relation("ReportCreator", fields: [creatorId], references: [id])
+
+  @@index([organizationId])
+  @@index([status])
+  @@map("reports")
 }
