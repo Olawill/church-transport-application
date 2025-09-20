@@ -9,3 +9,5 @@ Organization should be able to use whether they want to show email/password or f
 Can we also add phone login, where users are able to login with entering their phone number, and get otp either by whatsapp or sms.
 
 Can we also show a modern pricing page on the platform, where users can get started as well
+
+Organizations should only started from the platform where they can register and signup, before getting access to their tenant page

@@ -84,10 +84,8 @@ export const GET = async (request: NextRequest) => {
           }
 
           const distance = calculateDistance(
-            driverAddress.latitude!,
-            driverAddress.longitude!,
-            request.address.latitude,
-            request.address.longitude
+            { lat: driverAddress.latitude!, lng: driverAddress.longitude! },
+            { lat: request.address.latitude, lng: request.address.longitude }
           );
 
           return distance <= maxDistanceKm;
@@ -270,10 +268,8 @@ export const PUT = async (request: NextRequest) => {
         userAddress.longitude != null
       ) {
         distance = calculateDistance(
-          driverAddress?.latitude,
-          driverAddress?.longitude,
-          userAddress?.latitude,
-          userAddress?.longitude
+          { lat: driverAddress?.latitude, lng: driverAddress?.longitude },
+          { lat: userAddress?.latitude, lng: userAddress?.longitude }
         );
       }
     }

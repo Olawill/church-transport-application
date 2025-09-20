@@ -57,10 +57,8 @@ export const PUT = async (request: NextRequest) => {
       userAddress.longitude != null
     ) {
       distance = calculateDistance(
-        driverAddress?.latitude,
-        driverAddress?.longitude,
-        userAddress?.latitude,
-        userAddress?.longitude
+        { lat: driverAddress?.latitude, lng: driverAddress?.longitude },
+        { lat: userAddress?.latitude, lng: userAddress?.longitude }
       );
     }
 

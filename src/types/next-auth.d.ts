@@ -12,6 +12,8 @@ declare module "next-auth" {
       image?: string;
       needsCompletion?: boolean;
       isOAuthSignup?: boolean;
+      organizationId?: string;
+      organizationSlug?: string;
     };
   }
 
@@ -25,6 +27,8 @@ declare module "next-auth" {
     image?: string;
     needsCompletion?: boolean;
     isOAuthSignup?: boolean;
+    organizationId?: string;
+    organizationSlug?: string;
   }
 }
 
@@ -36,5 +40,7 @@ declare module "next-auth/jwt" {
     lastName: string;
     needsCompletion?: boolean;
     isOAuthSignup?: boolean;
+    organizationId?: string;
+    organizationSlug?: string;
   }
 }

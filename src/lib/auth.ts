@@ -64,6 +64,12 @@ export const authOptions: NextAuthConfig = {
           throw new Error("Account is inactive");
         }
 
+        // Get organization info for the user
+        const userWithOrg = await prisma.user.findUnique({
+          where: { id: user.id },
+          include: { organization: true },
+        });
+
         return {
           id: user.id,
           email: user.email,
@@ -72,12 +78,15 @@ export const authOptions: NextAuthConfig = {
           role: user.role,
           status: user.status,
           image: user.image || undefined,
+          organizationId: userWithOrg?.organizationId || undefined,
+          organizationSlug: userWithOrg?.organization?.slug || undefined,
         };
       },
     }),
   ],
   session: {
     strategy: "jwt",
+    maxAge: 7 * 24 * 60 * 60, // 7 days
   },
   pages: {
     signIn: "/login",
@@ -145,6 +154,8 @@ export const authOptions: NextAuthConfig = {
         token.lastName = user.lastName;
         token.needsCompletion = user.needsCompletion;
         token.isOAuthSignup = user.isOAuthSignup;
+        token.organizationId = user.organizationId;
+        token.organizationSlug = user.organizationSlug;
       }
       return token;
     },
@@ -159,6 +170,8 @@ export const authOptions: NextAuthConfig = {
           lastName: token.lastName as string,
           needsCompletion: token.needsCompletion as boolean,
           isOAuthSignup: token.isOAuthSignup as boolean,
+          organizationId: token.organizationId as string,
+          organizationSlug: token.organizationSlug as string,
         };
       }
       return session;

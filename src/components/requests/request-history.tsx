@@ -563,10 +563,14 @@ export const RequestHistory = () => {
                                         ...d,
                                         name: `${d.firstName} ${d.lastName}`,
                                         requestDistance: calculateDistance(
-                                          driverAddress.latitude,
-                                          driverAddress.longitude,
-                                          request.address.latitude,
-                                          request.address.longitude
+                                          {
+                                            lat: driverAddress.latitude,
+                                            lng: driverAddress.longitude,
+                                          },
+                                          {
+                                            lat: request.address.latitude,
+                                            lng: request.address.longitude,
+                                          }
                                         ),
                                         request,
                                       };

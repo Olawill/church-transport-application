@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { Coordinates } from "./route-optimization";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -7,11 +8,12 @@ export function cn(...inputs: ClassValue[]) {
 
 // Calculate distance between two points using Haversine formula
 export function calculateDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
+  coord1: Coordinates,
+  coord2: Coordinates
 ): number {
+  const { lat: lat1, lng: lon1 } = coord1;
+  const { lat: lat2, lng: lon2 } = coord2;
+
   const R = 6371; // Radius of the Earth in km
   const dLat = deg2rad(lat2 - lat1);
   const dLon = deg2rad(lon2 - lon1);
