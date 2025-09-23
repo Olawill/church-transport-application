@@ -18,8 +18,7 @@ const NewRequestPage = async () => {
 
   return (
     <>
-      {/* {UserRole.USER && <NewRequestForm />} */}
-      {UserRole.ADMIN ? (
+      {session.user.role === UserRole.ADMIN ? (
         <AdminNewUserRequest isNewUser={false} />
       ) : (
         <NewRequestForm />
