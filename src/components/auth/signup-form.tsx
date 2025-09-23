@@ -17,7 +17,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 import { signupSchema, SignupSchema } from "@/types/authSchemas";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Loader, UserPlus } from "lucide-react";
@@ -25,7 +24,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import PhoneInput from "react-phone-number-input";
 
 import {
   Select,
@@ -37,8 +35,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PROVINCES } from "@/lib/types";
-import "react-phone-number-input/style.css";
 import { toast } from "sonner";
+import CustomPhoneInput from "../custom-phone-input";
 
 export const SignupForm = () => {
   const router = useRouter();
@@ -177,28 +175,13 @@ export const SignupForm = () => {
                       <FormItem>
                         <FormLabel>Phone Number</FormLabel>
                         <FormControl>
-                          {/* <Input
-                          {...field}
-                          id="phone"
-                          name="phone"
-                          type="tel"
-                          placeholder="(123) 456-7890"
-                          disabled={loading}
-                        /> */}
-
-                          <PhoneInput
+                          <CustomPhoneInput
                             placeholder="(123) 456-7890"
                             defaultCountry="CA"
                             value={field.value}
                             onChange={field.onChange}
                             onBlur={field.onBlur}
-                            className={cn(
-                              "file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-                              "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
-                              "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
-                              fieldState.error &&
-                                "ring-destructive border-destructive"
-                            )}
+                            error={fieldState.error}
                             disabled={loading}
                           />
                         </FormControl>
