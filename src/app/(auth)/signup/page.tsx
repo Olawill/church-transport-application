@@ -6,7 +6,7 @@ const SignupPage = async () => {
   const session = await auth();
 
   if (session?.user) {
-    redirect("/dashboard");
+    redirect("/tenant/dashboard");
   }
 
   return <SignupForm />;

@@ -62,7 +62,7 @@ export const LoginForm = () => {
         }
       } else {
         toast.success("Logged in successfully");
-        router.push("/dashboard");
+        router.push("/tenant/dashboard");
         router.refresh();
       }
     } catch (error) {
@@ -85,7 +85,7 @@ export const LoginForm = () => {
         toast.error(`${provider} sign-in failed`);
       } else if (result?.url) {
         // const url = result.url as const
-        router.push("/dashboard");
+        router.push("/tenant/dashboard");
       }
     } catch (error) {
       console.error("OAuth error:", error);

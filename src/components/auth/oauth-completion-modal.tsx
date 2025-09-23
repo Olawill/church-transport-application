@@ -142,7 +142,7 @@ export const OauthCompletionModal = () => {
       toast.success(
         "Profile completed successfully! Your account is pending admin approval."
       );
-      router.push("/dashboard");
+      router.push("/tenant/dashboard");
     } catch (error) {
       console.error("Completion error:", error);
       toast.error("Failed to complete profile setup");

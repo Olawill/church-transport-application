@@ -11,3 +11,5 @@ Can we also add phone login, where users are able to login with entering their p
 Can we also show a modern pricing page on the platform, where users can get started as well
 
 Organizations should only started from the platform where they can register and signup, before getting access to their tenant page
+
+After signing up, each organization should have its own domain, so like org1.churchtranspo.com, where users can then sign up to use their transportation service

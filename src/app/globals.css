@@ -3,6 +3,12 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@property --border-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -41,6 +47,13 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  --animate-border-spin: border-spin 3s linear infinite;
+  @keyframes border-spin {
+    to {
+      --border-angle: 360deg;
+    }
+  }
 }
 
 :root {
