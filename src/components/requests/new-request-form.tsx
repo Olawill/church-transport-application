@@ -69,7 +69,7 @@ export const NewRequestForm = () => {
     defaultValues: {
       serviceDayId: "",
       addressId: "",
-      requestDate: "",
+      requestDate: undefined,
       notes: "",
     },
   });
@@ -83,20 +83,22 @@ export const NewRequestForm = () => {
     control: form.control,
     name: "serviceDayId",
   });
+  const requestDate = form.watch("requestDate");
+
   useEffect(() => {
     if (serviceDayId && serviceDays.length > 0) {
       const service = serviceDays.find((s) => s.id === serviceDayId);
       setSelectedService(service || null);
 
-      if (service) {
+      if (service && !requestDate) {
         // Set default request date to next occurrence of this service
         const nextDate = getNextServiceDate(service.dayOfWeek);
         // form.setValue("requestDate", nextDate.toISOString().split("T")[0]);
-        form.setValue("requestDate", nextDate.toLocaleDateString("en-CA"));
+        form.setValue("requestDate", nextDate);
       }
       // }
     }
-  }, [serviceDayId, serviceDays]);
+  }, [serviceDayId, serviceDays, requestDate]);
 
   const addressId = form.watch("addressId");
   useEffect(() => {
@@ -284,6 +286,8 @@ export const NewRequestForm = () => {
                 render={({ field }) => {
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);
+
+                  console.log({ field });
 
                   return (
                     <FormItem className="space-y-2">

@@ -363,7 +363,7 @@ export const ProfileManagement = () => {
                         <span>Upload Photo</span>
                       </div>
                     </Label>
-                    <input
+                    <Input
                       id="image-upload"
                       type="file"
                       accept="image/*"
