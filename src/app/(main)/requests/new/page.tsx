@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import AdminNewUserRequest from "@/components/admin/admin-new-user-request";
 import { NewRequestForm } from "@/components/requests/new-request-form";
 import { UserRole } from "@/generated/prisma";
 import { redirect } from "next/navigation";
@@ -6,12 +7,25 @@ import { redirect } from "next/navigation";
 const NewRequestPage = async () => {
   const session = await auth();
 
-  if (!session?.user || session.user.role !== UserRole.USER) {
+  if (
+    !session?.user ||
+    (session.user.role !== UserRole.USER &&
+      session.user.role !== UserRole.ADMIN)
+  ) {
     // if (!session) {
     redirect("/dashboard");
   }
 
-  return <NewRequestForm />;
+  return (
+    <>
+      {/* {UserRole.USER && <NewRequestForm />} */}
+      {UserRole.ADMIN ? (
+        <AdminNewUserRequest isNewUser={false} />
+      ) : (
+        <NewRequestForm />
+      )}
+    </>
+  );
 };
 
 export default NewRequestPage;
