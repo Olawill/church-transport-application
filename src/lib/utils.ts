@@ -128,3 +128,30 @@ export function generateRandomPassword(length: number = 8): string {
   }
   return password;
 }
+
+// Generate temporary password for admin user creation
+export function generateTempPassword(
+  lastName: string,
+  phoneNumber: string
+): string {
+  let temporaryPassword = "";
+  // Extract last 4 digits from phone number (remove all non-digit)
+  const phoneDigit = phoneNumber.replace(/\D/g, "");
+
+  const lastFourDigits = phoneDigit.slice(-4);
+
+  const password = lastName + lastFourDigits;
+
+  if (password.length < 8) {
+    const passwordCount = password.length;
+
+    const less = 8 - passwordCount;
+
+    for (let i = 0; i < less; i++) {
+      temporaryPassword = password + 0;
+    }
+    return temporaryPassword;
+  } else {
+    return (temporaryPassword = password);
+  }
+}
