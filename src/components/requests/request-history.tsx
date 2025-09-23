@@ -239,7 +239,7 @@ export const RequestHistory = () => {
               : "Monitor all pickup requests in the system"}
           </p>
         </div>
-        {isUser && (
+        {(isUser || isAdmin) && (
           <Link href="/requests/new">
             <Button>
               <Plus className="size-4" />
