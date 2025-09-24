@@ -160,6 +160,7 @@ export const NewRequestForm = () => {
   };
 
   const handleSubmit = async (values: NewRequestSchema) => {
+    console.log({ values });
     const validatedFields = newRequestSchema.safeParse(values);
 
     if (!validatedFields.success) {
@@ -254,7 +255,7 @@ export const NewRequestForm = () => {
                     </Select>
                     {selectedService && (
                       <FormDescription className="mt-2 p-3 bg-blue-50 rounded-lg">
-                        <div className="flex items-center space-x-2 text-sm text-blue-700">
+                        <p className="flex items-center space-x-2 text-sm text-blue-700">
                           <Clock className="h-4 w-4" />
                           <span>
                             Service starts at {formatTime(selectedService.time)}{" "}
@@ -271,7 +272,7 @@ export const NewRequestForm = () => {
                               ][selectedService.dayOfWeek]
                             }
                           </span>
-                        </div>
+                        </p>
                       </FormDescription>
                     )}
                     <FormMessage />
@@ -369,14 +370,14 @@ export const NewRequestForm = () => {
                     </Select>
                     {selectedAddress && (
                       <FormDescription className="mt-2 p-3 bg-gray-50 rounded-lg">
-                        <div className="flex items-center space-x-2 text-sm text-gray-700">
+                        <p className="flex items-center space-x-2 text-sm text-gray-700">
                           <MapPin className="h-4 w-4" />
                           <span>{formatAddress(selectedAddress)}</span>
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
                           Please ensure this address is correct before
                           submitting your request
-                        </div>
+                        </p>
                       </FormDescription>
                     )}
                     <FormMessage />
@@ -408,19 +409,6 @@ export const NewRequestForm = () => {
                   </FormItem>
                 )}
               />
-              {/* <div className="space-y-2">
-                <Label htmlFor="notes">Additional Notes</Label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes}
-                  onChange={(e) => handleInputChange('notes', e.target.value)}
-                  placeholder="Any special instructions or requirements..."
-                  rows={3}
-                />
-                <p className="text-xs text-gray-500">
-                  Optional: Let your driver know about any special requirements or instructions
-                </p>
-              </div> */}
 
               {/* Important Information */}
               <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">

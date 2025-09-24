@@ -1,6 +1,9 @@
 "use client";
-
+import React, { useState } from "react";
+import { ArrowLeft, Key, UserPlus2Icon } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   Card,
   CardContent,
@@ -16,15 +19,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { signupSchema, SignupSchema } from "@/types/authSchemas";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, Loader, UserPlus } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-
 import {
   Select,
   SelectContent,
@@ -34,75 +28,141 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { newUserSchema, NewUserSchema } from "@/types/newUserSchema";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Input } from "@/components/ui/input";
 import { PROVINCES } from "@/lib/types";
+import CustomPhoneInput from "@/components/custom-phone-input";
 import { toast } from "sonner";
-import CustomPhoneInput from "../custom-phone-input";
+import { generateTempPassword } from "@/lib/utils";
+import AdminNewUserRequest from "@/components/admin/admin-new-user-request";
 
-export const SignupForm = () => {
+const NewUserCreationForm = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
 
-  const form = useForm<SignupSchema>({
-    resolver: zodResolver(signupSchema),
+  const form = useForm<NewUserSchema>({
+    resolver: zodResolver(newUserSchema),
     defaultValues: {
+      isLoginRequired: false,
+      createPickUpRequest: false,
       firstName: "",
       lastName: "",
       email: "",
-      password: "",
-      confirmPassword: "",
       phone: "",
       street: "",
       city: "",
       province: "",
       postalCode: "",
+      password: "",
+      serviceDayId: "",
+      requestDate: undefined,
     },
   });
 
-  const onSubmit = async (values: SignupSchema) => {
+  // Watch the values needed for password generation
+  const watchedValues = form.watch([
+    "lastName",
+    "phone",
+    "isLoginRequired",
+    "createPickUpRequest",
+  ]);
+
+  const [lastName, phone, isLoginRequired, createPickUpRequest] = watchedValues;
+
+  // Function to generate temporary password
+  const generatePassword = () => {
+    if (!lastName || !phone) {
+      toast.error("Please enter last name and phone number first");
+      return;
+    }
+
+    const temp = generateTempPassword(lastName, phone);
+
+    // Set the password in the form
+    form.setValue("password", temp);
+  };
+
+  const onSubmit = async (values: NewUserSchema) => {
+    const validatedFields = newUserSchema.safeParse(values);
+
+    if (!validatedFields.success) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
     setLoading(true);
 
     try {
-      const response = await fetch("/api/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(values),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        toast.success(
-          data.message ||
-            "Registration successful! Please wait for admin approval."
-        );
-        router.push("/login");
+      if (values.createPickUpRequest === false) {
+        const response = await fetch("/api/admin/users", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(validatedFields.data),
+        });
+        if (response.ok) {
+          toast.success("User Created Successfully!");
+          router.push("/admin/users");
+        } else {
+          const errorData = await response.json();
+          toast.error(errorData.error || "Failed to create user");
+        }
       } else {
-        toast.error(data.error || "Registration failed");
+        const response = await fetch("/api/admin/users/pickup-request", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(validatedFields.data),
+        });
+        if (response.ok) {
+          toast.success("User Created Successfully!");
+          router.push("/admin/users");
+        } else {
+          const errorData = await response.json();
+          toast.error(errorData.error || "Failed to create user");
+        }
       }
-    } catch {
-      toast.error("An error occurred during registration");
+    } catch (error) {
+      console.error("Error creating user:", error);
+      toast.error("An error occured while creating user");
     } finally {
       setLoading(false);
     }
   };
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4 rounded-lg">
-      <Card className="w-full max-w-2xl shadow-lg">
-        <CardHeader className="space-y-2 text-center">
-          <CardTitle className="text-2xl font-bold">
-            Join Our Community
-          </CardTitle>
+    <div>
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="flex items-center space-x-3 mb-2">
+            <Link href="/admin/users">
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </Link>
+            <h1 className="text-2xl font-bold">New User</h1>
+          </div>
+          <p className="text-primary">
+            Create a new user{" "}
+            {createPickUpRequest &&
+              "and request transportation to church services"}
+          </p>
+        </div>
+      </div>
+
+      <Card className="w-full shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-xl">User Details</CardTitle>
           <CardDescription>
-            Create an account to request pickup services
+            Please provide the details for the user you are creating
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -195,61 +255,57 @@ export const SignupForm = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="password"
+                  name="isLoginRequired"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
+                    <FormItem className="flex items-center space-x-2">
+                      <FormLabel>Require Login</FormLabel>
                       <FormControl>
-                        <div className="relative">
-                          <Input
-                            {...field}
-                            id="password"
-                            name="password"
-                            type={showPassword ? "text" : "password"}
-                            placeholder="*********"
-                            disabled={loading}
-                          />
-                          <Button
-                            variant="ghost"
-                            type="button"
-                            size="sm"
-                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-gray-600"
-                            onClick={() => setShowPassword(!showPassword)}
-                            disabled={loading}
-                          >
-                            {showPassword ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="confirmPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Confirm Password</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          id="confirmPassword"
-                          name="confirmPassword"
-                          type="password"
-                          placeholder="Confirm password"
-                          disabled={loading}
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={(checked) => {
+                            form.setValue("password", "");
+                            field.onChange(checked);
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
+                {isLoginRequired && (
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              {...field}
+                              id="password"
+                              name="password"
+                              type="password"
+                              placeholder="********"
+                              disabled={loading}
+                              className="pr-32"
+                            />
+                            <Button
+                              className="absolute right-1 top-1 h-7 px-3"
+                              onClick={generatePassword}
+                              disabled={loading}
+                            >
+                              <Key className="h-3 w-3 mr-1" />
+                              Generate
+                            </Button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
 
               <div className="space-y-4">
@@ -357,35 +413,73 @@ export const SignupForm = () => {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? (
-                  <>
-                    <Loader className="h-4 w-4" />
-                    Creating account...
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="h-4 w-4" />
-                    Create Account
-                  </>
+              {/* New Request */}
+              <div>
+                <div className="flex items-center space-x-2 mb-4">
+                  <FormField
+                    control={form.control}
+                    name="createPickUpRequest"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center space-x-2">
+                        <FormLabel>Make Request</FormLabel>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={(checked) => {
+                              form.setValue("serviceDayId", "");
+                              form.setValue("requestDate", undefined);
+                              field.onChange(checked);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                {/* New request Form */}
+                {createPickUpRequest && (
+                  <AdminNewUserRequest isNewUser={true} form={form} />
                 )}
-              </Button>
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex justify-end space-x-3 pt-4">
+                <Link href="/admin/users">
+                  <Button type="button" variant="outline">
+                    Cancel
+                  </Button>
+                </Link>
+                {createPickUpRequest ? (
+                  <Button type="submit" disabled={loading}>
+                    {loading ? (
+                      "Creating User and Request..."
+                    ) : (
+                      <>
+                        <UserPlus2Icon className="mr-2 h-4 w-4" />
+                        Create New User and Request
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <Button type="submit" disabled={loading}>
+                    {loading ? (
+                      "Creating User..."
+                    ) : (
+                      <>
+                        <UserPlus2Icon className="mr-2 h-4 w-4" />
+                        Create New User
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
             </form>
           </Form>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm">
-              Already have an account?{" "}
-              <Link
-                href="/login"
-                className="font-medium text-blue-600 hover:text-blue-500"
-              >
-                Sign in
-              </Link>
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>
   );
 };
+
+export default NewUserCreationForm;
