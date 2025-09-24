@@ -1,8 +1,12 @@
-import { NextResponse } from "next/server";
+//api/admin/users/route.ts
+import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { UserRole } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
+import bcrypt from "bcryptjs";
+import { geocodeAddress } from "@/lib/geocoding";
+import { AnalyticsService } from "@/lib/analytics";
 
 export const GET = async () => {
   try {
@@ -37,6 +41,117 @@ export const GET = async () => {
     return NextResponse.json(users);
   } catch (error) {
     console.error("Users fetch error:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+};
+
+export const POST = async (request: NextRequest) => {
+  try {
+    const session = await auth();
+
+    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      isLoginRequired,
+      password,
+      street,
+      city,
+      province,
+      postalCode,
+    } = body;
+
+    // Check if user already exist
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
+      return NextResponse.json(
+        { error: "User with this email already exists" },
+        { status: 400 }
+      );
+    }
+
+    //Hash password
+    let hashedPassword = "";
+    if (isLoginRequired && password && password.length >= 8) {
+      const salt = await bcrypt.genSalt(10);
+      hashedPassword = await bcrypt.hash(password, salt);
+    }
+
+    // Get coordinates for addresses
+    const coordiantes = await geocodeAddress({
+      street,
+      city,
+      province,
+      postalCode,
+      country: "Canada",
+    });
+
+    if (coordiantes === null) {
+      return NextResponse.json(
+        { error: "Invalid address information" },
+        { status: 400 }
+      );
+    }
+
+    const newUser = await prisma.user.create({
+      data: {
+        firstName,
+        lastName,
+        email,
+        phone: phone || null,
+        password: isLoginRequired ? hashedPassword : null,
+        role: "USER",
+        status: "APPROVED",
+      },
+    });
+
+    // Create default address
+    await prisma.address.create({
+      data: {
+        userId: newUser.id,
+        name: "Home",
+        street,
+        city,
+        province,
+        postalCode,
+        country: "Canada",
+        latitude: coordiantes?.latitude || null,
+        longitude: coordiantes?.longitude || null,
+        isDefault: true,
+      },
+    });
+
+    // Track user creatin by admin event
+    await AnalyticsService.trackEvent({
+      eventType: "admin_user_creation",
+      userId: newUser.id,
+      metadata: { createdBy: session.user.id },
+    });
+
+    return NextResponse.json({
+      message: "User Created Successfully.",
+      user: {
+        id: newUser.id,
+        email: newUser.email,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        status: newUser.status,
+      },
+    });
+  } catch (error) {
+    console.error("Error creating user:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
