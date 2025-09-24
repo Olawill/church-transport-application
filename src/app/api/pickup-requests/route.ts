@@ -148,11 +148,21 @@ export const POST = async (request: NextRequest) => {
 
       // Check if it's too late to request pickup (less than 1 hour before service)
       const serviceDateTime = new Date(requestDate);
-      const oneHoursBefore = new Date(
-        serviceDateTime.getTime() - 1 * 60 * 60 * 1000
-      );
+      const serviceDay = await prisma.serviceDay.findUnique({
+        where: { id: serviceDayId },
+      });
+      if (!serviceDay) {
+        return NextResponse.json(
+          { error: "Invalid service day" },
+          { status: 400 }
+        );
+      }
+      const [hh, mm] = serviceDay.time.split(":").map((n) => parseInt(n, 10));
+      const serviceStart = new Date(serviceDateTime);
+      serviceStart.setHours(hh || 0, mm || 0, 0, 0);
+      const cutoff = new Date(serviceStart.getTime() - 60 * 60 * 1000);
 
-      if (new Date() > oneHoursBefore) {
+      if (Date.now() > cutoff.getTime()) {
         return NextResponse.json(
           {
             error: "Cannot request pickup less than 1 hour before service time",
@@ -231,11 +241,21 @@ export const POST = async (request: NextRequest) => {
 
     // Check if it's too late to request pickup (less than 1 hour before service)
     const serviceDateTime = new Date(requestDate);
-    const oneHoursBefore = new Date(
-      serviceDateTime.getTime() - 1 * 60 * 60 * 1000
-    );
+    const serviceDay = await prisma.serviceDay.findUnique({
+      where: { id: serviceDayId },
+    });
+    if (!serviceDay) {
+      return NextResponse.json(
+        { error: "Invalid service day" },
+        { status: 400 }
+      );
+    }
+    const [hh, mm] = serviceDay.time.split(":").map((n) => parseInt(n, 10));
+    const serviceStart = new Date(serviceDateTime);
+    serviceStart.setHours(hh || 0, mm || 0, 0, 0);
+    const cutoff = new Date(serviceStart.getTime() - 60 * 60 * 1000);
 
-    if (new Date() > oneHoursBefore) {
+    if (Date.now() > cutoff.getTime()) {
       return NextResponse.json(
         {
           error: "Cannot request pickup less than 1 hour before service time",

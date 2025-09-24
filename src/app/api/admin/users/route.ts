@@ -83,8 +83,14 @@ export const POST = async (request: NextRequest) => {
     }
 
     //Hash password
-    let hashedPassword = "";
-    if (isLoginRequired && password && password.length >= 8) {
+    let hashedPassword: string | null = null;
+    if (isLoginRequired) {
+      if (!password || password.length < 8) {
+        return NextResponse.json(
+          { error: "Password must be at least 8 characters" },
+          { status: 400 }
+        );
+      }
       const salt = await bcrypt.genSalt(10);
       hashedPassword = await bcrypt.hash(password, salt);
     }
@@ -111,7 +117,7 @@ export const POST = async (request: NextRequest) => {
         lastName,
         email,
         phone: phone || null,
-        password: isLoginRequired ? hashedPassword : null,
+        password: hashedPassword,
         role: "USER",
         status: "APPROVED",
       },

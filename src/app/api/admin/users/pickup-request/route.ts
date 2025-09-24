@@ -1,4 +1,5 @@
 //api/admin/users/pickup-request/route.ts
+import { z } from "zod";
 
 import { NextRequest, NextResponse } from "next/server";
 
@@ -9,6 +10,22 @@ import bcrypt from "bcryptjs";
 import { geocodeAddress } from "@/lib/geocoding";
 import { AnalyticsService } from "@/lib/analytics";
 
+const payloadSchema = z.object({
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  email: z.string().email(),
+  phone: z.string().optional().nullable(),
+  isLoginRequired: z.boolean(),
+  password: z.string().optional(),
+  street: z.string().min(1),
+  city: z.string().min(1),
+  province: z.string().min(1),
+  postalCode: z.string().min(1),
+  serviceDayId: z.string().min(1),
+  requestDate: z.union([z.string(), z.date()]),
+  notes: z.string().optional(),
+});
+
 export const POST = async (request: NextRequest) => {
   try {
     const session = await auth();
@@ -18,6 +35,13 @@ export const POST = async (request: NextRequest) => {
     }
 
     const body = await request.json();
+    const parsed = payloadSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid request payload" },
+        { status: 400 }
+      );
+    }
     const {
       firstName,
       lastName,
@@ -32,7 +56,7 @@ export const POST = async (request: NextRequest) => {
       serviceDayId,
       requestDate,
       notes,
-    } = body;
+    } = parsed.data;
 
     // Check if user already exist
     const existingUser = await prisma.user.findUnique({
@@ -47,9 +71,15 @@ export const POST = async (request: NextRequest) => {
     }
 
     //Hash password
-    let hashedPassword = "";
-    if (isLoginRequired && password && password.length >= 8) {
-      const salt = await bcrypt.genSalt(10);
+    let hashedPassword: string | null = null;
+    if (isLoginRequired) {
+      if (!password || password.length < 8) {
+        return NextResponse.json(
+          { error: "Password is required and must be at least 8 characters" },
+          { status: 400 }
+        );
+      }
+      const salt = await bcrypt.genSalt(12);
       hashedPassword = await bcrypt.hash(password, salt);
     }
 
@@ -77,7 +107,7 @@ export const POST = async (request: NextRequest) => {
           lastName,
           email,
           phone: phone || null,
-          password: isLoginRequired ? hashedPassword : null,
+          password: hashedPassword,
           role: "USER",
           status: "APPROVED",
         },
@@ -104,7 +134,7 @@ export const POST = async (request: NextRequest) => {
     //
     const { newUser, newAddress } = result;
 
-    // Track user creatin by admin event
+    // Track user creating by admin event
     await AnalyticsService.trackEvent({
       eventType: "admin_user_creation",
       userId: newUser.id,
@@ -120,13 +150,23 @@ export const POST = async (request: NextRequest) => {
       );
     }
 
-    // Check if it's too late to request pickup (less than 1 hour before service)
+    // Check cutoff: 1 hour before the service start time for the selected date
     const serviceDateTime = new Date(requestDate);
-    const oneHoursBefore = new Date(
-      serviceDateTime.getTime() - 1 * 60 * 60 * 1000
-    );
+    const serviceDay = await prisma.serviceDay.findUnique({
+      where: { id: serviceDayId },
+    });
+    if (!serviceDay) {
+      return NextResponse.json(
+        { error: "Invalid service day" },
+        { status: 400 }
+      );
+    }
+    const [hh, mm] = serviceDay.time.split(":").map((n) => parseInt(n, 10));
+    const serviceStart = new Date(serviceDateTime);
+    serviceStart.setHours(hh || 0, mm || 0, 0, 0);
+    const cutoff = new Date(serviceStart.getTime() - 60 * 60 * 1000);
 
-    if (new Date() > oneHoursBefore) {
+    if (Date.now() > cutoff.getTime()) {
       return NextResponse.json(
         {
           error: "Cannot request pickup less than 1 hour before service time",

@@ -79,11 +79,21 @@ export const PUT = async (
 
     // Check if it's too late to cancel (less than 2 hours before service)
     const serviceDateTime = new Date(pickupRequest.requestDate);
-    const twoHoursBefore = new Date(
-      serviceDateTime.getTime() - 2 * 60 * 60 * 1000
-    );
+    const serviceDay = await prisma.serviceDay.findUnique({
+      where: { id: pickupRequest.serviceDay.id },
+    });
+    if (!serviceDay) {
+      return NextResponse.json(
+        { error: "Invalid service day" },
+        { status: 400 }
+      );
+    }
+    const [hh, mm] = serviceDay.time.split(":").map((n) => parseInt(n, 10));
+    const serviceStart = new Date(serviceDateTime);
+    serviceStart.setHours(hh || 0, mm || 0, 0, 0);
+    const cutoff = new Date(serviceStart.getTime() - 2 * 60 * 60 * 1000);
 
-    if (pickupRequest.status === "ACCEPTED" && new Date() > twoHoursBefore) {
+    if (pickupRequest.status === "ACCEPTED" && Date.now() > cutoff.getTime()) {
       return NextResponse.json(
         {
           error:

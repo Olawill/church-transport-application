@@ -224,7 +224,8 @@ const AdminNewUserRequest = ({ isNewUser, form }: AdminNewUserRequestProps) => {
         // const response = await fetch(`/api/users?id=${session.user.id}`);
         const response = await fetch(`/api/users`);
         if (response.ok) {
-          const userData: NewRequestResponse[] = await response.json();
+          const userData: Array<Pick<User, "id" | "addresses">> =
+            await response.json();
           if (userData.length > 0) {
             setAddresses(
               userData.find((d) => d.id === selectedUser.id)?.addresses || []
@@ -322,7 +323,7 @@ const AdminNewUserRequest = ({ isNewUser, form }: AdminNewUserRequestProps) => {
                   </Select>
                   {selectedService && (
                     <FormDescription className="mt-2 p-3 bg-blue-50 rounded-lg">
-                      <p className="flex items-center space-x-2 text-sm text-blue-700">
+                      <span className="flex items-center space-x-2 text-sm text-blue-700">
                         <Clock className="h-4 w-4" />
                         <span>
                           Service starts at {formatTime(selectedService.time)}{" "}
@@ -339,7 +340,7 @@ const AdminNewUserRequest = ({ isNewUser, form }: AdminNewUserRequestProps) => {
                             ][selectedService.dayOfWeek]
                           }
                         </span>
-                      </p>
+                      </span>
                     </FormDescription>
                   )}
                   <FormMessage />
@@ -466,16 +467,16 @@ const AdminNewUserRequest = ({ isNewUser, form }: AdminNewUserRequestProps) => {
                         </Select>
                         {selectedUser && (
                           <FormDescription className="mt-2 p-3 bg-blue-50 rounded-lg">
-                            <p className="flex items-center space-x-2 text-sm text-gray-700">
+                            <span className="flex items-center space-x-2 text-sm text-gray-700">
                               <UserCheck className="h-4 w-4" />
                               <span>
                                 {selectedUser.firstName} {selectedUser.lastName}
                               </span>
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
+                            </span>
+                            <span className="text-xs text-gray-500 mt-1">
                               Please ensure this person you want to request a
                               ride on behalf of
-                            </p>
+                            </span>
                           </FormDescription>
                         )}
                         <FormMessage />
@@ -514,7 +515,7 @@ const AdminNewUserRequest = ({ isNewUser, form }: AdminNewUserRequestProps) => {
                         </Select>
                         {selectedService && (
                           <FormDescription className="mt-2 p-3 bg-blue-50 rounded-lg">
-                            <p className="flex items-center space-x-2 text-sm text-blue-700">
+                            <span className="flex items-center space-x-2 text-sm text-blue-700">
                               <Clock className="h-4 w-4" />
                               <span>
                                 Service starts at{" "}
@@ -531,7 +532,7 @@ const AdminNewUserRequest = ({ isNewUser, form }: AdminNewUserRequestProps) => {
                                   ][selectedService.dayOfWeek]
                                 }
                               </span>
-                            </p>
+                            </span>
                           </FormDescription>
                         )}
                         <FormMessage />
@@ -633,14 +634,14 @@ const AdminNewUserRequest = ({ isNewUser, form }: AdminNewUserRequestProps) => {
                         </Select>
                         {selectedAddress && (
                           <FormDescription className="mt-2 p-3 bg-gray-50 rounded-lg">
-                            <p className="flex items-center space-x-2 text-sm text-gray-700">
+                            <span className="flex items-center space-x-2 text-sm text-gray-700">
                               <MapPin className="h-4 w-4" />
                               <span>{formatAddress(selectedAddress)}</span>
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
+                            </span>
+                            <span className="text-xs text-gray-500 mt-1">
                               Please ensure this address is correct before
                               submitting your request
-                            </p>
+                            </span>
                           </FormDescription>
                         )}
                         <FormMessage />
