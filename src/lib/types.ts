@@ -92,6 +92,40 @@ export interface DistanceOption {
   label: string;
 }
 
+export type Frequency =
+  | "weekly"
+  | "monthly"
+  | "every 2 months"
+  | "quarterly"
+  | "every 4 months"
+  | "every 6 months"
+  | "yearly";
+
+export type Ordinal =
+  | "next" // next occurrence of the weekday from today
+  | "first"
+  | "second"
+  | "third"
+  | "fourth"
+  | "last";
+
+export const ordinalMap: Record<Exclude<Ordinal, "next" | "last">, number> = {
+  first: 1,
+  second: 2,
+  third: 3,
+  fourth: 4,
+};
+
+export const frequencyMap: Record<Frequency, number> = {
+  weekly: 0,
+  monthly: 1,
+  "every 2 months": 2,
+  quarterly: 3,
+  "every 4 months": 4,
+  "every 6 months": 6,
+  yearly: 12,
+};
+
 export const DISTANCE_OPTIONS: DistanceOption[] = [
   { value: 10, label: "10 km" },
   { value: 20, label: "20 km" },

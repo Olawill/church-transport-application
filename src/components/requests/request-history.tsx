@@ -502,26 +502,29 @@ export const RequestHistory = () => {
                         </Button>
                       )}
 
-                      {request.status === "PENDING" && isAdmin && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-green-600 hover:text-green-700 hover:bg-red-50"
-                          onClick={() => {
-                            toggleAccordion(request.id);
-                          }}
-                        >
-                          <UserSquareIcon className="size-4" />
-                          {openAccordions[request.id]
-                            ? "Hide Drivers"
-                            : "Show Drivers"}
-                        </Button>
-                      )}
+                      {(request.status === "PENDING" ||
+                        request.status === "ACCEPTED") &&
+                        isAdmin && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-green-600 hover:text-green-700 hover:bg-red-50"
+                            onClick={() => {
+                              toggleAccordion(request.id);
+                            }}
+                          >
+                            <UserSquareIcon className="size-4" />
+                            {openAccordions[request.id]
+                              ? "Hide Drivers"
+                              : "Show Drivers"}
+                          </Button>
+                        )}
                     </div>
                   </div>
 
                   {/* Assigning drivers - Only admin can assign drivers */}
-                  {request.status === "PENDING" &&
+                  {(request.status === "PENDING" ||
+                    request.status === "ACCEPTED") &&
                     isAdmin &&
                     openAccordions[request.id] && (
                       <>
@@ -547,35 +550,47 @@ export const RequestHistory = () => {
                               <DataTable
                                 columns={columns}
                                 data={drivers
-                                  .filter((d) => d.id !== request.userId)
+                                  .filter((d) => {
+                                    // Always exclude the current user
+                                    const isNotCurrentUser =
+                                      d.id !== request.userId;
+
+                                    // If request is accepted, also exclude the assigned driver
+                                    const isNotAssignedDriver =
+                                      request.status !== "ACCEPTED" ||
+                                      d.id !== request.driverId;
+
+                                    return (
+                                      isNotCurrentUser && isNotAssignedDriver
+                                    );
+                                  })
                                   .map((d) => {
                                     const driverAddress = d.addresses?.find(
                                       (a) => a.isDefault
                                     );
 
-                                    if (
-                                      driverAddress?.latitude &&
-                                      driverAddress?.longitude &&
-                                      request.address?.latitude &&
-                                      request.address?.longitude
-                                    ) {
-                                      return {
-                                        ...d,
-                                        name: `${d.firstName} ${d.lastName}`,
-                                        requestDistance: calculateDistance(
-                                          driverAddress.latitude,
-                                          driverAddress.longitude,
-                                          request.address.latitude,
-                                          request.address.longitude
-                                        ),
-                                        request,
-                                      };
-                                    }
+                                    const lat1 = driverAddress?.latitude;
+                                    const lon1 = driverAddress?.longitude;
+                                    const lat2 = request.address?.latitude;
+                                    const lon2 = request.address?.longitude;
+
+                                    const hasValidCoordinates =
+                                      lat1 != null &&
+                                      lon1 != null &&
+                                      lat2 != null &&
+                                      lon2 != null;
 
                                     return {
                                       ...d,
                                       name: `${d.firstName} ${d.lastName}`,
-                                      requestDistance: null,
+                                      requestDistance: hasValidCoordinates
+                                        ? calculateDistance(
+                                            lat1,
+                                            lon1,
+                                            lat2,
+                                            lon2
+                                          )
+                                        : null,
                                       request,
                                     };
                                   })}
