@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { Frequency, frequencyMap, Ordinal, ordinalMap } from "./types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -83,6 +84,109 @@ export function getNextServiceDate(dayOfWeek: number): Date {
   const nextDate = new Date(today);
   nextDate.setDate(today.getDate() + daysToAdd);
   return nextDate;
+}
+
+export function updatedGetNextServiceDate(
+  dayOfWeek: number,
+  frequency: Frequency = "weekly",
+  ordinal: Ordinal = "next"
+): Date {
+  if (dayOfWeek < 0 || dayOfWeek > 6) {
+    throw new Error(
+      "Invalid day of week: must be between 0 (Sunday=0) and 6 (Saturday=6)"
+    );
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const monthsToAdd = frequencyMap[frequency];
+
+  // ✅ "next" mode (uses today if it's the same weekday)
+  if (ordinal === "next") {
+    const baseDate = new Date(today);
+    const isTodayTargetDay = baseDate.getDay() === dayOfWeek;
+
+    if (!isTodayTargetDay) {
+      let daysToAdd = dayOfWeek - baseDate.getDay();
+      if (daysToAdd < 0) daysToAdd += 7;
+      baseDate.setDate(baseDate.getDate() + daysToAdd);
+    }
+
+    if (monthsToAdd === 0) {
+      return baseDate;
+    }
+
+    // Add months and re-align to the desired day of week
+    const result = new Date(baseDate);
+    result.setMonth(result.getMonth() + monthsToAdd);
+
+    // Adjust weekday again after month increment
+    const adjustedDay = result.getDay();
+    let offset = dayOfWeek - adjustedDay;
+    if (offset < 0) offset += 7;
+
+    result.setDate(result.getDate() + offset);
+
+    return result;
+  }
+
+  // ✅ "last" mode — find last weekday in target month
+  if (ordinal === "last") {
+    const lastDay = getLastWeekdayOfMonth(today, monthsToAdd, dayOfWeek);
+    return lastDay;
+  }
+
+  // ✅ first, second, third, fourth
+  if (ordinal in ordinalMap) {
+    const nth = ordinalMap[ordinal as keyof typeof ordinalMap];
+    const nthDate = getNthWeekdayOfMonth(today, monthsToAdd, dayOfWeek, nth);
+    return nthDate;
+  }
+
+  throw new Error(`Unsupported ordinal: ${ordinal}`);
+}
+
+function getNthWeekdayOfMonth(
+  fromDate: Date,
+  monthsToAdd: number,
+  dayOfWeek: number,
+  nth: number
+): Date {
+  const targetMonth = new Date(fromDate);
+  targetMonth.setMonth(targetMonth.getMonth() + monthsToAdd);
+  targetMonth.setDate(1); // Start at the first of the month
+
+  const firstDay = targetMonth.getDay();
+  let offset = dayOfWeek - firstDay;
+  if (offset < 0) offset += 7;
+
+  const dayOfMonth = 1 + offset + (nth - 1) * 7;
+  targetMonth.setDate(dayOfMonth);
+
+  // If it goes past the month (e.g. 5th Friday in Feb), fallback to last
+  if (targetMonth.getMonth() !== (fromDate.getMonth() + monthsToAdd) % 12) {
+    return getLastWeekdayOfMonth(fromDate, monthsToAdd, dayOfWeek);
+  }
+
+  return targetMonth;
+}
+
+function getLastWeekdayOfMonth(
+  fromDate: Date,
+  monthsToAdd: number,
+  dayOfWeek: number
+): Date {
+  const targetMonth = new Date(fromDate);
+  targetMonth.setMonth(targetMonth.getMonth() + monthsToAdd + 1); // move to 1st of the next month
+  targetMonth.setDate(0); // back to last day of target month
+
+  const lastDay = targetMonth.getDay();
+  let offset = lastDay - dayOfWeek;
+  if (offset < 0) offset += 7;
+
+  targetMonth.setDate(targetMonth.getDate() - offset);
+  return targetMonth;
 }
 
 // Format user's full name
