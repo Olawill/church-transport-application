@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-import { Address, NewRequestResponse, ServiceDay } from "@/lib/types";
+import { Address, NewRequestResponse, ServiceDay, User } from "@/lib/types";
 import {
   cn,
   formatAddress,
@@ -129,8 +129,8 @@ export const NewRequestForm = () => {
         // const response = await fetch(`/api/users?id=${session.user.id}`);
         const response = await fetch(`/api/users`);
         if (response.ok) {
-          const userData: NewRequestResponse[] = await response.json();
-          // console.log({ userData });
+          const userData: Array<Pick<User, "id" | "addresses">> =
+            await response.json();
           if (userData.length > 0) {
             setAddresses(
               userData.find((d) => d.id === session.user.id)?.addresses || []
@@ -160,7 +160,6 @@ export const NewRequestForm = () => {
   };
 
   const handleSubmit = async (values: NewRequestSchema) => {
-    console.log({ values });
     const validatedFields = newRequestSchema.safeParse(values);
 
     if (!validatedFields.success) {
@@ -288,8 +287,6 @@ export const NewRequestForm = () => {
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);
 
-                  console.log({ field });
-
                   return (
                     <FormItem className="space-y-2">
                       <FormLabel>Service Date</FormLabel>
@@ -370,14 +367,14 @@ export const NewRequestForm = () => {
                     </Select>
                     {selectedAddress && (
                       <FormDescription className="mt-2 p-3 bg-gray-50 rounded-lg">
-                        <p className="flex items-center space-x-2 text-sm text-gray-700">
+                        <span className="flex items-center space-x-2 text-sm text-gray-700">
                           <MapPin className="h-4 w-4" />
                           <span>{formatAddress(selectedAddress)}</span>
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
+                        </span>
+                        <span className="text-xs text-gray-500 mt-1">
                           Please ensure this address is correct before
                           submitting your request
-                        </p>
+                        </span>
                       </FormDescription>
                     )}
                     <FormMessage />

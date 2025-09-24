@@ -7,9 +7,9 @@ import "react-phone-number-input/style.css";
 interface CustomPhoneInputProps {
   placeholder?: string;
   defaultCountry?: string;
-  value: string;
-  onChange: () => void;
-  onBlur: () => void;
+  value?: string;
+  onChange: (value: string | undefined) => void;
+  onBlur: React.FocusEventHandler<HTMLInputElement>;
   className?: string;
   disabled?: boolean;
   error?: FieldError;

@@ -84,7 +84,6 @@ export const newUserSchema = z
   )
   .refine(
     (data) => {
-      console.log(data);
       // If pickup request is required, serviceId and requestDate must be provided
       if (data.createPickUpRequest) {
         return (

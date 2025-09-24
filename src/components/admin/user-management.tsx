@@ -184,23 +184,22 @@ export const UserManagement = () => {
     <>
       <UpdateRoleDialog />
 
-
       <div className="space-y-6">
         <div className="flex flex-row justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">User Management</h1>
-          <p className="mt-1">
-            Manage user registrations, roles, and account status
-          </p>
-        </div>
+          <div>
+            <h1 className="text-2xl font-bold">User Management</h1>
+            <p className="mt-1">
+              Manage user registrations, roles, and account status
+            </p>
+          </div>
 
-        <Link href="/admin/users/new">
-          <Button>
-            <UserPlus />
-            <span>New User</span>
+          <Button asChild>
+            <Link href="/admin/users/new" aria-label="Create new user">
+              <UserPlus className="size-4" />
+              <span>New User</span>
+            </Link>
           </Button>
-        </Link>
-      </div>
+        </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
