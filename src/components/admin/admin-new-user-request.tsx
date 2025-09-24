@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 import {
   ArrowLeft,
@@ -55,16 +56,18 @@ import {
   newAdminRequestSchema,
   NewAdminRequestSchema,
 } from "@/types/newRequestSchema";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm, UseFormReturn, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { NewUserSchema } from "@/types/newUserSchema";
 
 interface AdminNewUserRequestProps {
   isNewUser: boolean;
+  form?: UseFormReturn<NewUserSchema>;
 }
-const AdminNewUserRequest = ({ isNewUser }: AdminNewUserRequestProps) => {
+const AdminNewUserRequest = ({ isNewUser, form }: AdminNewUserRequestProps) => {
   const router = useRouter();
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
@@ -77,27 +80,24 @@ const AdminNewUserRequest = ({ isNewUser }: AdminNewUserRequestProps) => {
   );
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const form = useForm<NewAdminRequestSchema>({
+  const newRequestForm = useForm<NewAdminRequestSchema>({
     resolver: zodResolver(newAdminRequestSchema),
     defaultValues: {
       userId: "",
       serviceDayId: "",
       addressId: "",
-      requestDate: "",
+      requestDate: undefined,
       notes: "",
     },
   });
 
   useEffect(() => {
     fetchServiceDays();
-    fetchAddresses();
     fetchUsers();
+    fetchAddresses();
   }, []);
 
-  const serviceDayId = useWatch({
-    control: form.control,
-    name: "serviceDayId",
-  });
+  const serviceDayId = form ? form?.watch("serviceDayId") : "";
   useEffect(() => {
     if (serviceDayId && serviceDays.length > 0) {
       const service = serviceDays.find((s) => s.id === serviceDayId);
@@ -107,13 +107,33 @@ const AdminNewUserRequest = ({ isNewUser }: AdminNewUserRequestProps) => {
         // Set default request date to next occurrence of this service
         const nextDate = getNextServiceDate(service.dayOfWeek);
         // form.setValue("requestDate", nextDate.toISOString().split("T")[0]);
-        form.setValue("requestDate", nextDate.toLocaleDateString("en-CA"));
+        form?.setValue("requestDate", nextDate);
       }
       // }
     }
   }, [serviceDayId, serviceDays]);
 
-  const addressId = form.watch("addressId");
+  const newServiceDayId = useWatch({
+    control: newRequestForm.control,
+    name: "serviceDayId",
+  });
+
+  useEffect(() => {
+    if (newServiceDayId && serviceDays.length > 0) {
+      const service = serviceDays.find((s) => s.id === newServiceDayId);
+      setSelectedService(service || null);
+
+      if (service) {
+        // Set default request date to next occurrence of this service
+        const nextDate = getNextServiceDate(service.dayOfWeek);
+        // form.setValue("requestDate", nextDate.toISOString().split("T")[0]);
+        newRequestForm.setValue("requestDate", nextDate);
+      }
+      // }
+    }
+  }, [newServiceDayId, serviceDays]);
+
+  const addressId = newRequestForm.watch("addressId");
   useEffect(() => {
     if (addressId && addresses.length > 0) {
       const address = addresses.find((a) => a.id === addressId);
@@ -121,7 +141,7 @@ const AdminNewUserRequest = ({ isNewUser }: AdminNewUserRequestProps) => {
     }
   }, [addressId, addresses]);
 
-  const userId = form.watch("userId");
+  const userId = newRequestForm.watch("userId");
   useEffect(() => {
     if (userId && users.length > 0) {
       const user = users.find((u) => u.id === userId);
@@ -147,7 +167,6 @@ const AdminNewUserRequest = ({ isNewUser }: AdminNewUserRequestProps) => {
 
       if (response.ok) {
         const userData: User[] = await response.json();
-        console.log(userData);
         if (userData.length > 0) {
           setUsers(userData);
         }
@@ -196,7 +215,6 @@ const AdminNewUserRequest = ({ isNewUser }: AdminNewUserRequestProps) => {
       setUsers([mockUser]);
     }
   };
-
   const fetchAddresses = async () => {
     try {
       // For now, we'll fetch the user's default address
@@ -204,16 +222,13 @@ const AdminNewUserRequest = ({ isNewUser }: AdminNewUserRequestProps) => {
       // This is a simplified version using the user's info
       if (selectedUser && selectedUser.id) {
         // const response = await fetch(`/api/users?id=${session.user.id}`);
-        console.log("Selected user id", selectedUser.id);
         const response = await fetch(`/api/users`);
         if (response.ok) {
           const userData: NewRequestResponse[] = await response.json();
-          console.log({ userData });
           if (userData.length > 0) {
             setAddresses(
               userData.find((d) => d.id === selectedUser.id)?.addresses || []
             );
-            console.log("Addresses", { addresses });
           }
         }
       }
@@ -277,63 +292,65 @@ const AdminNewUserRequest = ({ isNewUser }: AdminNewUserRequestProps) => {
         <>
           {/* Service Selection */}
           <FormField
-            control={form.control}
+            control={form?.control}
             name="serviceDayId"
-            render={({ field }) => (
-              <FormItem className="space-y-2">
-                <FormLabel>Church Service</FormLabel>
-                <Select
-                  defaultValue={field.value}
-                  onValueChange={field.onChange}
-                >
-                  <FormControl>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a service" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {serviceDays.map((service) => (
-                      <SelectItem key={service.id} value={service.id}>
-                        <div className="flex items-center space-x-2">
-                          <CalendarIcon className="h-4 w-4" />
-                          <span>
-                            {service.name} - {formatTime(service.time)}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {selectedService && (
-                  <FormDescription className="mt-2 p-3 bg-blue-50 rounded-lg">
-                    <div className="flex items-center space-x-2 text-sm text-blue-700">
-                      <Clock className="h-4 w-4" />
-                      <span>
-                        Service starts at {formatTime(selectedService.time)}{" "}
-                        every{" "}
-                        {
-                          [
-                            "Sunday",
-                            "Monday",
-                            "Tuesday",
-                            "Wednesday",
-                            "Thursday",
-                            "Friday",
-                            "Saturday",
-                          ][selectedService.dayOfWeek]
-                        }
-                      </span>
-                    </div>
-                  </FormDescription>
-                )}
-                <FormMessage />
-              </FormItem>
-            )}
+            render={({ field }) => {
+              return (
+                <FormItem className="space-y-2">
+                  <FormLabel>Church Service</FormLabel>
+                  <Select
+                    defaultValue={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select a service" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {serviceDays.map((service) => (
+                        <SelectItem key={service.id} value={service.id}>
+                          <div className="flex items-center space-x-2">
+                            <CalendarIcon className="h-4 w-4" />
+                            <span>
+                              {service.name} - {formatTime(service.time)}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedService && (
+                    <FormDescription className="mt-2 p-3 bg-blue-50 rounded-lg">
+                      <p className="flex items-center space-x-2 text-sm text-blue-700">
+                        <Clock className="h-4 w-4" />
+                        <span>
+                          Service starts at {formatTime(selectedService.time)}{" "}
+                          every{" "}
+                          {
+                            [
+                              "Sunday",
+                              "Monday",
+                              "Tuesday",
+                              "Wednesday",
+                              "Thursday",
+                              "Friday",
+                              "Saturday",
+                            ][selectedService.dayOfWeek]
+                          }
+                        </span>
+                      </p>
+                    </FormDescription>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
           />
 
           {/* Date Selection */}
           <FormField
-            control={form.control}
+            control={form?.control}
             name="requestDate"
             render={({ field }) => {
               const today = new Date();
@@ -367,7 +384,11 @@ const AdminNewUserRequest = ({ isNewUser }: AdminNewUserRequestProps) => {
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
-                        selected={new Date(formatDate(new Date(field.value)))}
+                        selected={
+                          field.value
+                            ? new Date(formatDate(new Date(field.value)))
+                            : undefined
+                        }
                         onSelect={field.onChange}
                         disabled={(date) => date < today}
                         captionLayout="dropdown"
@@ -409,14 +430,14 @@ const AdminNewUserRequest = ({ isNewUser }: AdminNewUserRequestProps) => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Form {...form}>
+              <Form {...newRequestForm}>
                 <form
-                  onSubmit={form.handleSubmit(handleSubmit)}
+                  onSubmit={newRequestForm.handleSubmit(handleSubmit)}
                   className="space-y-6"
                 >
                   {/* User Selection */}
                   <FormField
-                    control={form.control}
+                    control={newRequestForm.control}
                     name="userId"
                     render={({ field }) => (
                       <FormItem className="space-y-2">
@@ -445,16 +466,16 @@ const AdminNewUserRequest = ({ isNewUser }: AdminNewUserRequestProps) => {
                         </Select>
                         {selectedUser && (
                           <FormDescription className="mt-2 p-3 bg-blue-50 rounded-lg">
-                            <div className="flex items-center space-x-2 text-sm text-gray-700">
+                            <p className="flex items-center space-x-2 text-sm text-gray-700">
                               <UserCheck className="h-4 w-4" />
                               <span>
                                 {selectedUser.firstName} {selectedUser.lastName}
                               </span>
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1">
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
                               Please ensure this person you want to request a
                               ride on behalf of
-                            </div>
+                            </p>
                           </FormDescription>
                         )}
                         <FormMessage />
@@ -464,7 +485,7 @@ const AdminNewUserRequest = ({ isNewUser }: AdminNewUserRequestProps) => {
 
                   {/* Service Selection */}
                   <FormField
-                    control={form.control}
+                    control={newRequestForm.control}
                     name="serviceDayId"
                     render={({ field }) => (
                       <FormItem className="space-y-2">
@@ -493,7 +514,7 @@ const AdminNewUserRequest = ({ isNewUser }: AdminNewUserRequestProps) => {
                         </Select>
                         {selectedService && (
                           <FormDescription className="mt-2 p-3 bg-blue-50 rounded-lg">
-                            <div className="flex items-center space-x-2 text-sm text-blue-700">
+                            <p className="flex items-center space-x-2 text-sm text-blue-700">
                               <Clock className="h-4 w-4" />
                               <span>
                                 Service starts at{" "}
@@ -510,7 +531,7 @@ const AdminNewUserRequest = ({ isNewUser }: AdminNewUserRequestProps) => {
                                   ][selectedService.dayOfWeek]
                                 }
                               </span>
-                            </div>
+                            </p>
                           </FormDescription>
                         )}
                         <FormMessage />
@@ -520,7 +541,7 @@ const AdminNewUserRequest = ({ isNewUser }: AdminNewUserRequestProps) => {
 
                   {/* Date Selection */}
                   <FormField
-                    control={form.control}
+                    control={newRequestForm.control}
                     name="requestDate"
                     render={({ field }) => {
                       const today = new Date();
@@ -580,7 +601,7 @@ const AdminNewUserRequest = ({ isNewUser }: AdminNewUserRequestProps) => {
 
                   {/* Address Selection */}
                   <FormField
-                    control={form.control}
+                    control={newRequestForm.control}
                     name="addressId"
                     render={({ field }) => (
                       <FormItem className="space-y-2">
@@ -595,7 +616,7 @@ const AdminNewUserRequest = ({ isNewUser }: AdminNewUserRequestProps) => {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {addresses.map((address) => (
+                            {selectedUser?.addresses?.map((address) => (
                               <SelectItem key={address.id} value={address.id}>
                                 <div className="flex items-center space-x-2">
                                   <MapPin className="h-4 w-4" />
@@ -612,14 +633,14 @@ const AdminNewUserRequest = ({ isNewUser }: AdminNewUserRequestProps) => {
                         </Select>
                         {selectedAddress && (
                           <FormDescription className="mt-2 p-3 bg-gray-50 rounded-lg">
-                            <div className="flex items-center space-x-2 text-sm text-gray-700">
+                            <p className="flex items-center space-x-2 text-sm text-gray-700">
                               <MapPin className="h-4 w-4" />
                               <span>{formatAddress(selectedAddress)}</span>
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1">
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
                               Please ensure this address is correct before
                               submitting your request
-                            </div>
+                            </p>
                           </FormDescription>
                         )}
                         <FormMessage />
@@ -629,7 +650,7 @@ const AdminNewUserRequest = ({ isNewUser }: AdminNewUserRequestProps) => {
 
                   {/* Notes */}
                   <FormField
-                    control={form.control}
+                    control={newRequestForm.control}
                     name="notes"
                     render={({ field }) => (
                       <FormItem className="space-y-2">
@@ -651,19 +672,6 @@ const AdminNewUserRequest = ({ isNewUser }: AdminNewUserRequestProps) => {
                       </FormItem>
                     )}
                   />
-                  {/* <div className="space-y-2">
-                <Label htmlFor="notes">Additional Notes</Label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes}
-                  onChange={(e) => handleInputChange('notes', e.target.value)}
-                  placeholder="Any special instructions or requirements..."
-                  rows={3}
-                />
-                <p className="text-xs text-gray-500">
-                  Optional: Let your driver know about any special requirements or instructions
-                </p>
-              </div> */}
 
                   {/* Important Information */}
                   <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
