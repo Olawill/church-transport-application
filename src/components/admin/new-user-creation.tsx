@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-// import { useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { newUserSchema, NewUserSchema } from "@/types/newUserSchema";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -37,20 +37,17 @@ import { PROVINCES } from "@/lib/types";
 import CustomPhoneInput from "@/components/custom-phone-input";
 import { toast } from "sonner";
 import { generateTempPassword } from "@/lib/utils";
-import { Label } from "@/components/ui/label";
 import AdminNewUserRequest from "@/components/admin/admin-new-user-request";
 
 const NewUserCreationForm = () => {
-  //   const router = useRouter();
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [isRequest, setIsRequest] = useState(false);
-
-  // Ref to access the AdminNewUserRequest component's form
-  //   const requestFormRef = useRef<any>(null);
 
   const form = useForm<NewUserSchema>({
     resolver: zodResolver(newUserSchema),
     defaultValues: {
+      isLoginRequired: false,
+      createPickUpRequest: false,
       firstName: "",
       lastName: "",
       email: "",
@@ -59,15 +56,21 @@ const NewUserCreationForm = () => {
       city: "",
       province: "",
       postalCode: "",
-      isLoginRequired: false,
       password: "",
+      serviceDayId: "",
+      requestDate: undefined,
     },
   });
 
   // Watch the values needed for password generation
-  const watchedValues = form.watch(["lastName", "phone", "isLoginRequired"]);
+  const watchedValues = form.watch([
+    "lastName",
+    "phone",
+    "isLoginRequired",
+    "createPickUpRequest",
+  ]);
 
-  const [lastName, phone, isLoginRequired] = watchedValues;
+  const [lastName, phone, isLoginRequired, createPickUpRequest] = watchedValues;
 
   // Function to generate temporary password
   const generatePassword = () => {
@@ -83,11 +86,49 @@ const NewUserCreationForm = () => {
   };
 
   const onSubmit = async (values: NewUserSchema) => {
+    const validatedFields = newUserSchema.safeParse(values);
+
+    if (!validatedFields.success) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
     setLoading(true);
+
     try {
-      console.log("Submitting new user with values", { values });
+      if (values.createPickUpRequest === false) {
+        const response = await fetch("/api/admin/users", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(validatedFields.data),
+        });
+        if (response.ok) {
+          toast.success("User Created Successfully!");
+          router.push("/admin/users");
+        } else {
+          const errorData = await response.json();
+          toast.error(errorData.error || "Failed to create user");
+        }
+      } else {
+        const response = await fetch("/api/admin/users/pickup-request", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(validatedFields.data),
+        });
+        if (response.ok) {
+          toast.success("User Created Successfully!");
+          router.push("/admin/users");
+        } else {
+          const errorData = await response.json();
+          toast.error(errorData.error || "Failed to create user");
+        }
+      }
     } catch (error) {
-      console.error("Error submitting form", error);
+      console.error("Error creating user:", error);
+      toast.error("An error occured while creating user");
     } finally {
       setLoading(false);
     }
@@ -106,7 +147,8 @@ const NewUserCreationForm = () => {
           </div>
           <p className="text-primary">
             Create a new user{" "}
-            {isRequest && "and request transportation to church services"}
+            {createPickUpRequest &&
+              "and request transportation to church services"}
           </p>
         </div>
       </div>
@@ -220,7 +262,10 @@ const NewUserCreationForm = () => {
                       <FormControl>
                         <Switch
                           checked={field.value}
-                          onCheckedChange={field.onChange}
+                          onCheckedChange={(checked) => {
+                            form.setValue("password", "");
+                            field.onChange(checked);
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -371,15 +416,31 @@ const NewUserCreationForm = () => {
               {/* New Request */}
               <div>
                 <div className="flex items-center space-x-2 mb-4">
-                  <Switch
-                    id="newRequest"
-                    checked={isRequest}
-                    onCheckedChange={() => setIsRequest(!isRequest)}
+                  <FormField
+                    control={form.control}
+                    name="createPickUpRequest"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center space-x-2">
+                        <FormLabel>Make Request</FormLabel>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={(checked) => {
+                              form.setValue("serviceDayId", "");
+                              form.setValue("requestDate", undefined);
+                              field.onChange(checked);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                  <Label htmlFor="newRequest">Make Request For User</Label>
                 </div>
                 {/* New request Form */}
-                {isRequest && <AdminNewUserRequest isNewUser={true} />}
+                {createPickUpRequest && (
+                  <AdminNewUserRequest isNewUser={true} form={form} />
+                )}
               </div>
 
               {/* Submit Button */}
@@ -389,7 +450,7 @@ const NewUserCreationForm = () => {
                     Cancel
                   </Button>
                 </Link>
-                {isRequest ? (
+                {createPickUpRequest ? (
                   <Button type="submit" disabled={loading}>
                     {loading ? (
                       "Creating User and Request..."
