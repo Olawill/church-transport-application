@@ -8,6 +8,7 @@ import {
   Clock,
   Filter,
   MapPin,
+  Pencil,
   Phone,
   Plus,
   User,
@@ -21,6 +22,7 @@ import { toast } from "sonner";
 
 import { columns } from "@/components/drivers/column";
 import { DataTable } from "@/components/drivers/data-table";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Accordion,
   AccordionContent,
@@ -57,6 +59,8 @@ import { UserRole } from "@/generated/prisma";
 import { useRequestStore } from "@/lib/store/useRequestStore";
 import { PickupRequest, User as UserType } from "@/lib/types";
 import { calculateDistance, formatDate, formatTime } from "@/lib/utils";
+import { NewRequestForm } from "./new-request-form";
+import AdminNewUserRequest from "../admin/admin-new-user-request";
 
 export const RequestHistory = () => {
   const { data: session } = useSession() || {};
@@ -65,6 +69,7 @@ export const RequestHistory = () => {
 
   const [drivers, setDrivers] = useState<UserType[]>([]);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [pickupCancelDialogOpen, setPickupCancelDialogOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<PickupRequest | null>(
     null
@@ -172,14 +177,28 @@ export const RequestHistory = () => {
     }
   };
 
-  const canCancelRequest = (request: PickupRequest): boolean => {
+  const handleEditDialog = (value: boolean) => {
+    setEditDialogOpen(value);
+    setSelectedRequest(null);
+  };
+
+  const canCancelOrEditRequest = (request: PickupRequest): boolean => {
     // Users can cancel their pending requests
     // Or pending requests that haven't been accepted yet
+    const serviceTime = request.serviceDay?.time as string;
+    const serviceDate = request.requestDate;
+    const [hours, minutes] = serviceTime.split(":").map(Number);
+    const serviceDateTime = new Date(serviceDate);
+    serviceDateTime.setHours(hours, minutes, 0, 0);
+
+    const now = new Date();
+    const twoHoursBefore = new Date(
+      serviceDateTime.getTime() - 2 * 60 * 60 * 1000
+    );
     return (
       request.status === "PENDING" ||
       (request.status === "ACCEPTED" &&
-        new Date(request.requestDate).getTime() >
-          Date.now() + 2 * 60 * 60 * 1000)
+        now.getTime() > twoHoursBefore.getTime())
     ); // 2 hours before
   };
 
@@ -471,20 +490,37 @@ export const RequestHistory = () => {
 
                     <div className="space-x-4">
                       {/* Action buttons for users */}
-                      {(isUser || isAdmin) && canCancelRequest(request) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => {
-                            setSelectedRequest(request);
-                            setCancelDialogOpen(true);
-                          }}
-                        >
-                          <X className="size-4" />
-                          Cancel
-                        </Button>
-                      )}
+                      {(isUser || isAdmin) &&
+                        canCancelOrEditRequest(request) && (
+                          <>
+                            {/* Edit Button */}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                              onClick={() => {
+                                setSelectedRequest(request);
+                                setEditDialogOpen(true);
+                              }}
+                            >
+                              <Pencil className="size-4" />
+                              Edit
+                            </Button>
+                            {/* Cancel Button */}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => {
+                                setSelectedRequest(request);
+                                setCancelDialogOpen(true);
+                              }}
+                            >
+                              <X className="size-4" />
+                              Cancel
+                            </Button>
+                          </>
+                        )}
 
                       {/* Action buttons for drivers */}
                       {isTransportationMember && canCancelPickup(request) && (
@@ -606,6 +642,53 @@ export const RequestHistory = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Eidt Request Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="sr-only">
+              <div className="flex items-center text-amber-600 font-medium">
+                <Pencil className="h-5 w-5 mr-2" />
+                Edit Pickup Request
+              </div>
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              Editing Pickup Request - You can only edit request minimum 2 hours
+              before service
+            </DialogDescription>
+          </DialogHeader>
+          {isUser ? (
+            <ScrollArea className="h-[520px] rounded-md p-4">
+              <NewRequestForm
+                newRequestData={{
+                  requestId: selectedRequest?.id as string,
+                  serviceDayId: selectedRequest?.serviceDayId as string,
+                  requestDate: selectedRequest?.requestDate as Date,
+                  addressId: selectedRequest?.addressId as string,
+                  notes: selectedRequest?.notes as string,
+                }}
+                setShowDialog={handleEditDialog}
+              />
+            </ScrollArea>
+          ) : (
+            <ScrollArea className="h-[540px] rounded-md py-4">
+              <AdminNewUserRequest
+                isNewUser={false}
+                newRequestData={{
+                  requestId: selectedRequest?.id as string,
+                  userId: selectedRequest?.userId as string,
+                  serviceDayId: selectedRequest?.serviceDayId as string,
+                  requestDate: selectedRequest?.requestDate as Date,
+                  addressId: selectedRequest?.addressId as string,
+                  notes: selectedRequest?.notes as string,
+                }}
+                setShowDialog={handleEditDialog}
+              />
+            </ScrollArea>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Cancel Request Dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
