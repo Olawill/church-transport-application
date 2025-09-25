@@ -13,6 +13,8 @@ import {
 import Link from "next/link";
 import { useState } from "react";
 
+import { cn } from "@/lib/utils";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +24,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BillingInterval } from "@/generated/prisma";
 
 const features = [
   {
@@ -128,8 +131,6 @@ const testimonials = [
 ];
 
 const LandingPage = () => {
-  const [hoveredPlan, setHoveredPlan] = useState<string | null>(null);
-
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -241,7 +242,7 @@ const LandingPage = () => {
       {/* Pricing Section */}
       <section id="pricing" className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <div className="text-center mb-4">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
               Simple, transparent pricing
             </h2>
@@ -251,65 +252,23 @@ const LandingPage = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 perspective-dramatic">
-            {plans.map((plan, index) => (
-              <Card
-                key={plan.name}
-                className={cn(
-                  "relative border-2 transition-all duration-300 ease-out transform-3d hover:scale-[1.03]",
-                  plan.popular
-                    ? "border-blue-500 shadow-xl scale-105"
-                    : hoveredPlan === plan.name
-                      ? "border-blue-300 shadow-lg"
-                      : "border-gray-200",
-                  index === 0 && "rotate-y-2",
-                  index === 2 && "-rotate-y-2"
-                )}
-                onMouseEnter={() => setHoveredPlan(plan.name)}
-                onMouseLeave={() => setHoveredPlan(null)}
-              >
-                {plan.popular && (
-                  <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-600 to-purple-600">
-                    Most Popular
-                  </Badge>
-                )}
-
-                <CardHeader className="text-center">
-                  <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                  <div className="mt-4">
-                    <span className="text-4xl font-bold">${plan.price}</span>
-                    <span>/month</span>
-                  </div>
-                  <CardDescription className="mt-2">
-                    {plan.description}
-                  </CardDescription>
-                </CardHeader>
-
-                <CardContent className="h-full flex flex-col justify-between">
-                  <ul className="space-y-3">
-                    {plan.features.map((feature, index) => (
-                      <li key={index} className="flex items-center">
-                        <Check className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <Link href="/register" className="block mt-8">
-                    <Button
-                      className={`w-full ${
-                        plan.popular
-                          ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                          : ""
-                      }`}
-                      variant={plan.popular ? "default" : "outline"}
-                    >
-                      Get Started
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="flex w-full flex-col gap-6 mb-10">
+            <Tabs defaultValue="monthly" className="space-y-8">
+              <TabsList className="self-center">
+                <TabsTrigger value="monthly">Monthly</TabsTrigger>
+                <TabsTrigger value="quarterly">Quarterly</TabsTrigger>
+                <TabsTrigger value="yearly">Yearly</TabsTrigger>
+              </TabsList>
+              <TabsContent value="monthly">
+                <Pricing interval={BillingInterval.MONTHLY} />
+              </TabsContent>
+              <TabsContent value="quarterly">
+                <Pricing interval={BillingInterval.QUARTERLY} />
+              </TabsContent>
+              <TabsContent value="yearly">
+                <Pricing interval={BillingInterval.YEARLY} />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </section>
@@ -386,6 +345,135 @@ const LandingPage = () => {
           </div>
         </div>
       </section>
+    </div>
+  );
+};
+
+const calculateIntervalPrice = ({
+  basePrice,
+  interval,
+}: {
+  basePrice: number;
+  interval: BillingInterval;
+}) => {
+  let intervalPrice = basePrice;
+  let intervalDiscount = 0;
+  let annualPrice = 0;
+
+  switch (interval) {
+    case BillingInterval.QUARTERLY:
+      intervalDiscount = 0.1; // 10% discount
+      intervalPrice = basePrice * 3 * (1 - intervalDiscount);
+      annualPrice = intervalPrice * 4;
+      break;
+    case BillingInterval.YEARLY:
+      intervalDiscount = 0.2; // 20% discount
+      intervalPrice = basePrice * 12 * (1 - intervalDiscount);
+      annualPrice = intervalPrice;
+      break;
+    default:
+      intervalPrice = basePrice;
+      annualPrice = intervalPrice * 12;
+      break;
+  }
+
+  const formattedIntervalPrice = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(intervalPrice);
+
+  const formattedAnnualPrice = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(annualPrice);
+
+  return {
+    intervalPrice: formattedIntervalPrice,
+    annualPrice: formattedAnnualPrice,
+    intervalDiscount,
+  };
+};
+
+const Pricing = ({ interval }: { interval: BillingInterval }) => {
+  const [hoveredPlan, setHoveredPlan] = useState<string | null>(null);
+
+  const priceSuffix =
+    interval === BillingInterval.MONTHLY
+      ? "month"
+      : interval === BillingInterval.QUARTERLY
+        ? "quarter"
+        : "year";
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 perspective-dramatic">
+      {plans.map((plan, index) => {
+        const { intervalPrice, annualPrice } = calculateIntervalPrice({
+          basePrice: plan.price,
+          interval,
+        });
+
+        return (
+          <Card
+            key={plan.name}
+            className={cn(
+              "relative border-2 transition-all duration-300 ease-out transform-3d hover:scale-[1.03]",
+              plan.popular
+                ? "border-blue-500 shadow-xl scale-105"
+                : hoveredPlan === plan.name
+                  ? "border-blue-300 shadow-lg"
+                  : "border-gray-200",
+              index === 0 && "rotate-y-2",
+              index === 2 && "-rotate-y-2"
+            )}
+            onMouseEnter={() => setHoveredPlan(plan.name)}
+            onMouseLeave={() => setHoveredPlan(null)}
+          >
+            {plan.popular && (
+              <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-600 to-purple-600">
+                Most Popular
+              </Badge>
+            )}
+
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl">{plan.name}</CardTitle>
+              <div className="mt-4">
+                <span className="text-4xl font-bold">{intervalPrice}</span>
+                <span>/{priceSuffix}</span>
+              </div>
+              {priceSuffix !== "year" && (
+                <span className="text-xs">(Total Annually: {annualPrice})</span>
+              )}
+              <CardDescription className="mt-2">
+                {plan.description}
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="h-full flex flex-col justify-between">
+              <ul className="space-y-3">
+                {plan.features.map((feature, index) => (
+                  <li key={index} className="flex items-center">
+                    <Check className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <Link href="/register" className="block mt-8">
+                <Button
+                  className={`w-full ${
+                    plan.popular
+                      ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                      : ""
+                  }`}
+                  variant={plan.popular ? "default" : "outline"}
+                >
+                  Get Started
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 };
