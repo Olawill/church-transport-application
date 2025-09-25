@@ -119,14 +119,169 @@ export const POST = async (request: NextRequest) => {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    if (session.user.role === UserRole.ADMIN) {
-      const body = await request.json();
-      const { userId, serviceDayId, addressId, requestDate, notes } = body;
+    const body = await request.json();
+    const { userId, serviceDayId, addressId, requestDate, notes } = body;
 
-      if (!userId || !serviceDayId || !addressId || !requestDate) {
+    const isAdmin = session.user.role === UserRole.ADMIN;
+
+    if (isAdmin) {
+      if (!userId) {
+        return NextResponse.json(
+          { error: "User does not exist" },
+          { status: 400 }
+        );
+      }
+
+      const existingUser = await prisma.user.findUnique({
+        where: { id: userId },
+      });
+      if (!existingUser) {
+        return NextResponse.json(
+          { error: "User does not exist" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Required fields
+    if (!serviceDayId || !addressId || !requestDate) {
+      return NextResponse.json(
+        { error: "Service day, address, and request date are required" },
+        { status: 400 }
+      );
+    }
+
+    // Check if it's too late to request pickup (less than 1 hour before service)
+    const serviceDateTime = new Date(requestDate);
+
+    if (isNaN(serviceDateTime.getTime())) {
+      return NextResponse.json(
+        { error: "Invalid request date" },
+        { status: 400 }
+      );
+    }
+
+    const serviceDay = await prisma.serviceDay.findUnique({
+      where: { id: serviceDayId },
+    });
+    if (!serviceDay) {
+      return NextResponse.json(
+        { error: "Invalid service day" },
+        { status: 400 }
+      );
+    }
+
+    // Ensure request is at least 1 hour before service
+    const [hh, mm] = serviceDay.time.split(":").map((n) => parseInt(n, 10));
+    const serviceStart = new Date(serviceDateTime);
+    serviceStart.setHours(hh || 0, mm || 0, 0, 0);
+    const cutoff = new Date(serviceStart.getTime() - 60 * 60 * 1000);
+
+    if (Date.now() > cutoff.getTime()) {
+      return NextResponse.json(
+        {
+          error: "Cannot request pickup less than 1 hour before service time",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validate that the user owns the address
+    const address = await prisma.address.findFirst({
+      where: {
+        id: addressId,
+        userId: isAdmin ? userId : session.user.id,
+      },
+    });
+
+    if (!address) {
+      return NextResponse.json({ error: "Invalid address" }, { status: 400 });
+    }
+
+    // Check if user already has a request for this service day and date
+    const existingRequest = await prisma.pickupRequest.findFirst({
+      where: {
+        userId: isAdmin ? userId : session.user.id,
+        serviceDayId,
+        requestDate: serviceDateTime,
+      },
+    });
+
+    if (existingRequest) {
+      return NextResponse.json(
+        { error: "You already have a pickup request for this service" },
+        { status: 400 }
+      );
+    }
+
+    const pickupRequest = await prisma.pickupRequest.create({
+      data: {
+        userId: isAdmin ? userId : session.user.id,
+        serviceDayId,
+        addressId,
+        requestDate: serviceDateTime,
+        notes: notes || null,
+        status: "PENDING",
+      },
+      include: {
+        serviceDay: true,
+        address: true,
+      },
+    });
+
+    // Track pickup request creation
+    if (isAdmin) {
+      await AnalyticsService.trackEvent({
+        eventType: "admin_user_pickup_request_created",
+        userId,
+        metadata: {
+          adminId: session.user.id,
+          requestId: pickupRequest.id,
+          serviceDayId,
+          addressId,
+        },
+      });
+    } else {
+      await AnalyticsService.trackPickupRequest(
+        session.user.id,
+        pickupRequest.id,
+        serviceDayId,
+        addressId
+      );
+    }
+
+    return NextResponse.json(pickupRequest, { status: 201 });
+  } catch (error) {
+    console.error("Error creating pickup request:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+};
+
+export const PATCH = async (request: NextRequest) => {
+  try {
+    const session = await auth();
+
+    if (
+      !session?.user ||
+      (session.user.role !== UserRole.USER &&
+        session.user.role !== UserRole.ADMIN)
+    ) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+    const body = await request.json();
+    const { requestId, userId, serviceDayId, addressId, requestDate, notes } =
+      body;
+
+    const isAdmin = session.user.role === UserRole.ADMIN;
+
+    if (isAdmin) {
+      if (!userId) {
         return NextResponse.json(
           {
-            error: "User, Service day, address, and request date are required",
+            error: "User not found",
           },
           { status: 400 }
         );
@@ -145,96 +300,13 @@ export const POST = async (request: NextRequest) => {
           { status: 400 }
         );
       }
-
-      // Check if it's too late to request pickup (less than 1 hour before service)
-      const serviceDateTime = new Date(requestDate);
-      const serviceDay = await prisma.serviceDay.findUnique({
-        where: { id: serviceDayId },
-      });
-      if (!serviceDay) {
-        return NextResponse.json(
-          { error: "Invalid service day" },
-          { status: 400 }
-        );
-      }
-      const [hh, mm] = serviceDay.time.split(":").map((n) => parseInt(n, 10));
-      const serviceStart = new Date(serviceDateTime);
-      serviceStart.setHours(hh || 0, mm || 0, 0, 0);
-      const cutoff = new Date(serviceStart.getTime() - 60 * 60 * 1000);
-
-      if (Date.now() > cutoff.getTime()) {
-        return NextResponse.json(
-          {
-            error: "Cannot request pickup less than 1 hour before service time",
-          },
-          { status: 400 }
-        );
-      }
-
-      // Validate that the user owns the address
-      const address = await prisma.address.findFirst({
-        where: {
-          id: addressId,
-          userId: userId,
-        },
-      });
-
-      if (!address) {
-        return NextResponse.json({ error: "Invalid address" }, { status: 400 });
-      }
-
-      // Check if user already has a request for this service day and date
-      const existingRequest = await prisma.pickupRequest.findFirst({
-        where: {
-          userId: userId,
-          serviceDayId,
-          requestDate: serviceDateTime,
-        },
-      });
-
-      if (existingRequest) {
-        return NextResponse.json(
-          { error: "You already have a pickup request for this service" },
-          { status: 400 }
-        );
-      }
-
-      const pickupRequest = await prisma.pickupRequest.create({
-        data: {
-          userId: userId,
-          serviceDayId,
-          addressId,
-          requestDate: serviceDateTime,
-          notes: notes || null,
-          status: "PENDING",
-        },
-        include: {
-          serviceDay: true,
-          address: true,
-        },
-      });
-
-      // Track pickup request creation
-      await AnalyticsService.trackEvent({
-        eventType: "admin_user_pickup_request",
-        userId,
-        metadata: {
-          adminId: session.user.id,
-          requestId: pickupRequest.id,
-          serviceDayId,
-          addressId,
-        },
-      });
-
-      return NextResponse.json(pickupRequest, { status: 201 });
     }
 
-    const body = await request.json();
-    const { serviceDayId, addressId, requestDate, notes } = body;
-
-    if (!serviceDayId || !addressId || !requestDate) {
+    if (!requestId || !serviceDayId || !addressId || !requestDate) {
       return NextResponse.json(
-        { error: "Service day, address, and request date are required" },
+        {
+          error: "Request, Service day, address, and request date are required",
+        },
         { status: 400 }
       );
     }
@@ -268,7 +340,7 @@ export const POST = async (request: NextRequest) => {
     const address = await prisma.address.findFirst({
       where: {
         id: addressId,
-        userId: session.user.id,
+        userId: isAdmin ? userId : session.user.id,
       },
     });
 
@@ -277,29 +349,28 @@ export const POST = async (request: NextRequest) => {
     }
 
     // Check if user already has a request for this service day and date
-    const existingRequest = await prisma.pickupRequest.findFirst({
+    const existingRequest = await prisma.pickupRequest.findUnique({
       where: {
-        userId: session.user.id,
-        serviceDayId,
-        requestDate: serviceDateTime,
+        id: requestId,
       },
     });
 
-    if (existingRequest) {
+    if (!existingRequest) {
       return NextResponse.json(
-        { error: "You already have a pickup request for this service" },
+        { error: "The Pickup Request does not exist" },
         { status: 400 }
       );
     }
 
-    const pickupRequest = await prisma.pickupRequest.create({
+    const pickupRequest = await prisma.pickupRequest.update({
+      where: {
+        id: requestId,
+      },
       data: {
-        userId: session.user.id,
         serviceDayId,
         addressId,
         requestDate: serviceDateTime,
         notes: notes || null,
-        status: "PENDING",
       },
       include: {
         serviceDay: true,
@@ -308,16 +379,33 @@ export const POST = async (request: NextRequest) => {
     });
 
     // Track pickup request creation
-    await AnalyticsService.trackPickupRequest(
-      session.user.id,
-      pickupRequest.id,
-      serviceDayId,
-      addressId
-    );
+    if (isAdmin) {
+      await AnalyticsService.trackEvent({
+        eventType: "admin_user_pickup_request_updated",
+        userId,
+        metadata: {
+          adminId: session.user.id,
+          requestId: pickupRequest.id,
+          serviceDayId,
+          addressId,
+        },
+      });
+    } else {
+      await AnalyticsService.trackEvent({
+        eventType: "pickup_request_updated",
+        userId: session.user.id,
+        metadata: {
+          requestId,
+          serviceDayId,
+          addressId,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    }
 
     return NextResponse.json(pickupRequest, { status: 201 });
   } catch (error) {
-    console.error("Error creating pickup request:", error);
+    console.error("Error updating pickup request:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
