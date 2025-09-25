@@ -83,6 +83,7 @@ export function getNextServiceDate(dayOfWeek: number): Date {
 
   const nextDate = new Date(today);
   nextDate.setDate(today.getDate() + daysToAdd);
+  nextDate.setHours(0, 0, 0, 0);
   return nextDate;
 }
 
