@@ -10,7 +10,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -30,18 +29,57 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
+import { useForm } from "react-hook-form";
+import { serviceDaySchema, ServiceDaySchema } from "@/types/serviceDaySchema";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 export const ServiceManagement = () => {
   const [serviceDays, setServiceDays] = useState<ServiceDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingService, setEditingService] = useState<ServiceDay | null>(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    dayOfWeek: "",
-    time: "",
-    serviceType: "REGULAR",
+
+  const serviceForm = useForm<ServiceDaySchema>({
+    resolver: zodResolver(serviceDaySchema),
+    defaultValues: {
+      name: editingService ? editingService.name : "",
+      dayOfWeek: editingService ? editingService.dayOfWeek.toString() : "",
+      time: editingService ? editingService.time : "",
+      serviceType: editingService ? editingService.serviceType : "REGULAR",
+      status: editingService ? editingService.isActive : true,
+    },
   });
+
+  // Add this useEffect to update form values when editingService changes
+  useEffect(() => {
+    if (editingService) {
+      serviceForm.reset({
+        name: editingService.name,
+        dayOfWeek: editingService.dayOfWeek.toString(),
+        time: editingService.time,
+        serviceType: editingService.serviceType,
+        status: editingService.isActive,
+      });
+    } else {
+      // Reset to default values when not editing
+      serviceForm.reset({
+        name: "",
+        dayOfWeek: "",
+        time: "",
+        serviceType: "REGULAR",
+        status: true,
+      });
+    }
+  }, [editingService, serviceForm]);
 
   useEffect(() => {
     fetchServiceDays();
@@ -61,57 +99,79 @@ export const ServiceManagement = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (values: ServiceDaySchema) => {
+    const validatedFields = serviceDaySchema.safeParse(values);
 
-    if (!formData.name || formData.dayOfWeek === "" || !formData.time) {
+    if (!validatedFields.success) {
       toast.error("Please fill in all required fields");
       return;
     }
 
-    try {
-      const method = editingService ? "PUT" : "POST";
-      const body = editingService
-        ? {
-            ...formData,
-            id: editingService.id,
-            dayOfWeek: parseInt(formData.dayOfWeek),
-          }
-        : { ...formData, dayOfWeek: parseInt(formData.dayOfWeek) };
+    setLoading(true);
 
+    try {
       const response = await fetch("/api/service-days", {
-        method,
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          ...validatedFields.data,
+          dayOfWeek: parseInt(validatedFields.data.dayOfWeek),
+        }),
       });
 
       if (response.ok) {
-        toast.success(
-          editingService
-            ? "Service updated successfully"
-            : "Service created successfully"
-        );
+        toast.success("Service created successfully");
         resetForm();
         fetchServiceDays();
       } else {
-        toast.error("Failed to save service");
+        toast.error("Failed to create service");
       }
     } catch (error) {
-      console.error("Error saving service:", error);
+      console.error("Error creating service:", error);
+      toast.error("An error occurred");
+    }
+  };
+
+  const handleUpdate = async (values: ServiceDaySchema) => {
+    const validatedFields = serviceDaySchema.safeParse(values);
+
+    if (!validatedFields.success) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/service-days", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          serviceId: editingService?.id,
+          ...validatedFields.data,
+          dayOfWeek: parseInt(validatedFields.data.dayOfWeek),
+        }),
+      });
+
+      if (response.ok) {
+        toast.success("Service updated successfully");
+        resetForm();
+        fetchServiceDays();
+      } else {
+        toast.error("Failed to update service");
+      }
+    } catch (error) {
+      console.error("Error updating service:", error);
       toast.error("An error occurred");
     }
   };
 
   const handleEdit = (service: ServiceDay) => {
     setEditingService(service);
-    setFormData({
-      name: service.name,
-      dayOfWeek: service.dayOfWeek.toString(),
-      time: service.time,
-      serviceType: service.serviceType,
-    });
     setShowForm(true);
   };
 
@@ -138,12 +198,7 @@ export const ServiceManagement = () => {
   };
 
   const resetForm = () => {
-    setFormData({
-      name: "",
-      dayOfWeek: "",
-      time: "",
-      serviceType: "REGULAR",
-    });
+    serviceForm.reset();
     setEditingService(null);
     setShowForm(false);
   };
@@ -158,6 +213,12 @@ export const ServiceManagement = () => {
     return type === "REGULAR"
       ? "bg-blue-100 text-blue-800"
       : "bg-purple-100 text-purple-800";
+  };
+
+  const getServiceStatusColor = (status: boolean) => {
+    return status == false
+      ? "bg-red-100 text-red-800"
+      : "bg-green-100 text-green-800";
   };
 
   return (
@@ -189,89 +250,201 @@ export const ServiceManagement = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Service Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    placeholder="e.g., Sunday Morning Service"
-                    required
+            <Form {...serviceForm}>
+              <form
+                onSubmit={
+                  editingService
+                    ? serviceForm.handleSubmit(handleUpdate)
+                    : serviceForm.handleSubmit(handleSubmit)
+                }
+                className="space-y-4"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Service Name */}
+                  <FormField
+                    control={serviceForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel>
+                          Service Name
+                          <span className="text-red-400">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type="text"
+                            name="name"
+                            placeholder="e.g., Sunday Morning Service"
+                            disabled={loading}
+                            onChange={(e) => {
+                              field.onChange(e);
+                            }}
+                            required
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
+                  {/* Day of the Week */}
+                  <FormField
+                    control={serviceForm.control}
+                    name="dayOfWeek"
+                    render={({ field }) => {
+                      console.log(field);
+                      return (
+                        <FormItem className="space-y-2">
+                          <FormLabel>
+                            Day of Week
+                            <span className="text-red-400">*</span>
+                          </FormLabel>
+                          <Select
+                            defaultValue={field.value}
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            // disabled={loading}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="max-md:w-full">
+                                <SelectValue
+                                  placeholder={
+                                    DAYS_OF_WEEK.find(
+                                      (day) =>
+                                        day.value.toString() === field.value
+                                    )?.label || "Select Day"
+                                  }
+                                />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {DAYS_OF_WEEK.map((day) => (
+                                <SelectItem
+                                  key={day.value.toString()}
+                                  value={day.value.toString()}
+                                >
+                                  {day.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
+                  />
+                  {/* Status */}
+                  <div className="space-y-2">
+                    {/* Status Switch */}
+                    {editingService && (
+                      <FormField
+                        control={serviceForm.control}
+                        name="status"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center space-x-2">
+                            <FormLabel>
+                              {field.value ? "Active" : "Inactive"}
+                            </FormLabel>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={(checked) => {
+                                  field.onChange(checked);
+                                }}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="dayOfWeek">Day of Week *</Label>
-                  <Select
-                    value={formData.dayOfWeek}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, dayOfWeek: value })
-                    }
-                  >
-                    <SelectTrigger className="max-md:w-full">
-                      <SelectValue placeholder="Select day" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DAYS_OF_WEEK.map((day) => (
-                        <SelectItem
-                          key={day.value.toString()}
-                          value={day.value.toString()}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Start Time */}
+                  <FormField
+                    control={serviceForm.control}
+                    name="time"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel>
+                          Start Time
+                          <span className="text-red-400">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type="time"
+                            step="1"
+                            name="time"
+                            placeholder="Select time"
+                            onChange={(e) => {
+                              field.onChange(e);
+                            }}
+                            disabled={loading}
+                            required
+                            className="bg-background appearance-none relative [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-2 [&::-webkit-calendar-picker-indicator]:top-1/2 [&::-webkit-calendar-picker-indicator]:-translate-y-1/2"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  {/* Service Type */}
+                  <FormField
+                    control={serviceForm.control}
+                    name="serviceType"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel>
+                          Service Type
+                          <span className="text-red-400">*</span>
+                        </FormLabel>
+                        <Select
+                          defaultValue={field.value}
+                          onValueChange={field.onChange}
+                          disabled={loading}
                         >
-                          {day.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="time">Start Time *</Label>
-                  <Input
-                    id="time"
-                    type="time"
-                    step="1"
-                    value={formData.time}
-                    onChange={(e) =>
-                      setFormData({ ...formData, time: e.target.value })
-                    }
-                    required
-                    className="bg-background appearance-none relative [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-2 [&::-webkit-calendar-picker-indicator]:top-1/2 [&::-webkit-calendar-picker-indicator]:-translate-y-1/2"
+                          <FormControl>
+                            <SelectTrigger className="max-md:w-full">
+                              <SelectValue placeholder="Select Type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="REGULAR">
+                              Regular Service
+                            </SelectItem>
+                            <SelectItem value="SPECIAL">
+                              Special Event
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="serviceType">Service Type</Label>
-                  <Select
-                    value={formData.serviceType}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, serviceType: value })
-                    }
-                  >
-                    <SelectTrigger className="max-md:w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="REGULAR">Regular Service</SelectItem>
-                      <SelectItem value="SPECIAL">Special Event</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
 
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  {editingService ? "Update Service" : "Create Service"}
-                </Button>
-              </div>
-            </form>
+                {/* New Features like MutliDay, Frequency, Multi-Day Duration */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Multi-Day Switch */}
+                  {/* <div className="flex flex-row space-x-1 items-center">
+                  <Switch id="multiDay" />
+                  <Label htmlFor="multiDay">Multi-Day Service</Label>
+                </div> */}
+                </div>
+
+                <div className="flex justify-end space-x-2">
+                  <Button type="button" variant="outline" onClick={resetForm}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    {editingService ? "Update Service" : "Create Service"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
           </CardContent>
         </Card>
       )}
@@ -327,9 +500,18 @@ export const ServiceManagement = () => {
                         <span>{formatTime(service.time)}</span>
                       </div>
                     </div>
-                    <Badge className={getServiceTypeColor(service.serviceType)}>
-                      {service.serviceType.toLowerCase()}
-                    </Badge>
+                    <div className="flex flex-row items-end space-x-1">
+                      <Badge
+                        className={getServiceTypeColor(service.serviceType)}
+                      >
+                        {service.serviceType.toLowerCase()}
+                      </Badge>
+                      <Badge
+                        className={getServiceStatusColor(service.isActive)}
+                      >
+                        {service.isActive ? "active" : "inactive"}
+                      </Badge>
+                    </div>
                   </div>
 
                   <div className="flex justify-end space-x-2">
