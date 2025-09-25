@@ -5,6 +5,7 @@ import {
   CalendarIcon,
   Clock,
   MapPin,
+  Pencil,
   Send,
   User2,
   UserCheck,
@@ -44,7 +45,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-import { Address, NewRequestResponse, ServiceDay, User } from "@/lib/types";
+import { Address, ServiceDay, User } from "@/lib/types";
 import {
   cn,
   formatAddress,
@@ -66,8 +67,15 @@ import { NewUserSchema } from "@/types/newUserSchema";
 interface AdminNewUserRequestProps {
   isNewUser: boolean;
   form?: UseFormReturn<NewUserSchema>;
+  newRequestData?: NewAdminRequestSchema & { requestId: string };
+  setShowDialog?: (value: boolean) => void;
 }
-const AdminNewUserRequest = ({ isNewUser, form }: AdminNewUserRequestProps) => {
+const AdminNewUserRequest = ({
+  isNewUser,
+  form,
+  newRequestData,
+  setShowDialog,
+}: AdminNewUserRequestProps) => {
   const router = useRouter();
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
@@ -83,11 +91,11 @@ const AdminNewUserRequest = ({ isNewUser, form }: AdminNewUserRequestProps) => {
   const newRequestForm = useForm<NewAdminRequestSchema>({
     resolver: zodResolver(newAdminRequestSchema),
     defaultValues: {
-      userId: "",
-      serviceDayId: "",
-      addressId: "",
-      requestDate: undefined,
-      notes: "",
+      userId: newRequestData?.userId || "",
+      serviceDayId: newRequestData?.serviceDayId || "",
+      addressId: newRequestData?.addressId || "",
+      requestDate: newRequestData?.requestDate || undefined,
+      notes: newRequestData?.notes || "",
     },
   });
 
@@ -287,6 +295,43 @@ const AdminNewUserRequest = ({ isNewUser, form }: AdminNewUserRequestProps) => {
     }
   };
 
+  const handleUpdate = async (values: NewAdminRequestSchema) => {
+    const validatedFields = newAdminRequestSchema.safeParse(values);
+
+    if (!validatedFields.success) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/pickup-requests", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          requestId: newRequestData?.requestId,
+          ...validatedFields.data,
+        }),
+      });
+      if (response.ok) {
+        toast.success("Pickup request updated successfully!");
+        setShowDialog?.(false);
+        router.push("/requests");
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || "Failed to update request");
+      }
+    } catch (error) {
+      console.error("Error updating request:", error);
+      toast.error("An error occurred while updating the request");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       {isNewUser ? (
@@ -410,12 +455,20 @@ const AdminNewUserRequest = ({ isNewUser, form }: AdminNewUserRequestProps) => {
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center space-x-3 mb-2">
-                <Link href="/requests">
-                  <Button variant="ghost" size="sm">
-                    <ArrowLeft className="h-4 w-4" />
+                {newRequestData ? (
+                  <Button variant="ghost" size="icon" className="cursor-none">
+                    <Pencil className="size-4" />
                   </Button>
-                </Link>
-                <h1 className="text-2xl font-bold">New Pickup Request</h1>
+                ) : (
+                  <Button asChild variant="ghost" size="sm">
+                    <Link href="/requests">
+                      <ArrowLeft className="size-4" />
+                    </Link>
+                  </Button>
+                )}
+                <h1 className="text-2xl font-bold">
+                  {newRequestData ? "Update" : "New"} Pickup Request
+                </h1>
               </div>
               <p className="text-primary">
                 Request transportation to church services
@@ -427,13 +480,18 @@ const AdminNewUserRequest = ({ isNewUser, form }: AdminNewUserRequestProps) => {
             <CardHeader>
               <CardTitle className="text-lg">Request Details</CardTitle>
               <CardDescription>
-                Please provide the details for your pickup request
+                Please {newRequestData ? "update" : "provide"} the details for
+                your pickup request
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...newRequestForm}>
                 <form
-                  onSubmit={newRequestForm.handleSubmit(handleSubmit)}
+                  onSubmit={
+                    newRequestData
+                      ? newRequestForm.handleSubmit(handleUpdate)
+                      : newRequestForm.handleSubmit(handleSubmit)
+                  }
                   className="space-y-6"
                 >
                   {/* User Selection */}
@@ -446,6 +504,7 @@ const AdminNewUserRequest = ({ isNewUser, form }: AdminNewUserRequestProps) => {
                         <Select
                           defaultValue={field.value}
                           onValueChange={field.onChange}
+                          disabled={!!newRequestData}
                         >
                           <FormControl>
                             <SelectTrigger className="w-full">
@@ -467,16 +526,25 @@ const AdminNewUserRequest = ({ isNewUser, form }: AdminNewUserRequestProps) => {
                         </Select>
                         {selectedUser && (
                           <FormDescription className="mt-2 p-3 bg-blue-50 rounded-lg">
-                            <span className="flex items-center space-x-2 text-sm text-gray-700">
-                              <UserCheck className="h-4 w-4" />
-                              <span>
-                                {selectedUser.firstName} {selectedUser.lastName}
+                            {!newRequestData ? (
+                              <>
+                                <span className="flex items-center space-x-2 text-sm text-gray-700">
+                                  <UserCheck className="h-4 w-4" />
+                                  <span>
+                                    {selectedUser.firstName}{" "}
+                                    {selectedUser.lastName}
+                                  </span>
+                                </span>
+                                <span className="text-xs text-gray-500 mt-1">
+                                  Please ensure this person you want to request
+                                  a ride on behalf of
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-xs text-gray-500 mt-1">
+                                You cannot change the user for this request
                               </span>
-                            </span>
-                            <span className="text-xs text-gray-500 mt-1">
-                              Please ensure this person you want to request a
-                              ride on behalf of
-                            </span>
+                            )}
                           </FormDescription>
                         )}
                         <FormMessage />
@@ -698,18 +766,35 @@ const AdminNewUserRequest = ({ isNewUser, form }: AdminNewUserRequestProps) => {
 
                   {/* Submit Button */}
                   <div className="flex justify-end space-x-3 pt-4">
-                    <Link href="/requests">
-                      <Button type="button" variant="outline">
+                    {newRequestData ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowDialog?.(false)}
+                      >
                         Cancel
                       </Button>
-                    </Link>
+                    ) : (
+                      <Button asChild type="button" variant="outline">
+                        <Link
+                          href="/requests"
+                          aria-label="Cancel Pickup Request"
+                        >
+                          Cancel
+                        </Link>
+                      </Button>
+                    )}
                     <Button type="submit" disabled={loading}>
                       {loading ? (
-                        "Creating Request..."
+                        newRequestData ? (
+                          "Updating Request..."
+                        ) : (
+                          "Creating Request..."
+                        )
                       ) : (
                         <>
                           <Send className="mr-2 h-4 w-4" />
-                          Submit Request
+                          {newRequestData ? "Update Request" : "Submit Request"}
                         </>
                       )}
                     </Button>

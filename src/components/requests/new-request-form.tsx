@@ -2,7 +2,14 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
-import { ArrowLeft, CalendarIcon, Clock, MapPin, Send } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarIcon,
+  Clock,
+  MapPin,
+  Pencil,
+  Send,
+} from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -42,7 +49,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-import { Address, NewRequestResponse, ServiceDay, User } from "@/lib/types";
+import { Address, ServiceDay, User } from "@/lib/types";
 import {
   cn,
   formatAddress,
@@ -52,7 +59,15 @@ import {
 } from "@/lib/utils";
 import { newRequestSchema, NewRequestSchema } from "@/types/newRequestSchema";
 
-export const NewRequestForm = () => {
+interface NewRequestFormProps {
+  newRequestData?: NewRequestSchema & { requestId: string };
+  setShowDialog?: (value: boolean) => void;
+}
+
+export const NewRequestForm = ({
+  newRequestData,
+  setShowDialog,
+}: NewRequestFormProps) => {
   const router = useRouter();
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
@@ -67,10 +82,10 @@ export const NewRequestForm = () => {
   const form = useForm<NewRequestSchema>({
     resolver: zodResolver(newRequestSchema),
     defaultValues: {
-      serviceDayId: "",
-      addressId: "",
-      requestDate: undefined,
-      notes: "",
+      serviceDayId: newRequestData?.serviceDayId || "",
+      addressId: newRequestData?.addressId || "",
+      requestDate: newRequestData?.requestDate || undefined,
+      notes: newRequestData?.notes || "",
     },
   });
 
@@ -83,22 +98,20 @@ export const NewRequestForm = () => {
     control: form.control,
     name: "serviceDayId",
   });
-  const requestDate = form.watch("requestDate");
 
   useEffect(() => {
     if (serviceDayId && serviceDays.length > 0) {
       const service = serviceDays.find((s) => s.id === serviceDayId);
       setSelectedService(service || null);
 
-      if (service && !requestDate) {
+      if (service) {
         // Set default request date to next occurrence of this service
         const nextDate = getNextServiceDate(service.dayOfWeek);
-        // form.setValue("requestDate", nextDate.toISOString().split("T")[0]);
+        console.log({ nextDate });
         form.setValue("requestDate", nextDate);
       }
-      // }
     }
-  }, [serviceDayId, serviceDays, requestDate]);
+  }, [serviceDayId, serviceDays]);
 
   const addressId = form.watch("addressId");
   useEffect(() => {
@@ -192,17 +205,62 @@ export const NewRequestForm = () => {
     }
   };
 
+  const handleUpdate = async (values: NewRequestSchema) => {
+    const validatedFields = newRequestSchema.safeParse(values);
+
+    if (!validatedFields.success) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/pickup-requests", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          requestId: newRequestData?.requestId,
+          ...validatedFields.data,
+        }),
+      });
+      if (response.ok) {
+        toast.success("Pickup request updated successfully!");
+        setShowDialog?.(false);
+        router.push("/requests");
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || "Failed to update request");
+      }
+    } catch (error) {
+      console.error("Error updating request:", error);
+      toast.error("An error occurred while updating the request");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center space-x-3 mb-2">
-            <Link href="/requests">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="h-4 w-4" />
+            {newRequestData ? (
+              <Button variant="ghost" size="icon" className="cursor-none">
+                <Pencil className="size-4" />
               </Button>
-            </Link>
-            <h1 className="text-2xl font-bold">New Pickup Request</h1>
+            ) : (
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/requests">
+                  <ArrowLeft className="size-4" />
+                </Link>
+              </Button>
+            )}
+            <h1 className="text-2xl font-bold">
+              {newRequestData ? "Update" : "New"} Pickup Request
+            </h1>
           </div>
           <p className="text-primary">
             Request transportation to church services
@@ -214,13 +272,18 @@ export const NewRequestForm = () => {
         <CardHeader>
           <CardTitle className="text-lg">Request Details</CardTitle>
           <CardDescription>
-            Please provide the details for your pickup request
+            Please {newRequestData ? "update" : "provide"} the details for your
+            pickup request
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form
-              onSubmit={form.handleSubmit(handleSubmit)}
+              onSubmit={
+                newRequestData
+                  ? form.handleSubmit(handleUpdate)
+                  : form.handleSubmit(handleSubmit)
+              }
               className="space-y-6"
             >
               {/* Service Selection */}
@@ -254,7 +317,7 @@ export const NewRequestForm = () => {
                     </Select>
                     {selectedService && (
                       <FormDescription className="mt-2 p-3 bg-blue-50 rounded-lg">
-                        <p className="flex items-center space-x-2 text-sm text-blue-700">
+                        <span className="flex items-center space-x-2 text-sm text-blue-700">
                           <Clock className="h-4 w-4" />
                           <span>
                             Service starts at {formatTime(selectedService.time)}{" "}
@@ -271,7 +334,7 @@ export const NewRequestForm = () => {
                               ][selectedService.dayOfWeek]
                             }
                           </span>
-                        </p>
+                        </span>
                       </FormDescription>
                     )}
                     <FormMessage />
@@ -430,18 +493,32 @@ export const NewRequestForm = () => {
 
               {/* Submit Button */}
               <div className="flex justify-end space-x-3 pt-4">
-                <Link href="/requests">
-                  <Button type="button" variant="outline">
+                {newRequestData ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowDialog?.(false)}
+                  >
                     Cancel
                   </Button>
-                </Link>
+                ) : (
+                  <Button asChild type="button" variant="outline">
+                    <Link href="/requests" aria-label="Cancel Pickup Request">
+                      Cancel
+                    </Link>
+                  </Button>
+                )}
                 <Button type="submit" disabled={loading}>
                   {loading ? (
-                    "Creating Request..."
+                    newRequestData ? (
+                      "Updating Request..."
+                    ) : (
+                      "Creating Request..."
+                    )
                   ) : (
                     <>
                       <Send className="mr-2 h-4 w-4" />
-                      Submit Request
+                      {newRequestData ? "Update Request" : "Submit Request"}
                     </>
                   )}
                 </Button>
