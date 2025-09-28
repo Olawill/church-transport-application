@@ -51,11 +51,11 @@ export const ServiceManagement = () => {
   const serviceForm = useForm<ServiceDaySchema>({
     resolver: zodResolver(serviceDaySchema),
     defaultValues: {
-      name: editingService ? editingService.name : "",
-      dayOfWeek: editingService ? editingService.dayOfWeek.toString() : "",
-      time: editingService ? editingService.time : "",
-      serviceType: editingService ? editingService.serviceType : "REGULAR",
-      status: editingService ? editingService.isActive : true,
+      name: "",
+      dayOfWeek: "",
+      time: "",
+      serviceType: "REGULAR",
+      isActive: true,
     },
   });
 
@@ -67,7 +67,7 @@ export const ServiceManagement = () => {
         dayOfWeek: editingService.dayOfWeek.toString(),
         time: editingService.time,
         serviceType: editingService.serviceType,
-        status: editingService.isActive,
+        isActive: editingService.isActive,
       });
     } else {
       // Reset to default values when not editing
@@ -76,10 +76,10 @@ export const ServiceManagement = () => {
         dayOfWeek: "",
         time: "",
         serviceType: "REGULAR",
-        status: true,
+        isActive: true,
       });
     }
-  }, [editingService, serviceForm]);
+  }, [editingService]);
 
   useEffect(() => {
     fetchServiceDays();
@@ -151,7 +151,7 @@ export const ServiceManagement = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          serviceId: editingService?.id,
+          id: editingService?.id,
           ...validatedFields.data,
           dayOfWeek: parseInt(validatedFields.data.dayOfWeek),
         }),
@@ -167,11 +167,23 @@ export const ServiceManagement = () => {
     } catch (error) {
       console.error("Error updating service:", error);
       toast.error("An error occurred");
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleEdit = (service: ServiceDay) => {
     setEditingService(service);
+
+    // Immediately reset the form with the service data
+    serviceForm.reset({
+      name: service.name,
+      dayOfWeek: service.dayOfWeek.toString(),
+      time: service.time,
+      serviceType: service.serviceType,
+      isActive: service.isActive,
+    });
+
     setShowForm(true);
   };
 
@@ -230,8 +242,11 @@ export const ServiceManagement = () => {
             Configure church service days and times for pickup requests
           </p>
         </div>
-        <Button onClick={() => setShowForm(true)}>
-          <Plus className="mr-2 h-4 w-4" />
+        <Button
+          onClick={() => setShowForm(true)}
+          disabled={loading || !!editingService}
+        >
+          <Plus className="h-4 w-4" />
           Add Service
         </Button>
       </div>
@@ -292,7 +307,6 @@ export const ServiceManagement = () => {
                     control={serviceForm.control}
                     name="dayOfWeek"
                     render={({ field }) => {
-                      console.log(field);
                       return (
                         <FormItem className="space-y-2">
                           <FormLabel>
@@ -300,21 +314,13 @@ export const ServiceManagement = () => {
                             <span className="text-red-400">*</span>
                           </FormLabel>
                           <Select
-                            defaultValue={field.value}
                             value={field.value}
                             onValueChange={field.onChange}
-                            // disabled={loading}
+                            disabled={loading}
                           >
                             <FormControl>
                               <SelectTrigger className="max-md:w-full">
-                                <SelectValue
-                                  placeholder={
-                                    DAYS_OF_WEEK.find(
-                                      (day) =>
-                                        day.value.toString() === field.value
-                                    )?.label || "Select Day"
-                                  }
-                                />
+                                <SelectValue placeholder={"Select Day"} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -339,7 +345,7 @@ export const ServiceManagement = () => {
                     {editingService && (
                       <FormField
                         control={serviceForm.control}
-                        name="status"
+                        name="isActive"
                         render={({ field }) => (
                           <FormItem className="flex items-center space-x-2">
                             <FormLabel>
@@ -401,7 +407,7 @@ export const ServiceManagement = () => {
                           <span className="text-red-400">*</span>
                         </FormLabel>
                         <Select
-                          defaultValue={field.value}
+                          value={field.value}
                           onValueChange={field.onChange}
                           disabled={loading}
                         >
@@ -425,21 +431,12 @@ export const ServiceManagement = () => {
                   />
                 </div>
 
-                {/* New Features like MutliDay, Frequency, Multi-Day Duration */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Multi-Day Switch */}
-                  {/* <div className="flex flex-row space-x-1 items-center">
-                  <Switch id="multiDay" />
-                  <Label htmlFor="multiDay">Multi-Day Service</Label>
-                </div> */}
-                </div>
-
                 <div className="flex justify-end space-x-2">
                   <Button type="button" variant="outline" onClick={resetForm}>
                     Cancel
                   </Button>
                   <Button type="submit">
-                    <CheckCircle className="mr-2 h-4 w-4" />
+                    <CheckCircle className="h-4 w-4" />
                     {editingService ? "Update Service" : "Create Service"}
                   </Button>
                 </div>
