@@ -1,20 +1,11 @@
 "use client";
 
-import {
-  Edit,
-  Mail,
-  MapPin,
-  Phone,
-  Plus,
-  Shield,
-  Star,
-  Trash2,
-  Upload,
-} from "lucide-react";
-import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { useSession } from "next-auth/react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
+import CustomPhoneInput from "@/components/custom-phone-input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,17 +18,44 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "../ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
+
+import { Edit, MapPin, Plus, Shield, Star, Trash2, Upload } from "lucide-react";
+import { FaSms, FaWhatsappSquare } from "react-icons/fa";
+import { MdMarkEmailUnread } from "react-icons/md";
+
+import { cn } from "@/lib/utils";
+
+import {
+  AddressUpdateSchema,
+  addressUpdateSchema,
+  ProfileUpdateSchema,
+  profileUpdateSchema,
+  SecurityUpdateSchema,
+  securityUpdateSchema,
+} from "@/types/newUserSchema";
+import { PROVINCES } from "@/lib/types";
 
 interface Address {
   id: string;
@@ -70,33 +88,48 @@ export const ProfileManagement = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isProfileEditing, setIsProfileEditing] = useState(false);
+  const [isAddressEditing, setIsAddressEditing] = useState(false);
   const [addressDialogOpen, setAddressDialogOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
 
-  const [profileForm, setProfileForm] = useState({
-    firstName: "",
-    lastName: "",
-    username: "",
-    phone: "",
-    whatsappNumber: "",
+  const [emailNotifications, setEmailNotification] = useState(false);
+  const [smsNotifications, setSmsNotification] = useState(false);
+  const [whatsAppNotifications, setWhatsAppNotification] = useState(false);
+
+  const profileForm = useForm({
+    resolver: zodResolver(profileUpdateSchema),
+    values: {
+      firstName: profile?.firstName || "",
+      lastName: profile?.lastName || "",
+      userName: profile?.username || "",
+      email: profile?.email || "",
+      phone: profile?.phone || "",
+      whatsappNumber: profile?.whatsappNumber || "",
+      image: profile?.image || "",
+    },
   });
 
-  const [addressForm, setAddressForm] = useState({
-    name: "",
-    street: "",
-    city: "",
-    province: "",
-    postalCode: "",
-    country: "Canada",
+  const addressForm = useForm({
+    resolver: zodResolver(addressUpdateSchema),
+    values: {
+      name: editingAddress?.name || "",
+      street: editingAddress?.street || "",
+      city: editingAddress?.city || "",
+      province: editingAddress?.province || "",
+      postalCode: editingAddress?.postalCode || "",
+      country: editingAddress?.country || "Canada",
+    },
   });
 
-  const [passwordForm, setPasswordForm] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
+  const securityForm = useForm({
+    resolver: zodResolver(securityUpdateSchema),
+    values: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    },
   });
 
   useEffect(() => {
@@ -112,13 +145,6 @@ export const ProfileManagement = () => {
       if (response.ok) {
         const data = await response.json();
         setProfile(data);
-        setProfileForm({
-          firstName: data.firstName || "",
-          lastName: data.lastName || "",
-          username: data.username || "",
-          phone: data.phone || "",
-          whatsappNumber: data.whatsappNumber || "",
-        });
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
@@ -141,30 +167,22 @@ export const ProfileManagement = () => {
     }
   };
 
-  const handleProfileUpdate = async () => {
+  const handleProfileUpdate = async (values: ProfileUpdateSchema) => {
+    const validatedFields = profileUpdateSchema.safeParse(values);
+
+    if (!validatedFields.success) {
+      toast.error("Please correct the errors in the form");
+    }
     try {
-      const formData = new FormData();
-
-      // Add profile data
-      Object.entries(profileForm).forEach(([key, value]) => {
-        if (value) formData.append(key, value);
-      });
-
-      // Add image if selected
-      if (imageFile) {
-        formData.append("image", imageFile);
-      }
-
       const response = await fetch("/api/user/profile", {
         method: "PUT",
-        body: formData,
+        body: JSON.stringify(validatedFields.data),
       });
 
       if (response.ok) {
         const updatedProfile = await response.json();
         setProfile(updatedProfile);
-        setIsEditing(false);
-        setImageFile(null);
+        setIsProfileEditing(false);
         setImagePreview("");
         toast.success("Profile updated successfully");
       } else {
@@ -177,73 +195,86 @@ export const ProfileManagement = () => {
     }
   };
 
-  const handlePasswordUpdate = async () => {
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
+  const handleAddAddress = async (values: AddressUpdateSchema) => {
+    const validatedFields = addressUpdateSchema.safeParse(values);
+
+    if (!validatedFields.success) {
+      toast.error(
+        editingAddress
+          ? "Please correct the errors in the form"
+          : "Please fill in all required fields"
+      );
     }
 
     try {
-      const response = await fetch("/api/user/change-password", {
-        method: "PUT",
+      const response = await fetch("/api/user/addresses", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          currentPassword: passwordForm.currentPassword,
-          newPassword: passwordForm.newPassword,
-        }),
+        body: JSON.stringify(validatedFields.data),
       });
 
       if (response.ok) {
-        setPasswordForm({
-          currentPassword: "",
-          newPassword: "",
-          confirmPassword: "",
-        });
-        toast.success("Password updated successfully");
+        await fetchAddresses();
+        setAddressDialogOpen(false);
+        addressForm.reset();
+        toast.success("Address added successfully");
       } else {
         const error = await response.json();
-        toast.error(error.message || "Failed to update password");
+        toast.error(error.message || "Failed to add address");
       }
     } catch (error) {
-      console.error("Error updating password:", error);
-      toast.error("Failed to update password");
+      console.error("Error adding address:", error);
+      toast.error("Failed to add address");
     }
   };
 
-  const handleAddressSubmit = async () => {
-    try {
-      const method = editingAddress ? "PUT" : "POST";
-      const url = editingAddress
-        ? `/api/user/addresses/${editingAddress.id}`
-        : "/api/user/addresses";
+  const handleUpdateAddress = async (values: AddressUpdateSchema) => {
+    if (!editingAddress) {
+      toast.error("No address selected for editing");
+      return;
+    }
 
-      const response = await fetch(url, {
-        method,
+    const validatedFields = addressUpdateSchema.safeParse(values);
+
+    if (!validatedFields.success) {
+      toast.error("Please correct the errors in the form");
+    }
+
+    try {
+      const response = await fetch(`/api/user/addresses/${editingAddress.id}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(addressForm),
+        body: JSON.stringify(validatedFields.data),
       });
 
       if (response.ok) {
         await fetchAddresses();
         setAddressDialogOpen(false);
         setEditingAddress(null);
-        setAddressForm({
-          name: "",
-          street: "",
-          city: "",
-          province: "",
-          postalCode: "",
-          country: "Canada",
-        });
-        toast.success(editingAddress ? "Address updated" : "Address added");
+        addressForm.reset();
+        toast.success("Address updated successfully");
       } else {
         const error = await response.json();
-        toast.error(error.message || "Failed to save address");
+        toast.error(error.message || "Failed to update address");
       }
     } catch (error) {
-      console.error("Error saving address:", error);
-      toast.error("Failed to save address");
+      console.error("Error updating address:", error);
+      toast.error("Failed to update address");
     }
+  };
+
+  const handleAddressEdit = (address: Address) => {
+    setEditingAddress(address);
+    setIsAddressEditing(true);
+    setAddressDialogOpen(true);
+    addressForm.reset({
+      name: address.name,
+      street: address.street,
+      city: address.city,
+      province: address.province,
+      postalCode: address.postalCode,
+      country: address.country,
+    });
   };
 
   const handleSetDefaultAddress = async (addressId: string) => {
@@ -283,10 +314,39 @@ export const ProfileManagement = () => {
     }
   };
 
+  const handleSecuritySubmit = async (values: SecurityUpdateSchema) => {
+    const validatedFields = securityUpdateSchema.safeParse(values);
+
+    if (!validatedFields.success) {
+      toast.error("Please correct the errors in the form");
+    }
+
+    try {
+      const response = await fetch("/api/user/change-password", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: validatedFields?.data?.currentPassword,
+          newPassword: validatedFields?.data?.newPassword,
+        }),
+      });
+
+      if (response.ok) {
+        securityForm.reset();
+        toast.success("Password updated successfully");
+      } else {
+        const error = await response.json();
+        toast.error(error.message || "Failed to update password");
+      }
+    } catch (error) {
+      console.error("Error updating password:", error);
+      toast.error("Failed to update password");
+    }
+  };
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setImageFile(file);
       const reader = new FileReader();
       reader.onload = (e) => setImagePreview(e.target?.result as string);
       reader.readAsDataURL(file);
@@ -335,147 +395,196 @@ export const ProfileManagement = () => {
               <CardTitle className="flex items-center justify-between">
                 Profile Information
                 <Button
-                  variant={isEditing ? "outline" : "default"}
-                  onClick={() => setIsEditing(!isEditing)}
+                  variant={isProfileEditing ? "outline" : "default"}
+                  onClick={() => setIsProfileEditing(!isProfileEditing)}
                 >
-                  {isEditing ? "Cancel" : "Edit Profile"}
+                  {isProfileEditing ? "Cancel" : "Edit Profile"}
                 </Button>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Profile Picture */}
-              <div className="flex items-center space-x-4">
-                <Avatar className="w-24 h-24">
-                  <AvatarImage
-                    src={imagePreview || profile?.image}
-                    alt={`${profile?.firstName} ${profile?.lastName}`}
-                  />
-                  <AvatarFallback className="text-xl">
-                    {profile?.firstName?.[0]}
-                    {profile?.lastName?.[0]}
-                  </AvatarFallback>
-                </Avatar>
-                {isEditing && (
-                  <div>
-                    <Label htmlFor="image-upload" className="cursor-pointer">
-                      <div className="flex items-center space-x-2 p-2 border rounded-md hover:bg-gray-50">
-                        <Upload className="w-4 h-4" />
-                        <span>Upload Photo</span>
-                      </div>
-                    </Label>
-                    <Input
-                      id="image-upload"
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleImageChange}
-                    />
-                  </div>
-                )}
-              </div>
-
               {/* Profile Form */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input
-                    id="firstName"
-                    value={profileForm.firstName}
-                    onChange={(e) =>
-                      setProfileForm((prev) => ({
-                        ...prev,
-                        firstName: e.target.value,
-                      }))
-                    }
-                    disabled={!isEditing}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input
-                    id="lastName"
-                    value={profileForm.lastName}
-                    onChange={(e) =>
-                      setProfileForm((prev) => ({
-                        ...prev,
-                        lastName: e.target.value,
-                      }))
-                    }
-                    disabled={!isEditing}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
-                  <Input
-                    id="username"
-                    value={profileForm.username}
-                    onChange={(e) =>
-                      setProfileForm((prev) => ({
-                        ...prev,
-                        username: e.target.value,
-                      }))
-                    }
-                    disabled={!isEditing}
-                    placeholder="Choose a unique username"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <div className="flex items-center space-x-2">
-                    <Input id="email" value={profile?.email || ""} disabled />
-                    {profile?.emailVerified && (
-                      <Badge variant="outline" className="text-green-600">
-                        <Mail className="w-3 h-3 mr-1" />
-                        Verified
-                      </Badge>
+              <Form {...profileForm}>
+                <form
+                  className="space-y-6"
+                  onSubmit={profileForm.handleSubmit(handleProfileUpdate)}
+                >
+                  {/* Profile Picture */}
+                  <div className="flex items-center space-x-4">
+                    <Avatar className="w-24 h-24">
+                      <AvatarImage
+                        src={imagePreview || profile?.image}
+                        alt={`${profile?.firstName} ${profile?.lastName}`}
+                      />
+                      <AvatarFallback className="text-xl">
+                        {profile?.firstName?.[0]}
+                        {profile?.lastName?.[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    {isProfileEditing && (
+                      <FormField
+                        control={profileForm.control}
+                        name="image"
+                        render={({ field }) => (
+                          <FormItem className="space-y-2">
+                            <FormLabel className="flex items-center space-x-2 p-2 border rounded-md hover:bg-gray-50">
+                              <Upload className="w-4 h-4" />
+                              <span>Upload Photo</span>
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={handleImageChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
                     )}
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <div className="flex items-center space-x-2">
-                    <Input
-                      id="phone"
-                      value={profileForm.phone}
-                      onChange={(e) =>
-                        setProfileForm((prev) => ({
-                          ...prev,
-                          phone: e.target.value,
-                        }))
-                      }
-                      disabled={!isEditing}
-                      placeholder="+1 (555) 123-4567"
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Firstname */}
+                    <FormField
+                      control={profileForm.control}
+                      name="firstName"
+                      render={({ field }) => (
+                        <FormItem className="space-y-2">
+                          <FormLabel>First Name</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="text"
+                              name="firstName"
+                              onChange={(e) => field.onChange(e)}
+                              disabled={!isProfileEditing}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                    {profile?.phoneVerified && (
-                      <Badge variant="outline" className="text-green-600">
-                        <Phone className="w-3 h-3 mr-1" />
-                        Verified
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="whatsapp">WhatsApp Number</Label>
-                  <Input
-                    id="whatsapp"
-                    value={profileForm.whatsappNumber}
-                    onChange={(e) =>
-                      setProfileForm((prev) => ({
-                        ...prev,
-                        whatsappNumber: e.target.value,
-                      }))
-                    }
-                    disabled={!isEditing}
-                    placeholder="+1 (555) 123-4567"
-                  />
-                </div>
-              </div>
 
-              {isEditing && (
-                <Button onClick={handleProfileUpdate} className="w-full">
-                  Save Changes
-                </Button>
-              )}
+                    {/* Last Name */}
+                    <FormField
+                      control={profileForm.control}
+                      name="lastName"
+                      render={({ field }) => (
+                        <FormItem className="space-y-2">
+                          <FormLabel>Last Name</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="text"
+                              name="lastName"
+                              onChange={(e) => field.onChange(e)}
+                              disabled={!isProfileEditing}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Username */}
+                    <FormField
+                      control={profileForm.control}
+                      name="userName"
+                      render={({ field }) => (
+                        <FormItem className="space-y-2">
+                          <FormLabel>Username</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              value={field.value || ""}
+                              type="text"
+                              name="userName"
+                              placeholder="Choose a unique username"
+                              onChange={(e) => field.onChange(e)}
+                              disabled={!isProfileEditing}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Email */}
+                    <FormField
+                      control={profileForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem className="space-y-2">
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="email"
+                              name="email"
+                              onChange={(e) => field.onChange(e)}
+                              disabled={!isProfileEditing}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Phone Number */}
+                    <FormField
+                      control={profileForm.control}
+                      name="phone"
+                      render={({ field, fieldState }) => (
+                        <FormItem className="space-y-2">
+                          <FormLabel>Phone Number</FormLabel>
+                          <FormControl>
+                            <CustomPhoneInput
+                              placeholder="(123) 456-7890"
+                              defaultCountry="CA"
+                              value={field.value}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              error={fieldState.error}
+                              disabled={loading}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* WhatsApp Number */}
+                    <FormField
+                      control={profileForm.control}
+                      name="whatsappNumber"
+                      render={({ field, fieldState }) => (
+                        <FormItem className="space-y-2">
+                          <FormLabel>WhatsApp Number</FormLabel>
+                          <FormControl>
+                            <CustomPhoneInput
+                              placeholder="(123) 456-7890"
+                              defaultCountry="CA"
+                              value={field.value}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              error={fieldState.error}
+                              disabled={loading}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  {isProfileEditing && (
+                    <Button type="submit" className="w-full">
+                      Save Changes
+                    </Button>
+                  )}
+                </form>
+              </Form>
             </CardContent>
           </Card>
         </TabsContent>
@@ -493,14 +602,7 @@ export const ProfileManagement = () => {
                     <Button
                       onClick={() => {
                         setEditingAddress(null);
-                        setAddressForm({
-                          name: "",
-                          street: "",
-                          city: "",
-                          province: "",
-                          postalCode: "",
-                          country: "Canada",
-                        });
+                        setIsAddressEditing(!isAddressEditing);
                       }}
                     >
                       <Plus className="w-4 h-4" />
@@ -510,111 +612,185 @@ export const ProfileManagement = () => {
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>
-                        {editingAddress ? "Edit Address" : "Add New Address"}
+                        {isAddressEditing && editingAddress
+                          ? "Edit Address"
+                          : "Add New Address"}
                       </DialogTitle>
                       <DialogDescription className="sr-only">
-                        {editingAddress
+                        {isAddressEditing && editingAddress
                           ? "Edit the details of your address"
                           : "Fill in the details for your new address"}
                       </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="addressName">Address Name</Label>
-                        <Select
-                          value={addressForm.name}
-                          onValueChange={(value) =>
-                            setAddressForm((prev) => ({ ...prev, name: value }))
-                          }
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select address type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Home">Home</SelectItem>
-                            <SelectItem value="Work">Work</SelectItem>
-                            <SelectItem value="Other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="street">Street Address</Label>
-                        <Input
-                          id="street"
-                          value={addressForm.street}
-                          onChange={(e) =>
-                            setAddressForm((prev) => ({
-                              ...prev,
-                              street: e.target.value,
-                            }))
-                          }
-                          placeholder="123 Main Street"
+                    <Form {...addressForm}>
+                      <form
+                        className="space-y-4"
+                        onSubmit={
+                          isAddressEditing && editingAddress
+                            ? addressForm.handleSubmit(handleUpdateAddress)
+                            : addressForm.handleSubmit(handleAddAddress)
+                        }
+                      >
+                        {/* Address Name */}
+                        <FormField
+                          control={addressForm.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem className="space-y-2">
+                              <FormLabel>Address Name</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Select address type" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="Home">Home</SelectItem>
+                                  <SelectItem value="Work">Work</SelectItem>
+                                  <SelectItem value="Other">Other</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
                         />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="city">City</Label>
-                          <Input
-                            id="city"
-                            value={addressForm.city}
-                            onChange={(e) =>
-                              setAddressForm((prev) => ({
-                                ...prev,
-                                city: e.target.value,
-                              }))
-                            }
-                            placeholder="Toronto"
+                        {/* Street Address */}
+                        <FormField
+                          control={addressForm.control}
+                          name="street"
+                          render={({ field }) => (
+                            <FormItem className="space-y-2">
+                              <FormLabel>Street Address</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  type="text"
+                                  name="street"
+                                  onChange={(e) => field.onChange(e)}
+                                  placeholder="123 Main Street"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        {/* City & Province */}
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* City */}
+                          <FormField
+                            control={addressForm.control}
+                            name="city"
+                            render={({ field }) => (
+                              <FormItem className="space-y-2">
+                                <FormLabel>City</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    type="text"
+                                    name="city"
+                                    onChange={(e) => field.onChange(e)}
+                                    placeholder="Toronto"
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          {/* Province */}
+                          <FormField
+                            control={addressForm.control}
+                            name="province"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Province</FormLabel>
+                                <Select
+                                  onValueChange={field.onChange}
+                                  defaultValue={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger
+                                      disabled={loading}
+                                      className="w-full"
+                                    >
+                                      <SelectValue placeholder="Select province" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectGroup>
+                                      <SelectLabel>Canada</SelectLabel>
+                                      {PROVINCES.map((province) => (
+                                        <SelectItem
+                                          value={province}
+                                          key={province}
+                                        >
+                                          {province}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectGroup>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
                           />
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="province">Province</Label>
-                          <Input
-                            id="province"
-                            value={addressForm.province}
-                            onChange={(e) =>
-                              setAddressForm((prev) => ({
-                                ...prev,
-                                province: e.target.value,
-                              }))
-                            }
-                            placeholder="ON"
+                        {/* Postal code  & Country */}
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Postal Code */}
+                          <FormField
+                            control={addressForm.control}
+                            name="postalCode"
+                            render={({ field }) => (
+                              <FormItem className="space-y-2">
+                                <FormLabel>Postal Code</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    type="text"
+                                    name="postalCode"
+                                    placeholder="M5H 2N2"
+                                    disabled={loading}
+                                    onChange={(e) =>
+                                      field.onChange(
+                                        e.target.value.toUpperCase()
+                                      )
+                                    }
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          {/* Country */}
+                          <FormField
+                            control={addressForm.control}
+                            name="country"
+                            render={({ field }) => (
+                              <FormItem className="space-y-2">
+                                <FormLabel>Country</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    type="text"
+                                    name="country"
+                                    placeholder="Canada"
+                                    disabled={loading}
+                                    onChange={(e) => field.onChange(e)}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
                           />
                         </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="postalCode">Postal Code</Label>
-                          <Input
-                            id="postalCode"
-                            value={addressForm.postalCode}
-                            onChange={(e) =>
-                              setAddressForm((prev) => ({
-                                ...prev,
-                                postalCode: e.target.value,
-                              }))
-                            }
-                            placeholder="M5H 2N2"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="country">Country</Label>
-                          <Input
-                            id="country"
-                            value={addressForm.country}
-                            onChange={(e) =>
-                              setAddressForm((prev) => ({
-                                ...prev,
-                                country: e.target.value,
-                              }))
-                            }
-                            placeholder="Canada"
-                          />
-                        </div>
-                      </div>
-                      <Button onClick={handleAddressSubmit} className="w-full">
-                        {editingAddress ? "Update Address" : "Add Address"}
-                      </Button>
-                    </div>
+                        <Button type="submit" className="w-full">
+                          {editingAddress ? "Update Address" : "Add Address"}
+                        </Button>
+                      </form>
+                    </Form>
                   </DialogContent>
                 </Dialog>
               </CardTitle>
@@ -657,16 +833,7 @@ export const ProfileManagement = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            setEditingAddress(address);
-                            setAddressForm({
-                              name: address.name,
-                              street: address.street,
-                              city: address.city,
-                              province: address.province,
-                              postalCode: address.postalCode,
-                              country: address.country,
-                            });
-                            setAddressDialogOpen(true);
+                            handleAddressEdit(address);
                           }}
                         >
                           <Edit className="w-4 h-4" />
@@ -731,51 +898,81 @@ export const ProfileManagement = () => {
                 <CardTitle>Change Password</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="currentPassword">Current Password</Label>
-                  <Input
-                    id="currentPassword"
-                    type="password"
-                    value={passwordForm.currentPassword}
-                    onChange={(e) =>
-                      setPasswordForm((prev) => ({
-                        ...prev,
-                        currentPassword: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="newPassword">New Password</Label>
-                  <Input
-                    id="newPassword"
-                    type="password"
-                    value={passwordForm.newPassword}
-                    onChange={(e) =>
-                      setPasswordForm((prev) => ({
-                        ...prev,
-                        newPassword: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={passwordForm.confirmPassword}
-                    onChange={(e) =>
-                      setPasswordForm((prev) => ({
-                        ...prev,
-                        confirmPassword: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <Button onClick={handlePasswordUpdate} className="w-full">
-                  Update Password
-                </Button>
+                {/* Password Form */}
+                <Form {...securityForm}>
+                  <form
+                    className="space-y-4"
+                    onSubmit={securityForm.handleSubmit(handleSecuritySubmit)}
+                  >
+                    {/* Current Password */}
+                    <FormField
+                      control={securityForm.control}
+                      name="currentPassword"
+                      render={({ field }) => (
+                        <FormItem className="space-y-2">
+                          <FormLabel>Current Password</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="password"
+                              name="currentPassword"
+                              onChange={(e) => field.onChange(e)}
+                              placeholder="Enter Current Password"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* New Password */}
+                    <FormField
+                      control={securityForm.control}
+                      name="newPassword"
+                      render={({ field }) => (
+                        <FormItem className="space-y-2">
+                          <FormLabel>New Password</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="password"
+                              name="newPassword"
+                              onChange={(e) => field.onChange(e)}
+                              placeholder="Enter New Password"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Confirm New Password */}
+                    <FormField
+                      control={securityForm.control}
+                      name="confirmPassword"
+                      render={({ field }) => (
+                        <FormItem className="space-y-2">
+                          <FormLabel>Confirm New Password</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="password"
+                              name="confirmPassword"
+                              onChange={(e) => field.onChange(e)}
+                              placeholder="Confirm New password"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Update Button */}
+                    <Button type="submit" className="w-full">
+                      Update Password
+                    </Button>
+                  </form>
+                </Form>
               </CardContent>
             </Card>
           </div>
@@ -787,9 +984,77 @@ export const ProfileManagement = () => {
               <CardTitle>Notification Preferences</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">
-                Notification preferences will be implemented here.
-              </p>
+              {/* Notification Form */}
+              <div className="space-y-6">
+                {/* Email Notification */}
+                <div className="flex items-center justify-between">
+                  <Label>
+                    <MdMarkEmailUnread />
+                    Email Notification
+                  </Label>
+                  <div className="flex items-center space-x-2">
+                    <Badge
+                      className={cn(emailNotifications && "bg-green-500")}
+                      variant={emailNotifications ? "secondary" : "default"}
+                    >
+                      {emailNotifications ? "Enabled" : "Disabled"}
+                    </Badge>
+                    <Switch
+                      checked={emailNotifications}
+                      onCheckedChange={(checked) => {
+                        setEmailNotification(checked);
+                      }}
+                      disabled={profile?.emailVerified ? false : true}
+                    />
+                  </div>
+                </div>
+
+                {/* SMS Notification */}
+                <div className="flex items-center justify-between">
+                  <Label>
+                    <FaSms />
+                    SMS Notification
+                  </Label>
+                  <div className="flex items-center space-x-2">
+                    <Badge
+                      className={cn(smsNotifications && "bg-green-500")}
+                      variant={smsNotifications ? "secondary" : "default"}
+                    >
+                      {smsNotifications ? "Enabled" : "Disabled"}
+                    </Badge>
+                    <Switch
+                      checked={smsNotifications}
+                      onCheckedChange={(checked) => {
+                        setSmsNotification(checked);
+                      }}
+                      disabled={profile?.phoneVerified ? false : true}
+                    />
+                  </div>
+                </div>
+
+                {/* whatsApp Notification */}
+                <div className="flex items-center justify-between">
+                  <Label>
+                    <FaWhatsappSquare />
+                    whatsApp Notification
+                  </Label>
+                  <div className="flex items-center space-x-2">
+                    <Badge
+                      className={cn(whatsAppNotifications && "bg-green-500")}
+                      variant={whatsAppNotifications ? "secondary" : "default"}
+                    >
+                      {whatsAppNotifications ? "Enabled" : "Disabled"}
+                    </Badge>
+                    <Switch
+                      checked={whatsAppNotifications}
+                      onCheckedChange={(checked) => {
+                        setWhatsAppNotification(checked);
+                      }}
+                      disabled={profile?.whatsappNumber === "" ? false : true}
+                    />
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
