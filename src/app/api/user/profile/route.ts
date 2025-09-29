@@ -64,14 +64,14 @@ export const PUT = async (request: NextRequest) => {
     }
 
     const body = await request.json();
-    const { firstName, lastName, username, phone, whatsappNumber, image } =
+    const { firstName, lastName, userName, phone, whatsappNumber, image } =
       body;
 
     // Validate username uniqueness if provided
-    if (username) {
+    if (userName) {
       const existingUser = await prisma.user.findFirst({
         where: {
-          username,
+          username: userName,
           id: { not: session.user.id },
         },
       });
@@ -87,7 +87,7 @@ export const PUT = async (request: NextRequest) => {
     const updateData: UpdatedDataType = {
       firstName,
       lastName,
-      username: username || null,
+      username: userName || null,
       phone: phone || null,
       whatsappNumber: whatsappNumber || null,
     };
