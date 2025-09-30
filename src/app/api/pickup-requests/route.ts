@@ -96,7 +96,6 @@ export const GET = async (request: NextRequest) => {
         return NextResponse.json(filteredRequests);
       }
     }
-
     return NextResponse.json(requests);
   } catch (error) {
     console.error("Error fetching pickup requests:", error);
@@ -120,7 +119,15 @@ export const POST = async (request: NextRequest) => {
     }
 
     const body = await request.json();
-    const { userId, serviceDayId, addressId, requestDate, notes } = body;
+    const {
+      userId,
+      serviceDayId,
+      addressId,
+      requestDate,
+      isPickUp,
+      isDropOff,
+      notes,
+    } = body;
 
     const isAdmin = session.user.role === UserRole.ADMIN;
 
@@ -144,9 +151,17 @@ export const POST = async (request: NextRequest) => {
     }
 
     // Required fields
-    if (!serviceDayId || !addressId || !requestDate) {
+    if (
+      !serviceDayId ||
+      !addressId ||
+      !requestDate ||
+      (!isPickUp && !isDropOff)
+    ) {
       return NextResponse.json(
-        { error: "Service day, address, and request date are required" },
+        {
+          error:
+            "Service day, address, request date, isPickUp, and isDropOff are required",
+        },
         { status: 400 }
       );
     }
@@ -220,6 +235,8 @@ export const POST = async (request: NextRequest) => {
         serviceDayId,
         addressId,
         requestDate: serviceDateTime,
+        isPickUp,
+        isDropOff,
         notes: notes || null,
         status: "PENDING",
       },
@@ -272,8 +289,16 @@ export const PATCH = async (request: NextRequest) => {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
     const body = await request.json();
-    const { requestId, userId, serviceDayId, addressId, requestDate, notes } =
-      body;
+    const {
+      requestId,
+      userId,
+      serviceDayId,
+      addressId,
+      requestDate,
+      isDropOff,
+      isPickUp,
+      notes,
+    } = body;
 
     const isAdmin = session.user.role === UserRole.ADMIN;
 
@@ -302,10 +327,17 @@ export const PATCH = async (request: NextRequest) => {
       }
     }
 
-    if (!requestId || !serviceDayId || !addressId || !requestDate) {
+    if (
+      !requestId ||
+      !serviceDayId ||
+      !addressId ||
+      !requestDate ||
+      (!isDropOff && !isPickUp)
+    ) {
       return NextResponse.json(
         {
-          error: "Request, Service day, address, and request date are required",
+          error:
+            "Request, Service day, address, request date, isPickUp, and isDropOff are required",
         },
         { status: 400 }
       );
@@ -370,6 +402,8 @@ export const PATCH = async (request: NextRequest) => {
         serviceDayId,
         addressId,
         requestDate: serviceDateTime,
+        isDropOff,
+        isPickUp,
         notes: notes || null,
       },
       include: {
