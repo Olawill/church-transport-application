@@ -110,12 +110,7 @@ export const profileUpdateSchema = z.object({
   lastName: z.string().trim().min(1, {
     message: "Last name is required",
   }),
-  userName: z
-    .string()
-    .trim()
-    .min(1, "Username is required")
-    .optional()
-    .or(z.literal("")),
+  userName: z.string().trim().min(1, "Username is required").or(z.literal("")),
   email: z
     .email({
       message: "Email is required",
@@ -131,7 +126,6 @@ export const profileUpdateSchema = z.object({
   whatsappNumber: z
     .string()
     .trim()
-    .min(1, "whatsApp number is required")
     .refine(isValidPhoneNumber, {
       message: "Please enter a valid whatsApp number",
     })
@@ -161,18 +155,11 @@ export type AddressUpdateSchema = z.infer<typeof addressUpdateSchema>;
 
 export const securityUpdateSchema = z
   .object({
-    currentPassword: z
-      .string()
-      .min(1, "Password is required")
-      .min(8, "Password must be at least 8 characters")
-      .optional()
-      .or(z.literal("")),
+    currentPassword: z.string().min(1, "Password is required"),
     newPassword: z
       .string()
       .min(1, "Password is required")
-      .min(8, "Password must be at least 8 characters")
-      .optional()
-      .or(z.literal("")),
+      .min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string().min(1, "Confirm password is required"),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {

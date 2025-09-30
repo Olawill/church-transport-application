@@ -109,6 +109,15 @@ export const ProfileManagement = () => {
       whatsappNumber: profile?.whatsappNumber || "",
       image: profile?.image || "",
     },
+    defaultValues: {
+      firstName: profile?.firstName || "",
+      lastName: profile?.lastName || "",
+      userName: profile?.username || "",
+      email: profile?.email || "",
+      phone: profile?.phone || "",
+      whatsappNumber: profile?.whatsappNumber || "",
+      image: profile?.image || "",
+    },
   });
 
   const addressForm = useForm({
@@ -199,11 +208,8 @@ export const ProfileManagement = () => {
     const validatedFields = addressUpdateSchema.safeParse(values);
 
     if (!validatedFields.success) {
-      toast.error(
-        editingAddress
-          ? "Please correct the errors in the form"
-          : "Please fill in all required fields"
-      );
+      toast.error("Please fill in all required fields");
+      return;
     }
 
     try {
@@ -238,6 +244,7 @@ export const ProfileManagement = () => {
 
     if (!validatedFields.success) {
       toast.error("Please correct the errors in the form");
+      return;
     }
 
     try {
@@ -319,6 +326,7 @@ export const ProfileManagement = () => {
 
     if (!validatedFields.success) {
       toast.error("Please correct the errors in the form");
+      return;
     }
 
     try {
@@ -547,7 +555,7 @@ export const ProfileManagement = () => {
                               onChange={field.onChange}
                               onBlur={field.onBlur}
                               error={fieldState.error}
-                              disabled={loading}
+                              disabled={!isProfileEditing}
                             />
                           </FormControl>
                           <FormMessage />
@@ -1050,7 +1058,7 @@ export const ProfileManagement = () => {
                       onCheckedChange={(checked) => {
                         setWhatsAppNotification(checked);
                       }}
-                      disabled={profile?.whatsappNumber === "" ? false : true}
+                      disabled={!profile?.whatsappNumber}
                     />
                   </div>
                 </div>

@@ -75,7 +75,6 @@ export const profileContactSchema = z.object({
   whatsappNumber: z
     .string()
     .trim()
-    .min(1, "whatsApp number is required")
     .refine(isValidPhoneNumber, {
       message: "Please enter a valid whatsApp number",
     })

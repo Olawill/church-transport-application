@@ -223,7 +223,7 @@ export const Header = () => {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t bg-secondary py-4">
+          <div className="lg:hidden border-t bg-secondary py-4">
             <nav className="space-y-2">
               {userNavigationItems.map((item) => (
                 <Link

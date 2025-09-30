@@ -131,6 +131,8 @@ export const ServiceManagement = () => {
     } catch (error) {
       console.error("Error creating service:", error);
       toast.error("An error occurred");
+    } finally {
+      setLoading(false);
     }
   };
 

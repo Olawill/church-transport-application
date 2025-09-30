@@ -80,7 +80,7 @@ export const OauthCompletionModal = ({
   // Form for contact info
   const contactForm = useForm<ProfileContactSchema>({
     resolver: zodResolver(profileContactSchema),
-    values: {
+    defaultValues: {
       phone: "",
       whatsappNumber: "",
     },
@@ -89,7 +89,7 @@ export const OauthCompletionModal = ({
   // Form for address info
   const addressForm = useForm<ProfileAddressSchema>({
     resolver: zodResolver(profileAddressSchema),
-    values: {
+    defaultValues: {
       name: "Home",
       street: "",
       city: "",
