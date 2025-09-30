@@ -57,29 +57,14 @@ export const ServiceManagement = () => {
       serviceType: "REGULAR",
       isActive: true,
     },
+    values: {
+      name: editingService?.name || "",
+      dayOfWeek: editingService?.dayOfWeek.toString() || "",
+      time: editingService?.time || "",
+      serviceType: editingService?.serviceType || "REGULAR",
+      isActive: editingService?.isActive ?? true,
+    },
   });
-
-  // Add this useEffect to update form values when editingService changes
-  useEffect(() => {
-    if (editingService) {
-      serviceForm.reset({
-        name: editingService.name,
-        dayOfWeek: editingService.dayOfWeek.toString(),
-        time: editingService.time,
-        serviceType: editingService.serviceType,
-        isActive: editingService.isActive,
-      });
-    } else {
-      // Reset to default values when not editing
-      serviceForm.reset({
-        name: "",
-        dayOfWeek: "",
-        time: "",
-        serviceType: "REGULAR",
-        isActive: true,
-      });
-    }
-  }, [editingService]);
 
   useEffect(() => {
     fetchServiceDays();
