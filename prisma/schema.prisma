@@ -170,6 +170,8 @@ model PickupRequest {
   requestDate DateTime      // The date of the service
   status      RequestStatus @default(PENDING)
   notes       String?
+  isPickUp       Boolean @default(true)
+  isDropOff       Boolean @default(false)
   distance    Float?        // Distance from driver to pickup location
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
