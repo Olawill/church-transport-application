@@ -230,9 +230,7 @@ export const ServiceManagement = () => {
   };
 
   const getServiceStatusColor = (status: boolean) => {
-    return status == false
-      ? "bg-red-100 text-red-800"
-      : "bg-green-100 text-green-800";
+    return !status ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800";
   };
 
   return (

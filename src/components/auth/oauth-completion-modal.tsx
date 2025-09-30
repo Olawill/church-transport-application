@@ -300,7 +300,7 @@ export const OauthCompletionModal = ({
                       name="whatsappNumber"
                       render={({ field, fieldState }) => (
                         <FormItem>
-                          <FormLabel>whatsApp Number</FormLabel>
+                          <FormLabel>WhatsApp Number</FormLabel>
                           <FormControl>
                             <CustomPhoneInput
                               placeholder="+1 (555) 123-4567"
@@ -389,6 +389,7 @@ export const OauthCompletionModal = ({
                                 placeholder="Toronto"
                               />
                             </FormControl>
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
