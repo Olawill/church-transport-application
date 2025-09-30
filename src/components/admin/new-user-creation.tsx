@@ -58,6 +58,8 @@ const NewUserCreationForm = () => {
       postalCode: "",
       password: "",
       serviceDayId: "",
+      isDropOff: false,
+      isPickUp: true,
       requestDate: undefined,
     },
   });
