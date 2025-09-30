@@ -250,12 +250,12 @@ export const RequestHistory = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">
-            {isUser ? "My Pickup Requests" : "All Pickup Requests"}
+            {isUser ? "My Ride Requests" : "All Ride Requests"}
           </h1>
           <p className="mt-1">
             {isUser
               ? "View and manage your transportation requests"
-              : "Monitor all pickup requests in the system"}
+              : "Monitor all ride requests in the system"}
           </p>
         </div>
         {(isUser || isAdmin) && (
@@ -409,6 +409,14 @@ export const RequestHistory = () => {
                             ? formatTime(request.serviceDay.time)
                             : "N/A"}
                         </p>
+                        <div className="flex items-center gap-2">
+                          {request.isPickUp && (
+                            <Badge className="bg-lime-700">PickUp</Badge>
+                          )}
+                          {request.isDropOff && (
+                            <Badge className="bg-cyan-700">DropOff</Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <Badge className={getStatusColor(request.status)}>
@@ -488,7 +496,7 @@ export const RequestHistory = () => {
                       )}
                     </div>
 
-                    <div className="space-x-4">
+                    <div className="space-x-1">
                       {/* Action buttons for users */}
                       {(isUser || isAdmin) &&
                         canCancelOrEditRequest(request) && (
@@ -497,6 +505,7 @@ export const RequestHistory = () => {
                             <Button
                               variant="outline"
                               size="sm"
+                              title="Edit Request"
                               className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                               onClick={() => {
                                 setSelectedRequest(request);
@@ -504,12 +513,13 @@ export const RequestHistory = () => {
                               }}
                             >
                               <Pencil className="size-4" />
-                              Edit
+                              <span className="max-sm:hidden">Edit</span>
                             </Button>
                             {/* Cancel Button */}
                             <Button
                               variant="outline"
                               size="sm"
+                              title="Cancel Request"
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
                               onClick={() => {
                                 setSelectedRequest(request);
@@ -517,7 +527,7 @@ export const RequestHistory = () => {
                               }}
                             >
                               <X className="size-4" />
-                              Cancel
+                              <span className="max-sm:hidden">Cancel</span>
                             </Button>
                           </>
                         )}
@@ -527,14 +537,15 @@ export const RequestHistory = () => {
                         <Button
                           variant="outline"
                           size="sm"
+                          title="Cancel Pickup"
                           className="text-red-600 hover:text-red-700 hover:bg-red-50"
                           onClick={() => {
                             setSelectedRequest(request);
                             setPickupCancelDialogOpen(true);
                           }}
                         >
-                          <X className="h-4 w-4 mr-2" />
-                          Cancel Pickup
+                          <X className="size-4" />
+                          <span className="max-sm:hidden">Cancel Pickup</span>
                         </Button>
                       )}
 
@@ -544,15 +555,22 @@ export const RequestHistory = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="text-green-600 hover:text-green-700 hover:bg-red-50"
+                            title={
+                              openAccordions[request.id]
+                                ? "Hide Drivers"
+                                : "Show Drivers"
+                            }
+                            className="text-green-600 hover:text-green-700 hover:bg-red-50 max-sm:mt-2"
                             onClick={() => {
                               toggleAccordion(request.id);
                             }}
                           >
                             <UserSquareIcon className="size-4" />
-                            {openAccordions[request.id]
-                              ? "Hide Drivers"
-                              : "Show Drivers"}
+                            <span className="max-sm:hidden">
+                              {openAccordions[request.id]
+                                ? "Hide Drivers"
+                                : "Show Drivers"}
+                            </span>
                           </Button>
                         )}
                     </div>
@@ -658,35 +676,40 @@ export const RequestHistory = () => {
               before service
             </DialogDescription>
           </DialogHeader>
-          {isUser ? (
-            <ScrollArea className="h-[520px] rounded-md p-4">
-              <NewRequestForm
-                newRequestData={{
-                  requestId: selectedRequest?.id as string,
-                  serviceDayId: selectedRequest?.serviceDayId as string,
-                  requestDate: selectedRequest?.requestDate as Date,
-                  addressId: selectedRequest?.addressId as string,
-                  notes: selectedRequest?.notes as string,
-                }}
-                setShowDialog={handleEditDialog}
-              />
-            </ScrollArea>
-          ) : (
-            <ScrollArea className="h-[540px] rounded-md py-4">
-              <AdminNewUserRequest
-                isNewUser={false}
-                newRequestData={{
-                  requestId: selectedRequest?.id as string,
-                  userId: selectedRequest?.userId as string,
-                  serviceDayId: selectedRequest?.serviceDayId as string,
-                  requestDate: selectedRequest?.requestDate as Date,
-                  addressId: selectedRequest?.addressId as string,
-                  notes: selectedRequest?.notes as string,
-                }}
-                setShowDialog={handleEditDialog}
-              />
-            </ScrollArea>
-          )}
+          {selectedRequest &&
+            (isUser ? (
+              <ScrollArea className="h-[520px] rounded-md p-4">
+                <NewRequestForm
+                  newRequestData={{
+                    requestId: selectedRequest.id as string,
+                    serviceDayId: selectedRequest.serviceDayId as string,
+                    requestDate: selectedRequest.requestDate as Date,
+                    addressId: selectedRequest.addressId as string,
+                    notes: selectedRequest.notes as string,
+                    isPickUp: selectedRequest.isPickUp as boolean,
+                    isDropOff: selectedRequest.isDropOff as boolean,
+                  }}
+                  setShowDialog={handleEditDialog}
+                />
+              </ScrollArea>
+            ) : (
+              <ScrollArea className="h-[540px] rounded-md py-4">
+                <AdminNewUserRequest
+                  isNewUser={false}
+                  newRequestData={{
+                    requestId: selectedRequest.id as string,
+                    userId: selectedRequest.userId as string,
+                    serviceDayId: selectedRequest.serviceDayId as string,
+                    requestDate: selectedRequest.requestDate as Date,
+                    addressId: selectedRequest.addressId as string,
+                    notes: selectedRequest.notes as string,
+                    isPickUp: selectedRequest.isPickUp as boolean,
+                    isDropOff: selectedRequest.isDropOff as boolean,
+                  }}
+                  setShowDialog={handleEditDialog}
+                />
+              </ScrollArea>
+            ))}
         </DialogContent>
       </Dialog>
 
