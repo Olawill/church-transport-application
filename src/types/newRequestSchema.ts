@@ -14,6 +14,8 @@ export const newRequestSchema = z.object({
   ),
   addressId: z.string().min(1, "Pickup address is required"),
   notes: z.string().optional(),
+  isPickUp: z.boolean().optional().default(true),
+  isDropOff: z.boolean().optional().default(false),
 });
 
 export type NewRequestSchema = z.infer<typeof newRequestSchema>;
@@ -33,6 +35,8 @@ export const newAdminRequestSchema = z.object({
   ),
   addressId: z.string().min(1, "Pickup address is required"),
   notes: z.string().optional(),
+  isPickUp: z.boolean().optional().default(true),
+  isDropOff: z.boolean().optional().default(false),
 });
 
 export type NewAdminRequestSchema = z.infer<typeof newAdminRequestSchema>;
