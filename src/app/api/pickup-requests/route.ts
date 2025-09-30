@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import { UserRole } from "@/generated/prisma";
+import { Prisma, UserRole } from "@/generated/prisma";
 import { AnalyticsService } from "@/lib/analytics";
 import { prisma } from "@/lib/db";
 import { calculateDistance } from "@/lib/utils";
@@ -16,26 +16,46 @@ export const GET = async (request: NextRequest) => {
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
+    const type = searchParams.get("type");
+    const requestDate = searchParams.get("requestDate");
     const maxDistance = searchParams.get("maxDistance");
 
-    const where: Record<string, string> = {};
+    // const where: Record<string, any> = {};
+    const where: Prisma.PickupRequestWhereInput = {};
+
+    const filter = () => {
+      if (status) {
+        where.status = status as Prisma.EnumRequestStatusFilter;
+      }
+
+      if (type === "PICKUP") {
+        where.isPickUp = true;
+      } else if (type === "DROPOFF") {
+        where.isDropOff = true;
+      }
+
+      if (requestDate) {
+        const date = new Date(requestDate);
+        if (!isNaN(date.getTime())) {
+          const endOfDay = new Date(date);
+          endOfDay.setUTCHours(23, 59, 59, 999);
+          where.requestDate = {
+            gte: date,
+            lte: endOfDay,
+          };
+        }
+      }
+    };
 
     // Filter based on user role
     if (session.user.role === UserRole.USER) {
       where.userId = session.user.id;
-      if (status) {
-        where.status = status;
-      }
+      filter();
     } else if (session.user.role === UserRole.TRANSPORTATION_TEAM) {
       // For drivers, show requests within their preferred distance
-      if (status) {
-        where.status = status;
-      }
+      filter();
     } else if (session.user.role === UserRole.ADMIN) {
-      // Admins can see all requests
-      if (status) {
-        where.status = status;
-      }
+      filter();
     }
 
     const requests = await prisma.pickupRequest.findMany({
