@@ -63,19 +63,15 @@ export const PUT = async (request: NextRequest) => {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const formData = await request.formData();
-    const firstName = formData.get("firstName") as string;
-    const lastName = formData.get("lastName") as string;
-    const username = formData.get("username") as string;
-    const phone = formData.get("phone") as string;
-    const whatsappNumber = formData.get("whatsappNumber") as string;
-    const imageFile = formData.get("image") as File;
+    const body = await request.json();
+    const { firstName, lastName, userName, phone, whatsappNumber, image } =
+      body;
 
     // Validate username uniqueness if provided
-    if (username) {
+    if (userName) {
       const existingUser = await prisma.user.findFirst({
         where: {
-          username,
+          username: userName,
           id: { not: session.user.id },
         },
       });
@@ -91,13 +87,13 @@ export const PUT = async (request: NextRequest) => {
     const updateData: UpdatedDataType = {
       firstName,
       lastName,
-      username: username || null,
+      username: userName || null,
       phone: phone || null,
       whatsappNumber: whatsappNumber || null,
     };
 
     // Handle image upload if provided
-    if (imageFile && imageFile.size > 0) {
+    if (image && image.size > 0) {
       // TODO: Implement cloud storage for profile images
       // For now, we'll just store a placeholder
       updateData.image = `/uploads/profiles/${session.user.id}-${Date.now()}.jpg`;

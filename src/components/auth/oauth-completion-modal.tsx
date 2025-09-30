@@ -21,14 +21,34 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useForm } from "react-hook-form";
+import {
+  ProfileAddressSchema,
+  profileAddressSchema,
+  profileContactSchema,
+  ProfileContactSchema,
+} from "@/types/authSchemas";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "../ui/form";
+import CustomPhoneInput from "../custom-phone-input";
+import { PROVINCES } from "@/lib/types";
 
 interface CompletionStep {
   id: string;
@@ -37,25 +57,46 @@ interface CompletionStep {
   completed: boolean;
 }
 
-export const OauthCompletionModal = () => {
+interface OauthCompletionModalProps {
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export const OauthCompletionModal = ({
+  isOpen: externalOpen,
+  onOpenChange,
+}: OauthCompletionModalProps) => {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  // const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const [profileData, setProfileData] = useState({
-    phone: "",
-    whatsappNumber: "",
+  // Use external control if provided, otherwise use internal state
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
+
+  // Form for contact info
+  const contactForm = useForm<ProfileContactSchema>({
+    resolver: zodResolver(profileContactSchema),
+    defaultValues: {
+      phone: "",
+      whatsappNumber: "",
+    },
   });
 
-  const [addressData, setAddressData] = useState({
-    name: "Home",
-    street: "",
-    city: "",
-    province: "",
-    postalCode: "",
-    country: "Canada",
+  // Form for address info
+  const addressForm = useForm<ProfileAddressSchema>({
+    resolver: zodResolver(profileAddressSchema),
+    defaultValues: {
+      name: "Home",
+      street: "",
+      city: "",
+      province: "",
+      postalCode: "",
+      country: "Canada",
+    },
   });
 
   const steps: CompletionStep[] = [
@@ -74,19 +115,25 @@ export const OauthCompletionModal = () => {
   ];
 
   useEffect(() => {
-    // Show modal if user needs to complete profile
-    if (
-      session?.user?.needsCompletion &&
-      session.user.isOAuthSignup &&
-      status === "authenticated"
-    ) {
-      setOpen(true);
+    // Only auto-open if not externally controlled
+    if (externalOpen === undefined) {
+      // Show modal if user needs to complete profile
+      if (
+        session?.user?.needsCompletion &&
+        session.user.isOAuthSignup &&
+        status === "authenticated"
+      ) {
+        setInternalOpen(true);
+      }
     }
-  }, [session, status]);
+  }, [session, status, externalOpen]);
 
-  const handleNext = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
+  const handleNext = async () => {
+    if (currentStep === 0) {
+      const isValid = await contactForm.trigger();
+      if (isValid) {
+        setCurrentStep(1);
+      }
     }
   };
 
@@ -97,17 +144,23 @@ export const OauthCompletionModal = () => {
   };
 
   const handleComplete = async () => {
+    const isContactValid = await contactForm.trigger();
+    const isAddressValid = await addressForm.trigger();
+    if (!isContactValid || !isAddressValid) return;
     setLoading(true);
     try {
-      // Update profile information
-      const profileFormData = new FormData();
-      Object.entries(profileData).forEach(([key, value]) => {
-        if (value) profileFormData.append(key, value);
-      });
+      // Get Values
+      const profileData = contactForm.getValues();
+      const addressData = addressForm.getValues();
 
+      // Update profile
       const profileResponse = await fetch("/api/user/profile", {
         method: "PUT",
-        body: profileFormData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: profileData.phone,
+          whatsappNumber: profileData.whatsappNumber || null,
+        }),
       });
 
       if (!profileResponse.ok) {
@@ -154,21 +207,6 @@ export const OauthCompletionModal = () => {
   if (status === "loading") {
     return null;
   }
-
-  const isStepValid = () => {
-    if (currentStep === 0) {
-      return profileData.phone.trim().length > 0;
-    }
-    if (currentStep === 1) {
-      return (
-        addressData.street.trim().length > 0 &&
-        addressData.city.trim().length > 0 &&
-        addressData.province.trim().length > 0 &&
-        addressData.postalCode.trim().length > 0
-      );
-    }
-    return false;
-  };
 
   return (
     <Dialog open={open} onOpenChange={() => {}} modal>
@@ -224,157 +262,232 @@ export const OauthCompletionModal = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               {currentStep === 0 && (
-                <>
-                  <div>
-                    <Label htmlFor="phone">Phone Number *</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={profileData.phone}
-                      onChange={(e) =>
-                        setProfileData((prev) => ({
-                          ...prev,
-                          phone: e.target.value,
-                        }))
-                      }
-                      placeholder="+1 (555) 123-4567"
-                      required
+                <Form {...contactForm}>
+                  <form className="space-y-4">
+                    {/* Phone Number */}
+                    <FormField
+                      control={contactForm.control}
+                      name="phone"
+                      render={({ field, fieldState }) => (
+                        <FormItem>
+                          <FormLabel>
+                            Phone Number
+                            <span className="text-red-500"> *</span>
+                          </FormLabel>
+                          <FormControl>
+                            <CustomPhoneInput
+                              placeholder="+1 (555) 123-4567"
+                              defaultCountry="CA"
+                              value={field.value}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              error={fieldState.error}
+                              disabled={loading}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            <span className="text-sm text-gray-500 mt-1">
+                              Required for transportation team to contact you
+                            </span>
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                    <p className="text-sm text-gray-500 mt-1">
-                      Required for transportation team to contact you
-                    </p>
-                  </div>
-                  <div>
-                    <Label htmlFor="whatsapp">WhatsApp Number (Optional)</Label>
-                    <Input
-                      id="whatsapp"
-                      type="tel"
-                      value={profileData.whatsappNumber}
-                      onChange={(e) =>
-                        setProfileData((prev) => ({
-                          ...prev,
-                          whatsappNumber: e.target.value,
-                        }))
-                      }
-                      placeholder="+1 (555) 123-4567"
+                    {/* WhatsApp Number */}
+                    <FormField
+                      control={contactForm.control}
+                      name="whatsappNumber"
+                      render={({ field, fieldState }) => (
+                        <FormItem>
+                          <FormLabel>WhatsApp Number</FormLabel>
+                          <FormControl>
+                            <CustomPhoneInput
+                              placeholder="+1 (555) 123-4567"
+                              defaultCountry="CA"
+                              value={field.value}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              error={fieldState.error}
+                              disabled={loading}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                    <p className="text-sm text-gray-500 mt-1">
-                      For WhatsApp notifications (can be same as phone number)
-                    </p>
-                  </div>
-                </>
+                  </form>
+                </Form>
               )}
 
               {currentStep === 1 && (
-                <>
-                  <div>
-                    <Label htmlFor="addressName">Address Name</Label>
-                    <Select
-                      value={addressData.name}
-                      onValueChange={(value) =>
-                        setAddressData((prev) => ({ ...prev, name: value }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Home">Home</SelectItem>
-                        <SelectItem value="Work">Work</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="street">Street Address *</Label>
-                    <Input
-                      id="street"
-                      value={addressData.street}
-                      onChange={(e) =>
-                        setAddressData((prev) => ({
-                          ...prev,
-                          street: e.target.value,
-                        }))
-                      }
-                      placeholder="123 Main Street"
-                      required
+                <Form {...addressForm}>
+                  <form className="space-y-4">
+                    {/* Address Name */}
+                    <FormField
+                      control={addressForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem className="space-y-2">
+                          <FormLabel>Address Name</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select address type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Home">Home</SelectItem>
+                              <SelectItem value="Work">Work</SelectItem>
+                              <SelectItem value="Other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="city">City *</Label>
-                      <Input
-                        id="city"
-                        value={addressData.city}
-                        onChange={(e) =>
-                          setAddressData((prev) => ({
-                            ...prev,
-                            city: e.target.value,
-                          }))
-                        }
-                        placeholder="Toronto"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="province">Province *</Label>
-                      <Input
-                        id="province"
-                        value={addressData.province}
-                        onChange={(e) =>
-                          setAddressData((prev) => ({
-                            ...prev,
-                            province: e.target.value,
-                          }))
-                        }
-                        placeholder="ON"
-                        required
-                      />
-                    </div>
-                  </div>
+                    {/* Street Address */}
+                    <FormField
+                      control={addressForm.control}
+                      name="street"
+                      render={({ field }) => (
+                        <FormItem className="space-y-2">
+                          <FormLabel>Street Address</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="text"
+                              name="street"
+                              onChange={(e) => field.onChange(e)}
+                              placeholder="123 Main Street"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="postalCode">Postal Code *</Label>
-                      <Input
-                        id="postalCode"
-                        value={addressData.postalCode}
-                        onChange={(e) =>
-                          setAddressData((prev) => ({
-                            ...prev,
-                            postalCode: e.target.value.toUpperCase(),
-                          }))
-                        }
-                        placeholder="M5H 2N2"
-                        required
+                    {/* City & Province */}
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* City */}
+                      <FormField
+                        control={addressForm.control}
+                        name="city"
+                        render={({ field }) => (
+                          <FormItem className="space-y-2">
+                            <FormLabel>City</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                type="text"
+                                name="city"
+                                onChange={(e) => field.onChange(e)}
+                                placeholder="Toronto"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
-                    </div>
-                    <div>
-                      <Label htmlFor="country">Country</Label>
-                      <Input
-                        id="country"
-                        value={addressData.country}
-                        onChange={(e) =>
-                          setAddressData((prev) => ({
-                            ...prev,
-                            country: e.target.value,
-                          }))
-                        }
-                        placeholder="Canada"
-                      />
-                    </div>
-                  </div>
 
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p className="text-sm text-blue-800">
-                      <strong>Note:</strong> This will be your primary pickup
-                      location. You can add more addresses and change your
-                      default location later in your profile settings.
-                    </p>
-                  </div>
-                </>
+                      {/* Province */}
+                      <FormField
+                        control={addressForm.control}
+                        name="province"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Province</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger
+                                  disabled={loading}
+                                  className="w-full"
+                                >
+                                  <SelectValue placeholder="Select province" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectGroup>
+                                  <SelectLabel>Canada</SelectLabel>
+                                  {PROVINCES.map((province) => (
+                                    <SelectItem value={province} key={province}>
+                                      {province}
+                                    </SelectItem>
+                                  ))}
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* Postal Code & Country */}
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Postal Code */}
+                      <FormField
+                        control={addressForm.control}
+                        name="postalCode"
+                        render={({ field }) => (
+                          <FormItem className="space-y-2">
+                            <FormLabel>Postal Code</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                type="text"
+                                name="postalCode"
+                                placeholder="M5H 2N2"
+                                disabled={loading}
+                                onChange={(e) =>
+                                  field.onChange(e.target.value.toUpperCase())
+                                }
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Country */}
+                      <FormField
+                        control={addressForm.control}
+                        name="country"
+                        render={({ field }) => (
+                          <FormItem className="space-y-2">
+                            <FormLabel>Country</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                type="text"
+                                name="country"
+                                placeholder="Canada"
+                                disabled={loading}
+                                onChange={(e) => field.onChange(e)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <p className="text-sm text-blue-800">
+                        <strong>Note:</strong> This will be your primary pickup
+                        location. You can add more addresses and change your
+                        default location later in your profile settings.
+                      </p>
+                    </div>
+                  </form>
+                </Form>
               )}
             </CardContent>
           </Card>
@@ -391,16 +504,11 @@ export const OauthCompletionModal = () => {
 
             <div className="flex space-x-2">
               {currentStep === steps.length - 1 ? (
-                <Button
-                  onClick={handleComplete}
-                  disabled={!isStepValid() || loading}
-                >
+                <Button onClick={handleComplete} disabled={loading}>
                   {loading ? "Completing..." : "Complete Setup"}
                 </Button>
               ) : (
-                <Button onClick={handleNext} disabled={!isStepValid()}>
-                  Next
-                </Button>
+                <Button onClick={handleNext}>Next</Button>
               )}
             </div>
           </div>

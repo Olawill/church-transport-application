@@ -4,6 +4,7 @@ import {
   isValidPostalCode,
 } from "@/lib/utils";
 import z from "zod";
+import { addressUpdateSchema } from "./newUserSchema";
 
 export const loginSchema = z.object({
   email: z.email({
@@ -62,3 +63,25 @@ export const signupSchema = z
   });
 
 export type SignupSchema = z.infer<typeof signupSchema>;
+
+export const profileContactSchema = z.object({
+  phone: z
+    .string()
+    .trim()
+    .min(1, "Phone number is required")
+    .refine(isValidPhoneNumber, {
+      message: "Please enter a valid phone number",
+    }),
+  whatsappNumber: z
+    .string()
+    .trim()
+    .refine(isValidPhoneNumber, {
+      message: "Please enter a valid whatsApp number",
+    })
+    .optional()
+    .or(z.literal("")),
+});
+export type ProfileContactSchema = z.infer<typeof profileContactSchema>;
+
+export const profileAddressSchema = addressUpdateSchema;
+export type ProfileAddressSchema = z.infer<typeof profileAddressSchema>;

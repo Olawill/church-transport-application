@@ -35,7 +35,6 @@ export const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleSignOut = async () => {
-    // signOutAction();
     await signOut({ redirect: false });
     redirect("/login");
   };
@@ -115,7 +114,7 @@ export const Header = () => {
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex space-x-8">
+          <nav className="hidden lg:flex space-x-8">
             {userNavigationItems.map((item) => (
               <Link
                 key={item.name}
@@ -147,7 +146,7 @@ export const Header = () => {
             </Button>
 
             {/* User info */}
-            <div className="hidden md:flex items-center space-x-3">
+            <div className="hidden lg:flex items-center space-x-3">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <div className="flex items-center space-x-2">
@@ -210,7 +209,7 @@ export const Header = () => {
             <Button
               variant="ghost"
               size="sm"
-              className="md:hidden"
+              className="lg:hidden"
               onClick={toggleMobileMenu}
             >
               {mobileMenuOpen ? (
@@ -224,7 +223,7 @@ export const Header = () => {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t bg-secondary py-4">
+          <div className="lg:hidden border-t bg-secondary py-4">
             <nav className="space-y-2">
               {userNavigationItems.map((item) => (
                 <Link
