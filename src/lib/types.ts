@@ -80,6 +80,11 @@ export interface PickupRequest {
   address?: Address;
 }
 
+export enum RequestType {
+  "PICKUP",
+  "DROPOFF",
+}
+
 export interface DashboardStats {
   totalUsers: number;
   pendingUsers: number;
