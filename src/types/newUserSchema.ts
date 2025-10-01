@@ -55,16 +55,18 @@ export const newUserSchema = z
       .optional()
       .or(z.literal("")),
     requestDate: z
-      .date()
-      .refine(
-        (date) => {
-          const now = new Date();
-          const today = new Date(now.toDateString());
-          return date >= today;
-        },
-        {
-          message: "Please select a valid date that is today or later",
-        }
+      .preprocess(
+        (val) => (val instanceof Date ? new Date(val) : undefined),
+        z.date({ message: "Service date is required" }).refine(
+          (date) => {
+            const now = new Date();
+            const today = new Date(now.toDateString()); // Strip time
+            return date >= today;
+          },
+          {
+            message: "Please select a valid date that is today or later",
+          }
+        )
       )
       .optional(),
     isPickUp: z.boolean(),

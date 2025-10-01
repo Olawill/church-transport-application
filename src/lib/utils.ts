@@ -251,7 +251,7 @@ export function generateTempPassword(
 
 // Capitalize
 export const capitalize = (str: string) =>
-  str.charAt(0) + str.slice(1).toLowerCase();
+  str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 
 // Filter Date Format
 export const formatFilterDate = (date: Date) =>

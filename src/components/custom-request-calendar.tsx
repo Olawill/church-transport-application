@@ -19,6 +19,19 @@ const formatDate = (date: Date | undefined) => {
   });
 };
 
+function safeParseDate(
+  input: string,
+  referenceDate: Date = new Date()
+): Date | null {
+  const trimmed = input.trim();
+
+  if (trimmed.length === 0 || trimmed.length > 200) {
+    return null;
+  }
+
+  return parseDate(trimmed, referenceDate) || null;
+}
+
 interface CustomDateCalendarProp {
   label: string;
   setRequestDateFilter: (value: Date | undefined) => void;
@@ -38,7 +51,7 @@ const CustomDateCalendar = ({
   const [month, setMonth] = useState<Date | undefined>(requestDateFilter);
 
   const handleParseDate = () => {
-    setRequestDateFilter(parseDate(value) || undefined);
+    setRequestDateFilter(safeParseDate(value) || undefined);
   };
 
   // useEffect(() => {
@@ -61,7 +74,7 @@ const CustomDateCalendar = ({
           className="bg-background pr-10"
           onChange={(e) => {
             setValue(e.target.value);
-            const date = parseDate(e.target.value);
+            const date = safeParseDate(e.target.value);
             if (date) {
               // setDate(date);
               handleParseDate();

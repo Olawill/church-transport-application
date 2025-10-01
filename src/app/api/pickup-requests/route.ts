@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import { Prisma, UserRole } from "@/generated/prisma";
+import { Prisma, RequestStatus, UserRole } from "@/generated/prisma";
 import { AnalyticsService } from "@/lib/analytics";
 import { prisma } from "@/lib/db";
 import { calculateDistance } from "@/lib/utils";
@@ -25,7 +25,7 @@ export const GET = async (request: NextRequest) => {
 
     const filter = () => {
       if (status) {
-        where.status = status as Prisma.EnumRequestStatusFilter;
+        where.status = { equals: status as RequestStatus };
       }
 
       if (type === "PICKUP") {

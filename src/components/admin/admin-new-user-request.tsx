@@ -63,7 +63,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { NewUserSchema } from "@/types/newUserSchema";
-import { Checkbox } from "../ui/checkbox";
+import { PickUpDropOffField } from "../requests/pickup-dropoff-field";
 
 interface AdminNewUserRequestProps {
   isNewUser: boolean;
@@ -305,7 +305,6 @@ const AdminNewUserRequest = ({
       toast.error("Please fill in all required fields");
       return;
     }
-    console.log("Form Field: ", validatedFields.data);
 
     setLoading(true);
 
@@ -456,53 +455,7 @@ const AdminNewUserRequest = ({
 
           {/* Pickup and Dropoff Options */}
           <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* PickUp Service */}
-            <FormField
-              control={form?.control}
-              name="isPickUp"
-              render={({ field }) => (
-                <FormItem className="space-x-2">
-                  <div className="flex items-center gap-2">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        id="isPickUp"
-                      />
-                    </FormControl>
-                    <FormLabel>Pickup Service</FormLabel>
-                  </div>
-                  <FormMessage />
-                  <FormDescription className="text-xs text-gray-500">
-                    Select if you need a pickup service to the church
-                  </FormDescription>
-                </FormItem>
-              )}
-            />
-
-            {/* DropOff Service */}
-            <FormField
-              control={form?.control}
-              name="isDropOff"
-              render={({ field }) => (
-                <FormItem className="space-x-2">
-                  <div className="flex items-center gap-2">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        id="isDropOff"
-                      />
-                    </FormControl>
-                    <FormLabel>DropOff Service</FormLabel>
-                  </div>
-                  <FormMessage />
-                  <FormDescription className="text-xs text-gray-500">
-                    Select if you need a drop off after service from church
-                  </FormDescription>
-                </FormItem>
-              )}
-            />
+            <PickUpDropOffField form={form!} />
           </div>
         </>
       ) : (
@@ -774,54 +727,7 @@ const AdminNewUserRequest = ({
 
                   {/* Pickup and Dropoff Options */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* PickUp Service */}
-                    <FormField
-                      control={newRequestForm.control}
-                      name="isPickUp"
-                      render={({ field }) => (
-                        <FormItem className="space-x-2">
-                          <div className="flex items-center gap-2">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                                id="isPickUp"
-                              />
-                            </FormControl>
-                            <FormLabel>Pickup Service</FormLabel>
-                          </div>
-                          <FormMessage />
-                          <FormDescription className="text-xs text-gray-500">
-                            Select if you need a pickup service to the church
-                          </FormDescription>
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* DropOff Service */}
-                    <FormField
-                      control={newRequestForm.control}
-                      name="isDropOff"
-                      render={({ field }) => (
-                        <FormItem className="space-x-2">
-                          <div className="flex items-center gap-2">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                                id="isDropOff"
-                              />
-                            </FormControl>
-                            <FormLabel>DropOff Service</FormLabel>
-                          </div>
-                          <FormMessage />
-                          <FormDescription className="text-xs text-gray-500">
-                            Select if you need a drop off after service from
-                            church
-                          </FormDescription>
-                        </FormItem>
-                      )}
-                    />
+                    <PickUpDropOffField form={newRequestForm} />
                   </div>
 
                   {/* Notes */}

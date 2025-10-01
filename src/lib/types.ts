@@ -81,8 +81,8 @@ export interface PickupRequest {
 }
 
 export enum RequestType {
-  "PICKUP",
-  "DROPOFF",
+  PICKUP = "PICKUP",
+  DROPOFF = "DROPOFF",
 }
 
 export interface DashboardStats {
