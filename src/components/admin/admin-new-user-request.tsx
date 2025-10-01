@@ -63,6 +63,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { NewUserSchema } from "@/types/newUserSchema";
+import { PickUpDropOffField } from "../requests/pickup-dropoff-field";
 
 interface AdminNewUserRequestProps {
   isNewUser: boolean;
@@ -95,6 +96,8 @@ const AdminNewUserRequest = ({
       serviceDayId: newRequestData?.serviceDayId || "",
       addressId: newRequestData?.addressId || "",
       requestDate: newRequestData?.requestDate || undefined,
+      isPickUp: newRequestData?.isPickUp ?? true,
+      isDropOff: newRequestData?.isDropOff ?? false,
       notes: newRequestData?.notes || "",
     },
   });
@@ -449,6 +452,11 @@ const AdminNewUserRequest = ({
               );
             }}
           />
+
+          {/* Pickup and Dropoff Options */}
+          <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <PickUpDropOffField form={form!} />
+          </div>
         </>
       ) : (
         <div className="space-y-6">
@@ -716,6 +724,11 @@ const AdminNewUserRequest = ({
                       </FormItem>
                     )}
                   />
+
+                  {/* Pickup and Dropoff Options */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <PickUpDropOffField form={newRequestForm} />
+                  </div>
 
                   {/* Notes */}
                   <FormField

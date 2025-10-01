@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import { UserRole } from "@/generated/prisma";
+import { Prisma, RequestStatus, UserRole } from "@/generated/prisma";
 import { AnalyticsService } from "@/lib/analytics";
 import { prisma } from "@/lib/db";
 import { calculateDistance } from "@/lib/utils";
@@ -16,26 +16,46 @@ export const GET = async (request: NextRequest) => {
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
+    const type = searchParams.get("type");
+    const requestDate = searchParams.get("requestDate");
     const maxDistance = searchParams.get("maxDistance");
 
-    const where: Record<string, string> = {};
+    // const where: Record<string, any> = {};
+    const where: Prisma.PickupRequestWhereInput = {};
+
+    const filter = () => {
+      if (status) {
+        where.status = { equals: status as RequestStatus };
+      }
+
+      if (type === "PICKUP") {
+        where.isPickUp = true;
+      } else if (type === "DROPOFF") {
+        where.isDropOff = true;
+      }
+
+      if (requestDate) {
+        const date = new Date(requestDate);
+        if (!isNaN(date.getTime())) {
+          const endOfDay = new Date(date);
+          endOfDay.setUTCHours(23, 59, 59, 999);
+          where.requestDate = {
+            gte: date,
+            lte: endOfDay,
+          };
+        }
+      }
+    };
 
     // Filter based on user role
     if (session.user.role === UserRole.USER) {
       where.userId = session.user.id;
-      if (status) {
-        where.status = status;
-      }
+      filter();
     } else if (session.user.role === UserRole.TRANSPORTATION_TEAM) {
       // For drivers, show requests within their preferred distance
-      if (status) {
-        where.status = status;
-      }
+      filter();
     } else if (session.user.role === UserRole.ADMIN) {
-      // Admins can see all requests
-      if (status) {
-        where.status = status;
-      }
+      filter();
     }
 
     const requests = await prisma.pickupRequest.findMany({
@@ -96,7 +116,6 @@ export const GET = async (request: NextRequest) => {
         return NextResponse.json(filteredRequests);
       }
     }
-
     return NextResponse.json(requests);
   } catch (error) {
     console.error("Error fetching pickup requests:", error);
@@ -120,7 +139,15 @@ export const POST = async (request: NextRequest) => {
     }
 
     const body = await request.json();
-    const { userId, serviceDayId, addressId, requestDate, notes } = body;
+    const {
+      userId,
+      serviceDayId,
+      addressId,
+      requestDate,
+      isPickUp,
+      isDropOff,
+      notes,
+    } = body;
 
     const isAdmin = session.user.role === UserRole.ADMIN;
 
@@ -144,9 +171,17 @@ export const POST = async (request: NextRequest) => {
     }
 
     // Required fields
-    if (!serviceDayId || !addressId || !requestDate) {
+    if (
+      !serviceDayId ||
+      !addressId ||
+      !requestDate ||
+      (!isPickUp && !isDropOff)
+    ) {
       return NextResponse.json(
-        { error: "Service day, address, and request date are required" },
+        {
+          error:
+            "Service day, address, request date, isPickUp, and isDropOff are required",
+        },
         { status: 400 }
       );
     }
@@ -220,6 +255,8 @@ export const POST = async (request: NextRequest) => {
         serviceDayId,
         addressId,
         requestDate: serviceDateTime,
+        isPickUp,
+        isDropOff,
         notes: notes || null,
         status: "PENDING",
       },
@@ -272,8 +309,16 @@ export const PATCH = async (request: NextRequest) => {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
     const body = await request.json();
-    const { requestId, userId, serviceDayId, addressId, requestDate, notes } =
-      body;
+    const {
+      requestId,
+      userId,
+      serviceDayId,
+      addressId,
+      requestDate,
+      isDropOff,
+      isPickUp,
+      notes,
+    } = body;
 
     const isAdmin = session.user.role === UserRole.ADMIN;
 
@@ -302,10 +347,17 @@ export const PATCH = async (request: NextRequest) => {
       }
     }
 
-    if (!requestId || !serviceDayId || !addressId || !requestDate) {
+    if (
+      !requestId ||
+      !serviceDayId ||
+      !addressId ||
+      !requestDate ||
+      (!isDropOff && !isPickUp)
+    ) {
       return NextResponse.json(
         {
-          error: "Request, Service day, address, and request date are required",
+          error:
+            "Request, Service day, address, request date, isPickUp, and isDropOff are required",
         },
         { status: 400 }
       );
@@ -370,6 +422,8 @@ export const PATCH = async (request: NextRequest) => {
         serviceDayId,
         addressId,
         requestDate: serviceDateTime,
+        isDropOff,
+        isPickUp,
         notes: notes || null,
       },
       include: {

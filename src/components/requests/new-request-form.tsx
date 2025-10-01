@@ -58,6 +58,7 @@ import {
   getNextServiceDate,
 } from "@/lib/utils";
 import { newRequestSchema, NewRequestSchema } from "@/types/newRequestSchema";
+import { PickUpDropOffField } from "./pickup-dropoff-field";
 
 interface NewRequestFormProps {
   newRequestData?: NewRequestSchema & { requestId: string };
@@ -85,6 +86,8 @@ export const NewRequestForm = ({
       serviceDayId: newRequestData?.serviceDayId || "",
       addressId: newRequestData?.addressId || "",
       requestDate: newRequestData?.requestDate || undefined,
+      isPickUp: newRequestData?.isPickUp ?? true,
+      isDropOff: newRequestData?.isDropOff ?? false,
       notes: newRequestData?.notes || "",
     },
   });
@@ -107,7 +110,6 @@ export const NewRequestForm = ({
       if (service) {
         // Set default request date to next occurrence of this service
         const nextDate = getNextServiceDate(service.dayOfWeek);
-        console.log({ nextDate });
         form.setValue("requestDate", nextDate);
       }
     }
@@ -259,7 +261,7 @@ export const NewRequestForm = ({
               </Button>
             )}
             <h1 className="text-2xl font-bold">
-              {newRequestData ? "Update" : "New"} Pickup Request
+              {newRequestData ? "Update" : "New"} Ride Request
             </h1>
           </div>
           <p className="text-primary">
@@ -444,6 +446,10 @@ export const NewRequestForm = ({
                   </FormItem>
                 )}
               />
+              {/* Pickup and Dropoff Options */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <PickUpDropOffField form={form} />
+              </div>
 
               {/* Notes */}
               <FormField

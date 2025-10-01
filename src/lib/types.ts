@@ -68,6 +68,8 @@ export interface PickupRequest {
   addressId: string;
   requestDate: Date;
   status: RequestStatus;
+  isPickUp: boolean;
+  isDropOff: boolean;
   notes?: string | null;
   distance?: number | null;
   createdAt: Date;
@@ -76,6 +78,11 @@ export interface PickupRequest {
   driver?: User | null;
   serviceDay?: ServiceDay;
   address?: Address;
+}
+
+export enum RequestType {
+  PICKUP = "PICKUP",
+  DROPOFF = "DROPOFF",
 }
 
 export interface DashboardStats {

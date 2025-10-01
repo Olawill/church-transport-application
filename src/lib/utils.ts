@@ -248,3 +248,11 @@ export function generateTempPassword(
 
   return base.length >= 8 ? base : base.padEnd(8, "0");
 }
+
+// Capitalize
+export const capitalize = (str: string) =>
+  str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+
+// Filter Date Format
+export const formatFilterDate = (date: Date) =>
+  date.toISOString().split("T")[0]; // "YYYY-MM-DD"

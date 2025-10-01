@@ -55,51 +55,66 @@ export const newUserSchema = z
       .optional()
       .or(z.literal("")),
     requestDate: z
-      .date()
-      .refine(
-        (date) => {
-          const now = new Date();
-          const today = new Date(now.toDateString());
-          return date >= today;
-        },
-        {
-          message: "Please select a valid date that is today or later",
-        }
+      .preprocess(
+        (val) => (val instanceof Date ? new Date(val) : undefined),
+        z.date({ message: "Service date is required" }).refine(
+          (date) => {
+            const now = new Date();
+            const today = new Date(now.toDateString()); // Strip time
+            return date >= today;
+          },
+          {
+            message: "Please select a valid date that is today or later",
+          }
+        )
       )
       .optional(),
+    isPickUp: z.boolean(),
+    isDropOff: z.boolean(),
   })
-  .refine(
-    (data) => {
-      // If login is required, password must be provided and not empty
-      if (data.isLoginRequired) {
-        return data.password && data.password.trim().length > 0;
+  .superRefine((data, ctx) => {
+    // Validate password if login is required
+    if (data.isLoginRequired) {
+      if (!data.password || data.password.trim().length === 0) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Password is required when login is required",
+          path: ["password"],
+        });
+      }
+    }
+
+    // Validate serviceDayId and requestDate if pickup request is created
+    if (data.createPickUpRequest) {
+      if (!data.serviceDayId || data.serviceDayId.trim().length === 0) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Service selection is required when creating pickup request",
+          path: ["serviceDayId"],
+        });
       }
 
-      return true; // If login not required, password validation passes
-    },
-    {
-      message: "Password is required when login is required",
-      path: ["password"], // This will attach the error to the password field
-    }
-  )
-  .refine(
-    (data) => {
-      // If pickup request is required, serviceId and requestDate must be provided
-      if (data.createPickUpRequest) {
-        return (
-          data.serviceDayId &&
-          data.requestDate !== undefined &&
-          data.serviceDayId.trim().length > 0
-        );
+      if (!data.requestDate) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Request date is required when creating pickup request",
+          path: ["requestDate"],
+        });
       }
-      return true;
-    },
-    {
-      message:
-        "Service selection and Request Date is required when creating pickup request",
-      path: ["serviceDayId"], // This will attach the error to the serviceDayId field
+      if (!data.isPickUp && !data.isDropOff) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Please select at least one option: Pickup or Drop-off",
+          path: ["isPickUp"],
+        });
+        ctx.addIssue({
+          code: "custom",
+          message: "Please select at least one option: Pickup or Drop-off",
+          path: ["isDropOff"],
+        });
+      }
     }
-  );
+  });
 
 export type NewUserSchema = z.infer<typeof newUserSchema>;
 

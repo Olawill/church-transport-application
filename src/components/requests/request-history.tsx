@@ -14,6 +14,7 @@ import {
   User,
   UserSquareIcon,
   X,
+  XCircle,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -56,16 +57,35 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 
 import { UserRole } from "@/generated/prisma";
-import { useRequestStore } from "@/lib/store/useRequestStore";
-import { PickupRequest, User as UserType } from "@/lib/types";
-import { calculateDistance, formatDate, formatTime } from "@/lib/utils";
+import { Status, useRequestStore } from "@/lib/store/useRequestStore";
+import { PickupRequest, RequestType, User as UserType } from "@/lib/types";
+import {
+  calculateDistance,
+  capitalize,
+  formatDate,
+  formatFilterDate,
+  formatTime,
+} from "@/lib/utils";
 import { NewRequestForm } from "./new-request-form";
 import AdminNewUserRequest from "../admin/admin-new-user-request";
+import CustomDateCalendar from "../custom-request-calendar";
+
+type Type = RequestType | "ALL";
 
 export const RequestHistory = () => {
   const { data: session } = useSession() || {};
-  const { requests, loading, fetchRequests, statusFilter, setStatusFilter } =
-    useRequestStore();
+  const {
+    requests,
+    loading,
+    fetchRequests,
+    statusFilter,
+    setStatusFilter,
+    typeFilter,
+    setTypeFilter,
+    requestDateFilter,
+    setRequestDateFilter,
+    clearFilters,
+  } = useRequestStore();
 
   const [drivers, setDrivers] = useState<UserType[]>([]);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -84,7 +104,7 @@ export const RequestHistory = () => {
     if (session?.user) {
       fetchRequests();
     }
-  }, [session, statusFilter]);
+  }, [session, statusFilter, typeFilter, requestDateFilter]);
 
   useEffect(() => {
     if (session?.user?.role === UserRole.ADMIN) {
@@ -245,17 +265,20 @@ export const RequestHistory = () => {
     (r) => r.status === "COMPLETED"
   ).length;
 
+  const dropOffRequest = requests.filter((r) => r.isDropOff === true).length;
+  const pickUpRequest = requests.filter((r) => r.isPickUp === true).length;
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">
-            {isUser ? "My Pickup Requests" : "All Pickup Requests"}
+            {isUser ? "My Ride Requests" : "All Ride Requests"}
           </h1>
           <p className="mt-1">
             {isUser
               ? "View and manage your transportation requests"
-              : "Monitor all pickup requests in the system"}
+              : "Monitor all ride requests in the system"}
           </p>
         </div>
         {(isUser || isAdmin) && (
@@ -270,6 +293,7 @@ export const RequestHistory = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Pending Request */}
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -284,6 +308,7 @@ export const RequestHistory = () => {
           </CardContent>
         </Card>
 
+        {/* Accepted Request */}
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -298,6 +323,7 @@ export const RequestHistory = () => {
           </CardContent>
         </Card>
 
+        {/* Completed Request */}
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -306,6 +332,36 @@ export const RequestHistory = () => {
                 <p className="text-2xl font-bold">{completedRequests}</p>
               </div>
               <div className="p-3 rounded-full bg-green-100 text-green-600">
+                <CheckCircle className="h-6 w-6" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* PickUp Request */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">PickUp</p>
+                <p className="text-2xl font-bold">{pickUpRequest}</p>
+              </div>
+              <div className="p-3 rounded-full bg-lime-100 text-lime-700">
+                <Car className="h-6 w-6" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* DropOff Request */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">DropOff</p>
+                <p className="text-2xl font-bold">{dropOffRequest}</p>
+              </div>
+              <div className="p-3 rounded-full bg-cyan-100 text-cyan-700">
                 <CheckCircle className="h-6 w-6" />
               </div>
             </div>
@@ -323,9 +379,15 @@ export const RequestHistory = () => {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4">
+            {/* Status */}
             <div className="flex-1">
-              <label className="text-sm font-medium mb-2 block">Status</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Label className="text-sm font-medium mb-2 block">Status</Label>
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => {
+                  setStatusFilter(value as Status);
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -338,6 +400,46 @@ export const RequestHistory = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Type */}
+            <div className="flex-1">
+              <Label className="text-sm font-medium mb-2 block">
+                Request Type
+              </Label>
+              <Select
+                value={typeFilter as string}
+                onValueChange={(value) => setTypeFilter(value as Type)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Requests</SelectItem>
+                  <SelectItem value="PICKUP">PickUp</SelectItem>
+                  <SelectItem value="DROPOFF">DropOff</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Request Date */}
+            <div className="flex-1">
+              <CustomDateCalendar
+                label="Request Date"
+                setRequestDateFilter={setRequestDateFilter}
+                requestDateFilter={requestDateFilter}
+              />
+            </div>
+            {/* Clear Button */}
+            <div className="flex-1">
+              {(statusFilter !== "ALL" ||
+                typeFilter !== "ALL" ||
+                requestDateFilter) && (
+                <Button variant="outline" type="button" onClick={clearFilters}>
+                  <XCircle className="size-4" />
+                  Clear Filter
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -346,9 +448,14 @@ export const RequestHistory = () => {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">
-            {statusFilter === "ALL"
+            {statusFilter === "ALL" &&
+            typeFilter === "ALL" &&
+            !requestDateFilter
               ? "All Requests"
-              : `${statusFilter.charAt(0) + statusFilter.slice(1).toLowerCase()} Requests`}
+              : `${statusFilter !== "ALL" ? capitalize(statusFilter) + " " : " "}` +
+                `${typeFilter !== "ALL" ? capitalize(String(typeFilter)) + " " : ""}` +
+                `Requests` +
+                `${requestDateFilter ? " on " + formatFilterDate(requestDateFilter) : ""}`}
           </CardTitle>
           <CardDescription>
             {statusFilter === "PENDING" &&
@@ -409,6 +516,14 @@ export const RequestHistory = () => {
                             ? formatTime(request.serviceDay.time)
                             : "N/A"}
                         </p>
+                        <div className="flex items-center gap-2">
+                          {request.isPickUp && (
+                            <Badge className="bg-lime-700">PickUp</Badge>
+                          )}
+                          {request.isDropOff && (
+                            <Badge className="bg-cyan-700">DropOff</Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <Badge className={getStatusColor(request.status)}>
@@ -488,7 +603,7 @@ export const RequestHistory = () => {
                       )}
                     </div>
 
-                    <div className="space-x-4">
+                    <div className="space-x-1">
                       {/* Action buttons for users */}
                       {(isUser || isAdmin) &&
                         canCancelOrEditRequest(request) && (
@@ -497,6 +612,7 @@ export const RequestHistory = () => {
                             <Button
                               variant="outline"
                               size="sm"
+                              title="Edit Request"
                               className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                               onClick={() => {
                                 setSelectedRequest(request);
@@ -504,12 +620,13 @@ export const RequestHistory = () => {
                               }}
                             >
                               <Pencil className="size-4" />
-                              Edit
+                              <span className="max-sm:hidden">Edit</span>
                             </Button>
                             {/* Cancel Button */}
                             <Button
                               variant="outline"
                               size="sm"
+                              title="Cancel Request"
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
                               onClick={() => {
                                 setSelectedRequest(request);
@@ -517,7 +634,7 @@ export const RequestHistory = () => {
                               }}
                             >
                               <X className="size-4" />
-                              Cancel
+                              <span className="max-sm:hidden">Cancel</span>
                             </Button>
                           </>
                         )}
@@ -527,14 +644,15 @@ export const RequestHistory = () => {
                         <Button
                           variant="outline"
                           size="sm"
+                          title="Cancel Pickup"
                           className="text-red-600 hover:text-red-700 hover:bg-red-50"
                           onClick={() => {
                             setSelectedRequest(request);
                             setPickupCancelDialogOpen(true);
                           }}
                         >
-                          <X className="h-4 w-4 mr-2" />
-                          Cancel Pickup
+                          <X className="size-4" />
+                          <span className="max-sm:hidden">Cancel Pickup</span>
                         </Button>
                       )}
 
@@ -544,15 +662,22 @@ export const RequestHistory = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="text-green-600 hover:text-green-700 hover:bg-red-50"
+                            title={
+                              openAccordions[request.id]
+                                ? "Hide Drivers"
+                                : "Show Drivers"
+                            }
+                            className="text-green-600 hover:text-green-700 hover:bg-red-50 max-sm:mt-2"
                             onClick={() => {
                               toggleAccordion(request.id);
                             }}
                           >
                             <UserSquareIcon className="size-4" />
-                            {openAccordions[request.id]
-                              ? "Hide Drivers"
-                              : "Show Drivers"}
+                            <span className="max-sm:hidden">
+                              {openAccordions[request.id]
+                                ? "Hide Drivers"
+                                : "Show Drivers"}
+                            </span>
                           </Button>
                         )}
                     </div>
@@ -658,35 +783,40 @@ export const RequestHistory = () => {
               before service
             </DialogDescription>
           </DialogHeader>
-          {isUser ? (
-            <ScrollArea className="h-[520px] rounded-md p-4">
-              <NewRequestForm
-                newRequestData={{
-                  requestId: selectedRequest?.id as string,
-                  serviceDayId: selectedRequest?.serviceDayId as string,
-                  requestDate: selectedRequest?.requestDate as Date,
-                  addressId: selectedRequest?.addressId as string,
-                  notes: selectedRequest?.notes as string,
-                }}
-                setShowDialog={handleEditDialog}
-              />
-            </ScrollArea>
-          ) : (
-            <ScrollArea className="h-[540px] rounded-md py-4">
-              <AdminNewUserRequest
-                isNewUser={false}
-                newRequestData={{
-                  requestId: selectedRequest?.id as string,
-                  userId: selectedRequest?.userId as string,
-                  serviceDayId: selectedRequest?.serviceDayId as string,
-                  requestDate: selectedRequest?.requestDate as Date,
-                  addressId: selectedRequest?.addressId as string,
-                  notes: selectedRequest?.notes as string,
-                }}
-                setShowDialog={handleEditDialog}
-              />
-            </ScrollArea>
-          )}
+          {selectedRequest &&
+            (isUser ? (
+              <ScrollArea className="h-[520px] rounded-md p-4">
+                <NewRequestForm
+                  newRequestData={{
+                    requestId: selectedRequest.id as string,
+                    serviceDayId: selectedRequest.serviceDayId as string,
+                    requestDate: selectedRequest.requestDate as Date,
+                    addressId: selectedRequest.addressId as string,
+                    notes: selectedRequest.notes as string,
+                    isPickUp: selectedRequest.isPickUp as boolean,
+                    isDropOff: selectedRequest.isDropOff as boolean,
+                  }}
+                  setShowDialog={handleEditDialog}
+                />
+              </ScrollArea>
+            ) : (
+              <ScrollArea className="h-[540px] rounded-md py-4">
+                <AdminNewUserRequest
+                  isNewUser={false}
+                  newRequestData={{
+                    requestId: selectedRequest.id as string,
+                    userId: selectedRequest.userId as string,
+                    serviceDayId: selectedRequest.serviceDayId as string,
+                    requestDate: selectedRequest.requestDate as Date,
+                    addressId: selectedRequest.addressId as string,
+                    notes: selectedRequest.notes as string,
+                    isPickUp: selectedRequest.isPickUp as boolean,
+                    isDropOff: selectedRequest.isDropOff as boolean,
+                  }}
+                  setShowDialog={handleEditDialog}
+                />
+              </ScrollArea>
+            ))}
         </DialogContent>
       </Dialog>
 
