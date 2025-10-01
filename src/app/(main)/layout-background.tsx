@@ -9,11 +9,12 @@ export const LayoutBackground = ({
 }: {
   children: React.ReactNode;
 }) => {
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   return (
     <div className="w-full min-h-screen relative">
       <div className="absolute inset-0 w-full h-full">
-        {theme === "dark" ? (
+        {isDark ? (
           <Orb
             hoverIntensity={0.5}
             rotateOnHover={true}
