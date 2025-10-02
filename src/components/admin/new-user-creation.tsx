@@ -99,7 +99,7 @@ const NewUserCreationForm = () => {
     setLoading(true);
 
     try {
-      if (values.createPickUpRequest === false) {
+      if (!values.createPickUpRequest) {
         const response = await fetch("/api/admin/users", {
           method: "POST",
           headers: {
