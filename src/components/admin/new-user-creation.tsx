@@ -1,9 +1,7 @@
 "use client";
-import React, { useState } from "react";
-import { ArrowLeft, Key, UserPlus2Icon } from "lucide-react";
-import Link from "next/link";
+import AdminNewUserRequest from "@/components/admin/admin-new-user-request";
+import CustomPhoneInput from "@/components/custom-phone-input";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import {
   Card,
   CardContent,
@@ -19,6 +17,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -28,16 +27,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { newUserSchema, NewUserSchema } from "@/types/newUserSchema";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { PROVINCES } from "@/lib/types";
-import CustomPhoneInput from "@/components/custom-phone-input";
-import { toast } from "sonner";
 import { generateTempPassword } from "@/lib/utils";
-import AdminNewUserRequest from "@/components/admin/admin-new-user-request";
+import { newUserSchema, NewUserSchema } from "@/types/adminCreateNewUserSchema";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { ArrowLeft, Key, UserPlus2Icon } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 const NewUserCreationForm = () => {
   const router = useRouter();
@@ -60,6 +60,8 @@ const NewUserCreationForm = () => {
       serviceDayId: "",
       isDropOff: false,
       isPickUp: true,
+      isGroupRide: false,
+      numberOfGroup: null,
       requestDate: undefined,
     },
   });
@@ -130,11 +132,14 @@ const NewUserCreationForm = () => {
       }
     } catch (error) {
       console.error("Error creating user:", error);
-      toast.error("An error occured while creating user");
+      toast.error("An error occurred while creating user");
     } finally {
       setLoading(false);
     }
   };
+
+  const isGroupRequest = form?.watch("isGroupRide");
+
   return (
     <div>
       <div className="flex items-center justify-between">
@@ -441,7 +446,11 @@ const NewUserCreationForm = () => {
                 </div>
                 {/* New request Form */}
                 {createPickUpRequest && (
-                  <AdminNewUserRequest isNewUser={true} form={form} />
+                  <AdminNewUserRequest
+                    isNewUser={true}
+                    form={form}
+                    isGroupRequest={isGroupRequest}
+                  />
                 )}
               </div>
 

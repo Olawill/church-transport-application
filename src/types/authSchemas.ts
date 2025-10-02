@@ -4,7 +4,7 @@ import {
   isValidPostalCode,
 } from "@/lib/utils";
 import z from "zod";
-import { addressUpdateSchema } from "./newUserSchema";
+import { addressUpdateSchema } from "./adminCreateNewUserSchema";
 
 export const loginSchema = z.object({
   email: z.email({

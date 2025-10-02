@@ -58,6 +58,8 @@ import {
   getNextServiceDate,
 } from "@/lib/utils";
 import { newRequestSchema, NewRequestSchema } from "@/types/newRequestSchema";
+import { Input } from "../ui/input";
+import { Switch } from "../ui/switch";
 import { PickUpDropOffField } from "./pickup-dropoff-field";
 
 interface NewRequestFormProps {
@@ -88,6 +90,8 @@ export const NewRequestForm = ({
       requestDate: newRequestData?.requestDate || undefined,
       isPickUp: newRequestData?.isPickUp ?? true,
       isDropOff: newRequestData?.isDropOff ?? false,
+      isGroupRide: newRequestData?.isGroupRide ?? false,
+      numberOfGroup: newRequestData?.numberOfGroup ?? null,
       notes: newRequestData?.notes || "",
     },
   });
@@ -243,6 +247,8 @@ export const NewRequestForm = ({
       setLoading(false);
     }
   };
+
+  const isGroupRequest = form.watch("isGroupRide");
 
   return (
     <div className="space-y-6">
@@ -449,6 +455,63 @@ export const NewRequestForm = ({
               {/* Pickup and Dropoff Options */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <PickUpDropOffField form={form} />
+              </div>
+
+              {/* Group Ride */}
+              <div className="flex flex-col justify-between rounded-lg border p-3 shadow-sm">
+                <FormField
+                  control={form.control}
+                  name="isGroupRide"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between pb-3">
+                      <div className="space-y-0.5">
+                        <FormLabel>Group Ride</FormLabel>
+                        <FormDescription>
+                          Is the request for a group (2 or more people)?.
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={(checked) => {
+                            form.setValue("numberOfGroup", !checked ? null : 2);
+                            field.onChange(checked);
+                          }}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                {isGroupRequest && (
+                  <FormField
+                    control={form.control}
+                    name="numberOfGroup"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Number of people</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Enter number of people"
+                            type="number"
+                            {...field}
+                            value={field.value ?? ""}
+                            min={2}
+                            max={10}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              // Convert empty string to null, otherwise to integer
+                              field.onChange(
+                                val === "" ? null : parseInt(val, 10)
+                              );
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
 
               {/* Notes */}

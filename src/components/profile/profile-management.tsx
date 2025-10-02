@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 
 import CustomPhoneInput from "@/components/custom-phone-input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -18,14 +18,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "../ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -40,6 +32,14 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "../ui/form";
 
 import { Edit, MapPin, Plus, Shield, Star, Trash2, Upload } from "lucide-react";
 import { FaSms, FaWhatsappSquare } from "react-icons/fa";
@@ -47,6 +47,7 @@ import { MdMarkEmailUnread } from "react-icons/md";
 
 import { cn } from "@/lib/utils";
 
+import { PROVINCES } from "@/lib/types";
 import {
   AddressUpdateSchema,
   addressUpdateSchema,
@@ -54,8 +55,7 @@ import {
   profileUpdateSchema,
   SecurityUpdateSchema,
   securityUpdateSchema,
-} from "@/types/newUserSchema";
-import { PROVINCES } from "@/lib/types";
+} from "@/types/adminCreateNewUserSchema";
 
 interface Address {
   id: string;

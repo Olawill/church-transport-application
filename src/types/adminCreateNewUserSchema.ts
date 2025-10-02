@@ -3,7 +3,7 @@ import {
   isValidPhoneNumber,
   isValidPostalCode,
 } from "@/lib/utils";
-import z from "zod";
+import { z } from "zod";
 
 export const newUserSchema = z
   .object({
@@ -54,10 +54,13 @@ export const newUserSchema = z
       .min(1, "Service selection is required")
       .optional()
       .or(z.literal("")),
-    requestDate: z
-      .preprocess(
-        (val) => (val instanceof Date ? new Date(val) : undefined),
-        z.date({ message: "Service date is required" }).refine(
+    requestDate:
+      // z
+      // .preprocess(
+      //   (val) => (val instanceof Date ? new Date(val) : undefined),
+      z
+        .date({ message: "Service date is required" })
+        .refine(
           (date) => {
             const now = new Date();
             const today = new Date(now.toDateString()); // Strip time
@@ -66,11 +69,13 @@ export const newUserSchema = z
           {
             message: "Please select a valid date that is today or later",
           }
+          // )
         )
-      )
-      .optional(),
+        .optional(),
     isPickUp: z.boolean(),
     isDropOff: z.boolean(),
+    isGroupRide: z.boolean(),
+    numberOfGroup: z.number().int().min(2).max(10).nullable(),
   })
   .superRefine((data, ctx) => {
     // Validate password if login is required
@@ -111,6 +116,37 @@ export const newUserSchema = z
           code: "custom",
           message: "Please select at least one option: Pickup or Drop-off",
           path: ["isDropOff"],
+        });
+      }
+    }
+
+    // Group ride logic
+    if (data.isGroupRide) {
+      if (data.numberOfGroup == null) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Please enter number of people in group ride",
+          path: ["numberOfGroup"],
+        });
+      } else if (data.numberOfGroup < 2) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Group ride must include at least 2 people",
+          path: ["numberOfGroup"],
+        });
+      } else if (data.numberOfGroup > 10) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Group ride must include at most 10 people",
+          path: ["numberOfGroup"],
+        });
+      }
+    } else {
+      if (data.numberOfGroup !== null && data.numberOfGroup !== undefined) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Number of people must be empty if not a group ride",
+          path: ["numberOfGroup"],
         });
       }
     }
