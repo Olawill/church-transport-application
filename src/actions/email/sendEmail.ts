@@ -3,7 +3,7 @@
 import { sendEmailSchema, SendEmailSchema } from "./emailSchema";
 
 import nodemailer from "nodemailer";
-import { render } from "@react-email/render";
+import { render, toPlainText } from "@react-email/render";
 // import { z } from "zod";
 import EmailTemplate from "../../../emails/email-template";
 
@@ -22,6 +22,10 @@ const mailTransporter = () => {
     port,
     secure,
     auth: { user, pass },
+    ...(port === 465 && { requireTLS: true }),
+    pool: true,
+    maxConnections: 5,
+    connectionTimeout: 10000,
   });
 };
 
@@ -50,6 +54,8 @@ const sendEmailAction = async (values: SendEmailSchema) => {
       })
     );
 
+    const emailText = toPlainText(emailHtml);
+
     // Get Subject from template config if not provided
     const emailSubject = getDefaultSubject(type);
     // const defaultFrom = `"${process.env.SMTP_FROM_NAME || "ActsOnWheel"}" <${process.env.SMTP_FROM_EMAIL}>`;
@@ -60,6 +66,7 @@ const sendEmailAction = async (values: SendEmailSchema) => {
       //   bcc: "henry.williams658@gmail.com",
       subject: emailSubject,
       html: emailHtml,
+      text: emailText,
     });
 
     return {
