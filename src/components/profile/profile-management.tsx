@@ -94,6 +94,9 @@ interface UserProfile {
   image?: string;
   whatsappNumber?: string;
   twoFactorEnabled: boolean;
+  emailNotifications: boolean;
+  whatsAppNotifications: boolean;
+  smsNotifications: boolean;
   emailVerified?: Date;
   phoneVerified?: Date;
 }
@@ -568,25 +571,33 @@ export const ProfileManagement = () => {
     }
   };
 
-  const toggle2FA = async () => {
+  const toggleUserSettings = async (
+    field:
+      | "twoFactorEnabled"
+      | "emailNotifications"
+      | "smsNotifications"
+      | "whatsAppNotifications",
+    currentValue: boolean
+  ) => {
     try {
-      const response = await fetch("/api/user/toggle-2fa", {
+      const response = await fetch("/api/user/toggle-setting", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enabled: !profile?.twoFactorEnabled }),
+        body: JSON.stringify({ field, value: !currentValue }),
       });
 
-      if (response.ok) {
-        setProfile((prev) =>
-          prev ? { ...prev, twoFactorEnabled: !prev.twoFactorEnabled } : null
-        );
-        toast.success(
-          `2FA ${profile?.twoFactorEnabled ? "disabled" : "enabled"}`
-        );
-      }
+      if (!response.ok) throw new Error("Failed to update setting");
+
+      const data = await response.json();
+
+      setProfile((prev) => (prev ? { ...prev, [field]: data[field] } : prev));
+
+      toast.success(
+        `${field} ${!currentValue ? "enabled" : "disabled"} successfully`
+      );
     } catch (error) {
-      console.error("Failed to toggle 2FA:", error);
-      toast.error("Failed to toggle 2FA");
+      console.error(`Failed to toggle ${field}:`, error);
+      toast.error(`Failed to toggle ${field}`);
     }
   };
 
@@ -1284,6 +1295,12 @@ export const ProfileManagement = () => {
                       />
                     </div>
                   </div>
+                  <Switch
+                    checked={profile?.twoFactorEnabled || false}
+                    onCheckedChange={(checked) =>
+                      toggleUserSettings("twoFactorEnabled", !checked)
+                    }
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -1775,6 +1792,122 @@ export const ProfileManagement = () => {
                     </div>
                   </CardContent>
                 </Card>
+                    {/* Update Button */}
+                    <Button type="submit" className="w-full">
+                      Update Password
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="notifications">
+          <Card>
+            <CardHeader>
+              <CardTitle>Notification Preferences</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {/* Notification Form */}
+              <div className="space-y-6">
+                {/* Email Notification */}
+                <div className="flex items-start justify-between">
+                  <div>
+                    <Label>
+                      <MdMarkEmailUnread />
+                      Email Notification
+                    </Label>
+                    <span className="text-xs text-gray-600 dark:text-gray-400">
+                      You need to verify your email to receive email
+                      notifications
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Badge
+                      className={cn(
+                        profile?.emailNotifications && "bg-green-500"
+                      )}
+                      variant={
+                        profile?.emailNotifications ? "secondary" : "default"
+                      }
+                    >
+                      {profile?.emailNotifications ? "Enabled" : "Disabled"}
+                    </Badge>
+                    <Switch
+                      checked={profile?.emailNotifications}
+                      onCheckedChange={(checked) => {
+                        toggleUserSettings("emailNotifications", !checked);
+                      }}
+                      disabled={!profile?.emailVerified}
+                    />
+                  </div>
+                </div>
+
+                {/* SMS Notification */}
+                <div className="flex items-start justify-between">
+                  <div>
+                    <Label>
+                      <FaSms />
+                      SMS Notification
+                    </Label>
+                    <span className="text-xs text-gray-600 dark:text-gray-400">
+                      You need to verify your phone number to receive sms
+                      notifications
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Badge
+                      className={cn(
+                        profile?.smsNotifications && "bg-green-500"
+                      )}
+                      variant={
+                        profile?.smsNotifications ? "secondary" : "default"
+                      }
+                    >
+                      {profile?.smsNotifications ? "Enabled" : "Disabled"}
+                    </Badge>
+                    <Switch
+                      checked={profile?.smsNotifications}
+                      onCheckedChange={(checked) => {
+                        toggleUserSettings("smsNotifications", !checked);
+                      }}
+                      disabled={!profile?.phoneVerified}
+                    />
+                  </div>
+                </div>
+
+                {/* whatsApp Notification */}
+                <div className="flex items-start justify-between">
+                  <div>
+                    <Label>
+                      <FaWhatsappSquare />
+                      whatsApp Notification
+                    </Label>
+                    <span className="text-xs text-gray-600 dark:text-gray-400">
+                      You need whatsApp number to receive whatsApp notifications
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Badge
+                      className={cn(
+                        profile?.whatsAppNotifications && "bg-green-500"
+                      )}
+                      variant={
+                        profile?.whatsAppNotifications ? "secondary" : "default"
+                      }
+                    >
+                      {profile?.whatsAppNotifications ? "Enabled" : "Disabled"}
+                    </Badge>
+                    <Switch
+                      checked={profile?.whatsAppNotifications}
+                      onCheckedChange={(checked) => {
+                        toggleUserSettings("whatsAppNotifications", !checked);
+                      }}
+                      disabled={!profile?.whatsappNumber}
+                    />
+                  </div>
+                </div>
               </div>
             </TabsContent>
           )}
