@@ -1,4 +1,34 @@
 import { prisma } from "./db";
+import { sendMail } from "@/actions/email/sendEmail";
+import { EmailType } from "../../emails/email-template";
+
+export type NotificationType = "email" | "whatsapp" | "sms";
+export type NotificationChannel = NotificationType[];
+
+export interface EmailNotification {
+  to: string;
+  type: EmailType;
+  name: string;
+  message?: string;
+  from?: string;
+}
+
+export interface WhatsAppNotification {
+  to: string;
+  body: string;
+  mediaUrl?: string;
+}
+
+export interface SMSNotification {
+  to: string;
+  body: string;
+}
+
+export interface UserNotificationPreferences {
+  email: boolean;
+  whatsapp: boolean;
+  sms: boolean;
+}
 
 export interface WhatsAppMessage {
   to: string;
@@ -15,6 +45,60 @@ export interface EmailMessage {
 }
 
 export class NotificationService {
+  // ==================== USER PREFERENCE METHODS ====================
+  /*
+   * Get user's notification preferences
+   */
+  static async getUserPreferences(
+    userId: string
+  ): Promise<UserNotificationPreferences> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        emailNotifications: true,
+        whatsAppNotifications: true,
+        smsNotifications: true,
+      },
+    });
+
+    return {
+      email: user?.emailNotifications ?? false,
+      whatsapp: user?.whatsAppNotifications ?? false,
+      sms: user?.smsNotifications ?? false,
+    };
+  }
+
+  /* Update user's notification preferences */
+  static async updateUserPreferences(
+    userId: string,
+    preferences: Partial<UserNotificationPreferences>
+  ): Promise<void> {
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        emailNotifications: preferences.email,
+        whatsAppNotifications: preferences.whatsapp,
+        smsNotifications: preferences.sms,
+      },
+    });
+  }
+
+  /* Get enabled notification channels for a user */
+  static async getEnabledChannels(
+    userId: string
+  ): Promise<NotificationChannel> {
+    const prefs = await this.getUserPreferences(userId);
+    const channels: NotificationChannel = [];
+
+    if (prefs.email) channels.push("email");
+    if (prefs.whatsapp) channels.push("whatsapp");
+    if (prefs.sms) channels.push("sms");
+
+    return channels;
+  }
+
+  // ==================== SCHEDULING METHODS ====================
+  // ==================== WHATSAPP SCHEDULING METHODS ====================
   static async scheduleWhatsAppNotification(
     userId: string,
     message: WhatsAppMessage,
@@ -32,6 +116,7 @@ export class NotificationService {
     });
   }
 
+  // ==================== EMAIL SCHEDULING METHODS ====================
   static async scheduleEmailNotification(
     userId: string,
     email: EmailMessage,
@@ -48,7 +133,10 @@ export class NotificationService {
       },
     });
   }
+  // ==================== SMS SCHEDULING METHODS ====================
+  // To be implemented
 
+  // ==================== BUSINESS LOGIC ====================
   static async sendPickupAcceptedNotification(
     userId: string,
     driverName: string,
@@ -183,14 +271,19 @@ export class NotificationService {
 
   static async notifyDriver(
     metadata: WhatsAppMessage | EmailMessage,
-    type: "email" | "whatsapp"
+    type: "email" | "whatsapp",
+    username: string
   ): Promise<void> {
     if (type === "whatsapp") {
       await this.sendWhatsAppMessage(metadata as WhatsAppMessage);
     }
 
     if (type === "email") {
-      await this.sendEmailMessage(metadata as EmailMessage);
+      await this.sendEmailMessage(
+        metadata as EmailMessage,
+        "driver_notice",
+        username
+      );
     }
   }
 
@@ -212,9 +305,9 @@ export class NotificationService {
           );
         } else if (notification.type === "email") {
           // Here you would integrate with email service
-          await this.sendEmailMessage(
-            JSON.parse(notification.metadata || "{}")
-          );
+          // await this.sendEmailMessage(
+          //   JSON.parse(notification.metadata || "{}")
+          // );
         }
 
         await prisma.notification.update({
@@ -240,8 +333,18 @@ export class NotificationService {
   }
 
   // Placeholder for email service integration
-  private static async sendEmailMessage(email: EmailMessage): Promise<void> {
+  private static async sendEmailMessage(
+    email: EmailMessage,
+    type: EmailType,
+    name: string
+  ): Promise<void> {
     // TODO: Implement email service integration
-    console.log("Email would be sent:", email);
+    await sendMail({
+      type,
+      to: email.to,
+      name,
+      message: email.body,
+    });
+    console.log(`${type} Email would be sent: ${email}`);
   }
 }
