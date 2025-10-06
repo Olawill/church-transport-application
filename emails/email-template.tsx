@@ -31,6 +31,8 @@ interface EmailTemplateProps {
   type: EmailType;
   name: string;
   message: string;
+  verifyCode?: string;
+  verifyExpiry?: string;
 }
 
 const messages = {
@@ -59,6 +61,10 @@ const messages = {
     "The driver is 10 minutes away from you. Ensure you are ready before they arrive. The driver can only wait for you for an extra 5 minutes before cancelling your request.",
 };
 
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL
+  ? `https://${process.env.NEXT_PUBLIC_APP_URL}`
+  : "";
+
 const getEmailConfig = (type: EmailTemplateProps["type"]) => {
   const configs = {
     welcome: {
@@ -79,14 +85,14 @@ const getEmailConfig = (type: EmailTemplateProps["type"]) => {
       preview: "Please verify your email address",
       subject: "Verify Your Email Address",
       buttonText: "Verify Email",
-      buttonUrl: "/verify-email",
+      buttonUrl: `${baseUrl}/verify-email`,
       defaultMessage: messages.emailVerification,
     },
     forgot_password: {
       preview: "Reset your password",
       subject: "Password Reset Request",
       buttonText: "Reset Password",
-      buttonUrl: "/reset-password",
+      buttonUrl: `${baseUrl}/reset-password`,
       defaultMessage: messages.passwordReset,
     },
     password_change: {
@@ -107,42 +113,42 @@ const getEmailConfig = (type: EmailTemplateProps["type"]) => {
       preview: "Your admin account has been created",
       subject: "Admin Account Created",
       buttonText: "Login",
-      buttonUrl: "/dashboard",
+      buttonUrl: `${baseUrl}/dashboard`,
       defaultMessage: messages.adminUserCreation,
     },
     driver_assignment: {
       preview: "You have been assigned a new delivery",
       subject: "New Delivery Assignment",
       buttonText: "View Assignment",
-      buttonUrl: "/transportation",
+      buttonUrl: `${baseUrl}/transportation`,
       defaultMessage: messages.driverAssignment,
     },
     driver_accept: {
       preview: "Driver has accepted your request",
       subject: "Driver Accepted Your Request",
       buttonText: "Track Delivery",
-      buttonUrl: "/requests",
+      buttonUrl: `${baseUrl}/requests`,
       defaultMessage: messages.driverAcceptance,
     },
     approval_need: {
       preview: "Action required: Approval needed",
       subject: "Approval Required",
       buttonText: "Review Request",
-      buttonUrl: "/users",
+      buttonUrl: `${baseUrl}/users`,
       defaultMessage: messages.approvalNeeded,
     },
     request_notify: {
       preview: "You have a new request",
       subject: "New Request Notification",
       buttonText: "View Request",
-      buttonUrl: "/requests",
+      buttonUrl: `${baseUrl}/requests`,
       defaultMessage: messages.requestNotification,
     },
     driver_notice: {
       preview: "Important notice for drivers",
       subject: "Driver Notice",
       buttonText: "View Details",
-      buttonUrl: "/requests",
+      buttonUrl: `${baseUrl}/requests`,
       defaultMessage: messages.driverNotification,
     },
   };
@@ -150,11 +156,17 @@ const getEmailConfig = (type: EmailTemplateProps["type"]) => {
   return configs[type];
 };
 
-const EmailTemplate = ({ type = "otp", name, message }: EmailTemplateProps) => {
+const EmailTemplate = ({
+  type = "otp",
+  name,
+  message,
+  verifyCode,
+  verifyExpiry,
+}: EmailTemplateProps) => {
   const config = getEmailConfig(type);
   const emailName = name || "Jade";
-  const verificationCode = "000000";
-  const verificationExpiry = "10 minutes";
+  const verificationCode = verifyCode ? verifyCode : "000000";
+  const verificationExpiry = verifyExpiry ? verifyExpiry : "10 minutes";
 
   // Combine default message with additional message if provided
   const fullMessage = message

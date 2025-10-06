@@ -4,21 +4,25 @@ import { sendEmailSchema, SendEmailSchema } from "./emailSchema";
 
 import nodemailer from "nodemailer";
 import { render } from "@react-email/render";
-import { z } from "zod";
+// import { z } from "zod";
 import EmailTemplate from "../../../emails/email-template";
 
-const mailTransporter = async () => {
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || "465"),
-    secure: true,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASSWORD,
-    },
+const mailTransporter = () => {
+  const host = process.env.SMTP_HOST;
+  const port = Number(process.env.SMTP_PORT || 465);
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASSWORD;
+  if (!host || !user || !pass || !process.env.SMTP_FROM_EMAIL) {
+    throw new Error("SMTP env vars missing (HOST, USER, PASSWORD, FROM_EMAIL)");
+  }
+  const secure =
+    process.env.SMTP_SECURE?.toLowerCase() === "true" || port === 465;
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: { user, pass },
   });
-
-  return transporter;
 };
 
 const sendEmailAction = async (values: SendEmailSchema) => {
@@ -26,12 +30,12 @@ const sendEmailAction = async (values: SendEmailSchema) => {
 
   if (!validatedValues.success) {
     return {
-      // errors: validatedValues.error.flatten().fieldErrors,
-      errors: z.treeifyError(validatedValues.error).properties,
+      errors: validatedValues.error.flatten().fieldErrors,
+      // errors: z.treeifyError(validatedValues.error).properties,
     };
   }
 
-  const { from, to, type, name, message } = validatedValues.data;
+  const { to, type, name, message } = validatedValues.data;
 
   try {
     // Create transporter
@@ -48,11 +52,10 @@ const sendEmailAction = async (values: SendEmailSchema) => {
 
     // Get Subject from template config if not provided
     const emailSubject = getDefaultSubject(type);
-    const defaultFrom = `"${process.env.SMTP_FROM_NAME || "ActsOnWheel"}" <${process.env.SMTP_FROM_EMAIL}>`;
+    // const defaultFrom = `"${process.env.SMTP_FROM_NAME || "ActsOnWheel"}" <${process.env.SMTP_FROM_EMAIL}>`;
 
     // Send Email
     await transporter.sendMail({
-      from: from ? from : defaultFrom,
       to,
       //   bcc: "henry.williams658@gmail.com",
       subject: emailSubject,
@@ -71,17 +74,9 @@ const sendEmailAction = async (values: SendEmailSchema) => {
 };
 
 export const sendMail = async (values: SendEmailSchema) => {
-  const validatedFields = sendEmailSchema.safeParse(values);
-
-  if (!validatedFields.success) {
-    return { error: "Invalid email values" };
-  }
-
-  const { data } = validatedFields;
-
-  await sendEmailAction(data);
-
-  return { success: "Email sent successfully" };
+  const result = await sendEmailAction(values);
+  if ("errors" in result || "error" in result) return result;
+  return { success: true };
 };
 
 // Helper function to get default subject based on email type

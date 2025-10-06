@@ -2,12 +2,6 @@ import { isValidEmail } from "@/lib/utils";
 import { z } from "zod";
 
 export const sendEmailSchema = z.object({
-  from: z
-    .email({
-      message: "Email is required",
-    })
-    .refine(isValidEmail, { message: "Please enter a valid email address" })
-    .optional(),
   to: z
     .email({
       message: "Email is required",
