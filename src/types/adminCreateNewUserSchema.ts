@@ -1,3 +1,4 @@
+import { BranchType } from "@/generated/prisma";
 import {
   isValidEmail,
   isValidPhoneNumber,
@@ -219,3 +220,37 @@ export const securityUpdateSchema = z
   });
 
 export type SecurityUpdateSchema = z.infer<typeof securityUpdateSchema>;
+
+export const churchBranchContactInfoUpdateSchema = z.object({
+  branchName: z.string().nullable(),
+  branchCategory: z.enum(BranchType),
+  churchAddress: z.string().trim().min(1, "Church address is required"),
+  churchCity: z.string().trim().min(1, "City is required"),
+  churchProvince: z.string().min(1, "Province is required"),
+  churchPostalCode: z
+    .string()
+    .trim()
+    .min(1, "Postal code is required")
+    .refine(isValidPostalCode, {
+      message: "Please enter a valid Canadian postal code",
+    }),
+  churchCountry: z.string().trim().min(1, "Country is required"),
+  churchPhone: z
+    .string()
+    .trim()
+    .min(1, "Phone number is required")
+    .refine(isValidPhoneNumber, {
+      message: "Please enter a valid phone number",
+    }),
+  requestCutOffInHrs: z
+    .string()
+    .trim()
+    .refine((val) => parseInt(val, 10), {
+      message: "Please enter cut-off time in hours",
+    }),
+  defaultMaxDistance: z.enum(["10", "20", "30", "50"]),
+});
+
+export type ChurchBranchContactInfoUpdateSchema = z.infer<
+  typeof churchBranchContactInfoUpdateSchema
+>;

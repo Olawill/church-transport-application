@@ -32,6 +32,11 @@ enum ServiceType {
   SPECIAL
 }
 
+enum BranchType {
+  HEADQUARTER
+  BRANCH
+}
+
 enum RequestStatus {
   PENDING
   ACCEPTED
@@ -203,12 +208,40 @@ model DriverRequestCancel {
 
 model SystemConfig {
   id                  String            @id @default(cuid())
-  key                 String            @unique
-  value               String
+  churchName          String            @unique
+  churchAcronym       String?           @unique       
+  churchLogo          String?       
+
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
+  systemBranchInfos   SystemBranchInfo[]
+
   @@map("system_config")
+}
+
+model SystemBranchInfo {
+  id                  String            @id @default(cuid())
+  branchName          String?
+  branchCategory      BranchType        @default(BRANCH)
+
+  systemConfigId      String
+
+  churchAddress       String
+  churchCity          String
+  churchProvince      String
+  churchPostalCode    String
+  churchCountry       String
+  churchPhone         String
+  requestCutOffInHrs  String
+  defaultMaxDistance  String
+
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  systemConfig        SystemConfig      @relation(fields: [systemConfigId], references: [id], onDelete: Cascade)
+
+  @@map("system_branch_infos")
 }
 
 model OTP {
