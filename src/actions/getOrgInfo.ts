@@ -10,7 +10,7 @@ export const getOrgInfo = async () => {
 
   if (!session) {
     return {
-      error: "You ara not authorized",
+      error: "You are not authorized",
     };
   }
 
@@ -38,3 +38,27 @@ export const getOrgInfo = async () => {
     return { error: "Server error", organization: null };
   }
 };
+
+export const setHeadquarter = async (addressId: string) => {
+  const session = await auth();
+
+  if (!session) {
+    return {
+      error: "You are not authorized",
+    };
+  }
+
+  // TODO: Check if user is admin or owner
+  // Check if address exist
+  // Check if address belongs to organization
+  // Get the current headquarter, if any and make branch
+  // Set address to headquarter
+};
+
+// Delete branch
+// Only owner
+// Check if address exist
+// Check if address belongs to organization
+// Check if admin for address has more than 1 address linked
+// If not change admin role to user
+// Then delete address
