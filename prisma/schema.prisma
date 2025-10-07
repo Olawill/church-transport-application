@@ -32,6 +32,11 @@ enum ServiceType {
   SPECIAL
 }
 
+enum BranchType {
+  HEADQUARTER
+  BRANCH
+}
+
 enum RequestStatus {
   PENDING
   ACCEPTED
@@ -54,208 +59,234 @@ enum OTPType {
 }
 
 model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
+  id                  String     @id @default(cuid())
+  userId              String
+  type                String
+  provider            String
+  providerAccountId   String
+  refresh_token       String?    @db.Text
+  access_token        String?    @db.Text
+  expires_at          Int?
+  token_type          String?
+  scope               String?
+  id_token            String?    @db.Text
+  session_state       String?
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
 
 model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                  String      @id @default(cuid())
+  sessionToken        String      @unique
+  userId              String
+  expires             DateTime
+  user                User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model User {
-  id            String      @id @default(cuid())
-  firstName     String
-  lastName      String
-  email         String      @unique
-  password      String? // Optional for OAuth
-  phone         String?
-  username      String?     @unique
-  role          UserRole    @default(USER)
-  status        UserStatus  @default(PENDING)
-  isActive      Boolean     @default(true)
-  maxDistance   Int         @default(10) // For transportation team members
-  emailVerified DateTime?
-  phoneVerified DateTime?
-  image         String?
-  whatsappNumber String?
-  twoFactorEnabled Boolean   @default(false)
-  bannedAt      DateTime?
-  bannedBy      String?
-  banReason     String?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id                  String       @id @default(cuid())
+  firstName           String
+  lastName            String
+  email               String       @unique
+  password            String?      // Optional for OAuth
+  phone               String?
+  username            String?      @unique
+  role                UserRole     @default(USER)
+  status              UserStatus   @default(PENDING)
+  isActive            Boolean      @default(true)
+  maxDistance         Int          @default(10) // For transportation team members
+  emailVerified       DateTime?
+  phoneVerified       DateTime?
+  image               String?
+  whatsappNumber      String?
+  twoFactorEnabled    Boolean       @default(false)
+  bannedAt            DateTime?
+  bannedBy            String?
+  banReason           String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 
-  emailNotifications Boolean @default(false)
-  whatsAppNotifications Boolean @default(false)
-  smsNotifications Boolean @default(false)
-
-  accounts        Account[]
-  sessions        Session[]
-  addresses       Address[]
-  pickupRequests  PickupRequest[] @relation("UserRequests")
-  acceptedRequests PickupRequest[] @relation("DriverRequests")
-  cancelledRequests DriverRequestCancel[] @relation("DriverRequestsCancel")
-  otps            OTP[]
-  subscription    Subscription?
+  accounts            Account[]
+  sessions            Session[]
+  addresses           Address[]
+  pickupRequests      PickupRequest[] @relation("UserRequests")
+  acceptedRequests    PickupRequest[] @relation("DriverRequests")
+  cancelledRequests   DriverRequestCancel[] @relation("DriverRequestsCancel")
+  otps                OTP[]
+  subscription        Subscription?
 
   @@map("users")
 }
 
 model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
+  identifier          String
+  token               String           @unique
+  expires             DateTime
 
   @@unique([identifier, token])
 }
 
 model Address {
-  id         String  @id @default(cuid())
-  userId     String
-  name       String  // e.g., "Home", "Work", "Other"
-  street     String
-  city       String
-  province   String
-  postalCode String
-  country    String  @default("Canada")
-  latitude   Float?
-  longitude  Float?
-  isDefault  Boolean @default(false)
-  isActive   Boolean @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                  String            @id @default(cuid())
+  userId              String
+  name                String            // e.g., "Home", "Work", "Other"
+  street              String
+  city                String
+  province            String
+  postalCode          String
+  country             String            @default("Canada")
+  latitude            Float?
+  longitude           Float?
+  isDefault           Boolean           @default(false)
+  isActive            Boolean           @default(true)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
 
-  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  pickupRequests PickupRequest[]
+  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pickupRequests      PickupRequest[]
 
-  @@unique([userId, name]) // Prevent duplicate address names per user
+  @@unique([userId, name])              // Prevent duplicate address names per user
   @@map("addresses")
 }
 
 model ServiceDay {
-  id          String      @id @default(cuid())
-  name        String
-  dayOfWeek   Int         // 0 = Sunday, 1 = Monday, etc.
-  time        String      // Format: "HH:MM" (24-hour)
-  serviceType ServiceType @default(REGULAR)
-  isActive    Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id                  String            @id @default(cuid())
+  name                String
+  dayOfWeek           Int               // 0 = Sunday, 1 = Monday, etc.
+  time                String            // Format: "HH:MM" (24-hour)
+  serviceType         ServiceType       @default(REGULAR)
+  isActive            Boolean           @default(true)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
 
-  pickupRequests PickupRequest[]
+  pickupRequests      PickupRequest[]
 
   @@map("service_days")
 }
 
 model PickupRequest {
-  id          String        @id @default(cuid())
-  userId      String
-  driverId    String?
-  serviceDayId String
-  addressId   String
-  requestDate DateTime      // The date of the service
-  status      RequestStatus @default(PENDING)
-  notes       String?
-  isPickUp       Boolean @default(true)
-  isDropOff       Boolean @default(false)
-  distance    Float?        // Distance from driver to pickup location
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id                  String            @id @default(cuid())
+  userId              String
+  driverId            String?
+  serviceDayId        String
+  addressId           String
+  requestDate         DateTime          // The date of the service
+  status              RequestStatus     @default(PENDING)
+  notes               String?
+  isPickUp            Boolean           @default(true)
+  isDropOff           Boolean           @default(false)
+  isGroupRide         Boolean           @default(false)
+  numberOfGroup       Int?
+  distance            Float?            // Distance from driver to pickup location
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
 
-  user       User        @relation("UserRequests", fields: [userId], references: [id])
-  driver     User?       @relation("DriverRequests", fields: [driverId], references: [id])
-  serviceDay ServiceDay  @relation(fields: [serviceDayId], references: [id])
-  address    Address     @relation(fields: [addressId], references: [id])
+  user                User              @relation("UserRequests", fields: [userId], references: [id])
+  driver              User?             @relation("DriverRequests", fields: [driverId], references: [id])
+  serviceDay          ServiceDay        @relation(fields: [serviceDayId], references: [id])
+  address             Address           @relation(fields: [addressId], references: [id])
 
-  cancelledRequests DriverRequestCancel[]
+  cancelledRequests   DriverRequestCancel[]
 
   @@map("pickup_requests")
 }
 
 model DriverRequestCancel {
-  id          String        @id @default(cuid())
-  driverId    String
-  requestId String
-  note       String
-  createdAt   DateTime      @default(now())
+  id                  String            @id @default(cuid())
+  driverId            String
+  requestId           String
+  note                String
+  createdAt           DateTime          @default(now())
 
-  driver     User       @relation("DriverRequestsCancel", fields: [driverId], references: [id])
-  request PickupRequest  @relation(fields: [requestId], references: [id])
+  driver              User              @relation("DriverRequestsCancel", fields: [driverId], references: [id])
+  request             PickupRequest     @relation(fields: [requestId], references: [id])
 
   @@map("driver_requests_cancel")
 }
 
 model SystemConfig {
-  id    String @id @default(cuid())
-  key   String @unique
-  value String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                  String            @id @default(cuid())
+  churchName          String            @unique
+  churchAcronym       String?           @unique       
+  churchLogo          String?       
+
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  systemBranchInfos   SystemBranchInfo[]
 
   @@map("system_config")
 }
 
-model OTP {
-  id        String   @id @default(cuid())
-  userId    String
-  code      String
-  type      OTPType
-  identifier String  // email or phone
-  expiresAt DateTime
-  verified  Boolean  @default(false)
-  attempts  Int      @default(0)
-  createdAt DateTime @default(now())
+model SystemBranchInfo {
+  id                  String            @id @default(cuid())
+  branchName          String?
+  branchCategory      BranchType        @default(BRANCH)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  systemConfigId      String
+
+  churchAddress       String
+  churchCity          String
+  churchProvince      String
+  churchPostalCode    String
+  churchCountry       String
+  churchPhone         String
+  requestCutOffInHrs  String
+  defaultMaxDistance  String
+
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  systemConfig        SystemConfig      @relation(fields: [systemConfigId], references: [id], onDelete: Cascade)
+
+  @@map("system_branch_infos")
+}
+
+model OTP {
+  id                  String             @id @default(cuid())
+  userId              String
+  code                String
+  type                OTPType
+  identifier          String             // email or phone
+  expiresAt           DateTime
+  verified            Boolean            @default(false)
+  attempts            Int                @default(0)
+  createdAt           DateTime           @default(now())
+
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, type])
   @@map("otps")
 }
 
 model Subscription {
-  id               String             @id @default(cuid())
-  userId           String             @unique
-  status           SubscriptionStatus @default(ACTIVE)
-  isFreeForLife    Boolean            @default(false)
-  currentPeriodStart DateTime?
-  currentPeriodEnd   DateTime?
-  cancelledAt      DateTime?
-  trialEnd         DateTime?
-  metadata         String?            // JSON for additional subscription info
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
+  id                  String             @id @default(cuid())
+  userId              String             @unique
+  status              SubscriptionStatus @default(ACTIVE)
+  isFreeForLife       Boolean            @default(false)
+  currentPeriodStart  DateTime?
+  currentPeriodEnd    DateTime?
+  cancelledAt         DateTime?
+  trialEnd            DateTime?
+  metadata            String?            // JSON for additional subscription info
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("subscriptions")
 }
 
 model Analytics {
-  id          String   @id @default(cuid())
-  eventType   String   // e.g., "pickup_request", "user_registration", "driver_acceptance"
-  userId      String?
-  metadata    String?  // JSON data for additional context
-  value       Float?   // Numerical value if applicable
-  date        DateTime @default(now())
-  createdAt   DateTime @default(now())
+  id                  String              @id @default(cuid())
+  eventType           String              // e.g., "pickup_request", "user_registration", "driver_acceptance"
+  userId              String?
+  metadata            String?             // JSON data for additional context
+  value               Float?              // Numerical value if applicable
+  date                DateTime            @default(now())
+  createdAt           DateTime            @default(now())
 
   @@index([eventType, date])
   @@index([userId, eventType])
@@ -263,16 +294,16 @@ model Analytics {
 }
 
 model Notification {
-  id          String   @id @default(cuid())
-  userId      String
-  type        String   // "whatsapp", "email", "push"
-  title       String
-  message     String
-  status      String   @default("pending") // "pending", "sent", "failed"
-  scheduledFor DateTime?
-  sentAt      DateTime?
-  metadata    String?  // JSON for additional notification data
-  createdAt   DateTime @default(now())
+  id                  String              @id @default(cuid())
+  userId              String
+  type                String              // "whatsapp", "email", "push"
+  title               String
+  message             String
+  status              String              @default("pending") // "pending", "sent", "failed"
+  scheduledFor        DateTime?
+  sentAt              DateTime?
+  metadata            String?             // JSON for additional notification data
+  createdAt           DateTime            @default(now())
 
   @@index([userId, status])
   @@index([scheduledFor])

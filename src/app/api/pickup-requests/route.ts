@@ -146,6 +146,8 @@ export const POST = async (request: NextRequest) => {
       requestDate,
       isPickUp,
       isDropOff,
+      isGroupRide,
+      numberOfGroup,
       notes,
     } = body;
 
@@ -259,6 +261,8 @@ export const POST = async (request: NextRequest) => {
         isDropOff,
         notes: notes || null,
         status: "PENDING",
+        isGroupRide,
+        numberOfGroup,
       },
       include: {
         serviceDay: true,
@@ -317,6 +321,8 @@ export const PATCH = async (request: NextRequest) => {
       requestDate,
       isDropOff,
       isPickUp,
+      isGroupRide,
+      numberOfGroup,
       notes,
     } = body;
 
@@ -333,13 +339,13 @@ export const PATCH = async (request: NextRequest) => {
       }
 
       // Check if the user exists
-      const exisingUser = await prisma.user.findUnique({
+      const existingUser = await prisma.user.findUnique({
         where: {
           id: userId,
         },
       });
 
-      if (!exisingUser) {
+      if (!existingUser) {
         return NextResponse.json(
           { error: "User does not exist" },
           { status: 400 }
@@ -425,6 +431,8 @@ export const PATCH = async (request: NextRequest) => {
         isDropOff,
         isPickUp,
         notes: notes || null,
+        isGroupRide,
+        numberOfGroup,
       },
       include: {
         serviceDay: true,

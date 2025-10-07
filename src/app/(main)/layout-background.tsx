@@ -11,6 +11,7 @@ export const LayoutBackground = ({
 }) => {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
+
   return (
     <div className="w-full min-h-screen relative">
       <div className="absolute inset-0 w-full h-full">
@@ -23,7 +24,15 @@ export const LayoutBackground = ({
           />
         ) : (
           <Particles
-            particleColors={["#bedeff", "#74d600"]}
+            // particleColors={["#bedeff", "#74d600"]}
+            particleColors={[
+              "#bedeff", // light blue
+              "#74d600", // vibrant green
+              "#ffa500", // orange
+              "#ff69b4", // hot pink
+              "#8a2be2", // blue violet
+              "#00ffff", // cyan
+            ]}
             particleCount={1000}
             particleSpread={2}
             speed={0.1}
@@ -34,7 +43,7 @@ export const LayoutBackground = ({
           />
         )}
       </div>
-      <div className="relative w-full">{children}</div>
+      <div className="relative w-full h-full">{children}</div>
     </div>
   );
 };

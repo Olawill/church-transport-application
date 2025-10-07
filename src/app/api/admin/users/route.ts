@@ -3,10 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { UserRole } from "@/generated/prisma";
-import { prisma } from "@/lib/db";
-import bcrypt from "bcryptjs";
-import { geocodeAddress } from "@/lib/geocoding";
 import { AnalyticsService } from "@/lib/analytics";
+import { prisma } from "@/lib/db";
+import { geocodeAddress } from "@/lib/geocoding";
+import bcrypt from "bcryptjs";
 
 export const GET = async () => {
   try {
@@ -96,7 +96,7 @@ export const POST = async (request: NextRequest) => {
     }
 
     // Get coordinates for addresses
-    const coordiantes = await geocodeAddress({
+    const coordinates = await geocodeAddress({
       street,
       city,
       province,
@@ -104,7 +104,7 @@ export const POST = async (request: NextRequest) => {
       country: "Canada",
     });
 
-    if (coordiantes === null) {
+    if (coordinates === null) {
       return NextResponse.json(
         { error: "Invalid address information" },
         { status: 400 }
@@ -133,13 +133,13 @@ export const POST = async (request: NextRequest) => {
         province,
         postalCode,
         country: "Canada",
-        latitude: coordiantes?.latitude || null,
-        longitude: coordiantes?.longitude || null,
+        latitude: coordinates?.latitude || null,
+        longitude: coordinates?.longitude || null,
         isDefault: true,
       },
     });
 
-    // Track user creatin by admin event
+    // Track user creating by admin event
     await AnalyticsService.trackEvent({
       eventType: "admin_user_creation",
       userId: newUser.id,

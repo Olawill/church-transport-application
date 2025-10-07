@@ -1,4 +1,4 @@
-import { ServiceType, UserRole } from "@/generated/prisma";
+import { Prisma, ServiceType, UserRole } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
@@ -142,21 +142,62 @@ async function main() {
 
   // Create system configuration entries
   const systemConfigs = [
-    { key: "church_name", value: "The Citadel International Church" },
-    { key: "church_address", value: "7915 8 Street NE, Calgary, AB T2E 8A2" },
-    { key: "church_phone", value: "+1 800-257-0658" },
-    { key: "max_request_hours_before", value: "2" },
-    { key: "min_request_minutes_before", value: "30" },
-    { key: "default_max_distance", value: "10" },
+    { key: "churchName", value: "The Citadel International Church" },
+    { key: "churchAcronym", value: "TCIC" },
+    { key: "branchName", value: "TCIC Calgary" },
+    { key: "churchAddress", value: "7915 8 Street NE" },
+    { key: "churchCity", value: "Calgary" },
+    { key: "churchProvince", value: "AB" },
+    { key: "churchPostalCode", value: "T2E 8A2" },
+    { key: "churchCountry", value: "Canada" },
+    { key: "churchPhone", value: "+18002570658" },
+    { key: "requestCutOffInHrs", value: "2" },
+    { key: "defaultMaxDistance", value: "10" },
   ];
 
-  for (const config of systemConfigs) {
-    await prisma.systemConfig.upsert({
-      where: { key: config.key },
-      update: { value: config.value },
-      create: config,
-    });
-  }
+  // for (const config of systemConfigs) {
+  // await prisma.systemConfig.upsert({
+  //   where: { key: config.key },
+  //   update: { value: config.value },
+  //   create: config,
+  // });
+  // }
+  const configData: Prisma.SystemConfigCreateInput = {
+    churchName: systemConfigs.find((c) => c.key === "churchName")?.value || "",
+    churchAcronym:
+      systemConfigs.find((c) => c.key === "churchAcronym")?.value || null,
+  };
+
+  const system = await prisma.systemConfig.upsert({
+    where: { churchAcronym: configData.churchAcronym ?? "DEFAULT" },
+    update: configData,
+    create: configData,
+    select: { id: true },
+  });
+
+  const branchData: Prisma.SystemBranchInfoCreateManyInput = {
+    branchName: systemConfigs.find((c) => c.key === "branchName")?.value || "",
+    systemConfigId: system.id,
+    churchAddress:
+      systemConfigs.find((c) => c.key === "churchAddress")?.value || "",
+    churchCity: systemConfigs.find((c) => c.key === "churchCity")?.value || "",
+    churchProvince:
+      systemConfigs.find((c) => c.key === "churchProvince")?.value || "",
+    churchPostalCode:
+      systemConfigs.find((c) => c.key === "churchPostalCode")?.value || "",
+    churchCountry:
+      systemConfigs.find((c) => c.key === "churchCountry")?.value || "",
+    churchPhone:
+      systemConfigs.find((c) => c.key === "churchPhone")?.value || "",
+    requestCutOffInHrs:
+      systemConfigs.find((c) => c.key === "requestCutOffInHrs")?.value ?? "0",
+    defaultMaxDistance:
+      systemConfigs.find((c) => c.key === "defaultMaxDistance")?.value ?? "0",
+  };
+
+  await prisma.systemBranchInfo.create({
+    data: branchData,
+  });
 
   console.log("✅ System configuration created");
   console.log("🌱 Database seed completed!");

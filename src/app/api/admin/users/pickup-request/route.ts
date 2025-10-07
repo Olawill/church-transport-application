@@ -5,10 +5,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { UserRole } from "@/generated/prisma";
-import { prisma } from "@/lib/db";
-import bcrypt from "bcryptjs";
-import { geocodeAddress } from "@/lib/geocoding";
 import { AnalyticsService } from "@/lib/analytics";
+import { prisma } from "@/lib/db";
+import { geocodeAddress } from "@/lib/geocoding";
+import bcrypt from "bcryptjs";
 
 const payloadSchema = z.object({
   firstName: z.string().min(1),
@@ -24,6 +24,10 @@ const payloadSchema = z.object({
   serviceDayId: z.string().min(1),
   requestDate: z.union([z.string(), z.date()]),
   notes: z.string().optional(),
+  isPickUp: z.boolean(),
+  isDropOff: z.boolean(),
+  isGroupRide: z.boolean(),
+  numberOfGroup: z.number().int().min(2).max(10).nullable(),
 });
 
 export const POST = async (request: NextRequest) => {
@@ -56,6 +60,10 @@ export const POST = async (request: NextRequest) => {
       serviceDayId,
       requestDate,
       notes,
+      isPickUp,
+      isDropOff,
+      isGroupRide,
+      numberOfGroup,
     } = parsed.data;
 
     // Check if user already exist
@@ -84,7 +92,7 @@ export const POST = async (request: NextRequest) => {
     }
 
     // Get coordinates for addresses
-    const coordiantes = await geocodeAddress({
+    const coordinates = await geocodeAddress({
       street,
       city,
       province,
@@ -92,7 +100,7 @@ export const POST = async (request: NextRequest) => {
       country: "Canada",
     });
 
-    if (coordiantes === null) {
+    if (coordinates === null) {
       return NextResponse.json(
         { error: "Invalid address information" },
         { status: 400 }
@@ -123,8 +131,8 @@ export const POST = async (request: NextRequest) => {
           province,
           postalCode,
           country: "Canada",
-          latitude: coordiantes?.latitude || null,
-          longitude: coordiantes?.longitude || null,
+          latitude: coordinates?.latitude || null,
+          longitude: coordinates?.longitude || null,
           isDefault: true,
         },
       });
@@ -199,6 +207,10 @@ export const POST = async (request: NextRequest) => {
         requestDate: serviceDateTime,
         notes: notes || null,
         status: "PENDING",
+        isPickUp,
+        isDropOff,
+        isGroupRide,
+        numberOfGroup,
       },
       include: {
         serviceDay: true,

@@ -1,18 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 "use client";
-import {
-  ArrowLeft,
-  CalendarIcon,
-  Clock,
-  MapPin,
-  Pencil,
-  Send,
-  User2,
-  UserCheck,
-} from "lucide-react";
-import { toast } from "sonner";
-import { format } from "date-fns";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -44,6 +31,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { format } from "date-fns";
+import {
+  ArrowLeft,
+  CalendarIcon,
+  Clock,
+  MapPin,
+  Pencil,
+  Send,
+  User2,
+  UserCheck,
+} from "lucide-react";
+import Link from "next/link";
+import { toast } from "sonner";
 
 import { Address, ServiceDay, User } from "@/lib/types";
 import {
@@ -53,26 +53,30 @@ import {
   formatTime,
   getNextServiceDate,
 } from "@/lib/utils";
+import { NewUserSchema } from "@/types/adminCreateNewUserSchema";
 import {
   newAdminRequestSchema,
   NewAdminRequestSchema,
 } from "@/types/newRequestSchema";
-import { useForm, UseFormReturn, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { NewUserSchema } from "@/types/newUserSchema";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useForm, UseFormReturn, useWatch } from "react-hook-form";
 import { PickUpDropOffField } from "../requests/pickup-dropoff-field";
+import { Input } from "../ui/input";
+import { Switch } from "../ui/switch";
 
 interface AdminNewUserRequestProps {
   isNewUser: boolean;
+  isGroupRequest: boolean;
   form?: UseFormReturn<NewUserSchema>;
   newRequestData?: NewAdminRequestSchema & { requestId: string };
   setShowDialog?: (value: boolean) => void;
 }
 const AdminNewUserRequest = ({
   isNewUser,
+  isGroupRequest,
   form,
   newRequestData,
   setShowDialog,
@@ -89,6 +93,7 @@ const AdminNewUserRequest = ({
   );
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
   const newRequestForm = useForm<NewAdminRequestSchema>({
     resolver: zodResolver(newAdminRequestSchema),
     defaultValues: {
@@ -98,6 +103,8 @@ const AdminNewUserRequest = ({
       requestDate: newRequestData?.requestDate || undefined,
       isPickUp: newRequestData?.isPickUp ?? true,
       isDropOff: newRequestData?.isDropOff ?? false,
+      isGroupRide: newRequestData?.isGroupRide ?? false,
+      numberOfGroup: newRequestData?.numberOfGroup ?? null,
       notes: newRequestData?.notes || "",
     },
   });
@@ -335,6 +342,8 @@ const AdminNewUserRequest = ({
     }
   };
 
+  const isGroupRequestNewForm = newRequestForm.watch("isGroupRide");
+
   return (
     <>
       {isNewUser ? (
@@ -456,6 +465,61 @@ const AdminNewUserRequest = ({
           {/* Pickup and Dropoff Options */}
           <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
             <PickUpDropOffField form={form!} />
+          </div>
+
+          {/* Group Ride */}
+          <div className="flex flex-col justify-between rounded-lg border p-3 shadow-sm mt-4">
+            <FormField
+              control={form?.control}
+              name="isGroupRide"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between pb-3">
+                  <div className="space-y-0.5">
+                    <FormLabel>Group Ride</FormLabel>
+                    <FormDescription>
+                      Is the request for a group (2 or more people)?.
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={(checked) => {
+                        form?.setValue("numberOfGroup", !checked ? null : 2);
+                        field.onChange(checked);
+                      }}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            {isGroupRequest && (
+              <FormField
+                control={form?.control}
+                name="numberOfGroup"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Number of people</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter number of people"
+                        type="number"
+                        {...field}
+                        value={field.value ?? ""}
+                        min={2}
+                        max={10}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          // Convert empty string to null, otherwise to integer
+                          field.onChange(val === "" ? null : parseInt(val, 10));
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
           </div>
         </>
       ) : (
@@ -728,6 +792,66 @@ const AdminNewUserRequest = ({
                   {/* Pickup and Dropoff Options */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <PickUpDropOffField form={newRequestForm} />
+                  </div>
+
+                  {/* Group Ride */}
+                  <div className="flex flex-col justify-between rounded-lg border p-3 shadow-sm">
+                    <FormField
+                      control={newRequestForm.control}
+                      name="isGroupRide"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between pb-3">
+                          <div className="space-y-0.5">
+                            <FormLabel>Group Ride</FormLabel>
+                            <FormDescription>
+                              Is the request for a group (2 or more people)?.
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={(checked) => {
+                                newRequestForm.setValue(
+                                  "numberOfGroup",
+                                  !checked ? null : 2
+                                );
+                                field.onChange(checked);
+                              }}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    {isGroupRequestNewForm && (
+                      <FormField
+                        control={newRequestForm.control}
+                        name="numberOfGroup"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Number of people</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Enter number of people"
+                                type="number"
+                                {...field}
+                                value={field.value ?? ""}
+                                min={2}
+                                max={10}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  // Convert empty string to null, otherwise to integer
+                                  field.onChange(
+                                    val === "" ? null : parseInt(val, 10)
+                                  );
+                                }}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
                   </div>
 
                   {/* Notes */}
