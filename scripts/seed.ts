@@ -168,10 +168,10 @@ async function main() {
       systemConfigs.find((c) => c.key === "churchAcronym")?.value || null,
   };
 
-  const system = await prisma.systemConfig.create({
-    // where: { key: config.key },
-    // update: { value: config.value },
-    data: configData,
+  const system = await prisma.systemConfig.upsert({
+    where: { churchAcronym: configData.churchAcronym ?? "DEFAULT" },
+    update: configData,
+    create: configData,
     select: { id: true },
   });
 
