@@ -245,7 +245,7 @@ export const churchBranchContactInfoUpdateSchema = z.object({
   requestCutOffInHrs: z
     .string()
     .trim()
-    .refine((val) => parseInt(val, 10), {
+    .refine((val) => /^\d+$/.test(val, 10), {
       message: "Please enter cut-off time in hours",
     }),
   defaultMaxDistance: z.enum(["10", "20", "30", "50"]),
