@@ -8,27 +8,30 @@ import { UserRole } from "@/generated/prisma";
 import { AnalyticsService } from "@/lib/analytics";
 import { prisma } from "@/lib/db";
 import { geocodeAddress } from "@/lib/geocoding";
+import { validateRequest } from "@/types/newRequestSchema";
 import bcrypt from "bcryptjs";
 
-const payloadSchema = z.object({
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
-  email: z.string().email(),
-  phone: z.string().optional().nullable(),
-  isLoginRequired: z.boolean(),
-  password: z.string().optional(),
-  street: z.string().min(1),
-  city: z.string().min(1),
-  province: z.string().min(1),
-  postalCode: z.string().min(1),
-  serviceDayId: z.string().min(1),
-  requestDate: z.union([z.string(), z.date()]),
-  notes: z.string().optional(),
-  isPickUp: z.boolean(),
-  isDropOff: z.boolean(),
-  isGroupRide: z.boolean(),
-  numberOfGroup: z.number().int().min(2).max(10).nullable(),
-});
+const payloadSchema = z
+  .object({
+    firstName: z.string().min(1),
+    lastName: z.string().min(1),
+    email: z.email(),
+    phone: z.string().optional().nullable(),
+    isLoginRequired: z.boolean(),
+    password: z.string().optional(),
+    street: z.string().min(1),
+    city: z.string().min(1),
+    province: z.string().min(1),
+    postalCode: z.string().min(1),
+    serviceDayId: z.string().min(1),
+    requestDate: z.union([z.string(), z.date()]),
+    notes: z.string().optional(),
+    isPickUp: z.boolean(),
+    isDropOff: z.boolean(),
+    isGroupRide: z.boolean(),
+    numberOfGroup: z.number().int().min(2).max(10).nullable(),
+  })
+  .superRefine(validateRequest);
 
 export const POST = async (request: NextRequest) => {
   try {

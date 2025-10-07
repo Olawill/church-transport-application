@@ -26,8 +26,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
-import { NotificationService } from "@/lib/notifications";
-
 interface EmailProps {
   openEmailDialog: boolean;
   setOpenEmailDialog: (open: boolean) => void;
@@ -77,14 +75,14 @@ export const DriverEmailDialog = ({
 
       const { body, subject } = validated.data;
 
-      await NotificationService.notifyDriver(
-        {
-          body,
-          to: driverRequest.email,
-          subject: subject || "Notification from Church Transport",
-        },
-        "email"
-      );
+      // await NotificationService.notifyDriver(
+      //   {
+      //     body,
+      //     to: driverRequest.email,
+      //     subject: subject || "Notification from Church Transport",
+      //   },
+      //   "email"
+      // );
 
       toast.success("Email sent successfully");
       form.reset({ body: "", subject: "" });
@@ -193,10 +191,10 @@ export const DriverWhatsAppDialog = ({
         return;
       }
 
-      await NotificationService.notifyDriver(
-        { to, type: "text", text: message },
-        "whatsapp"
-      );
+      // await NotificationService.notifyDriver(
+      //   { to, type: "text", text: message },
+      //   "whatsapp"
+      // );
 
       toast.success("whatsApp message sent successfully");
       form.reset();

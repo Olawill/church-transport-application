@@ -60,25 +60,16 @@ export const validateRequest = (
 export const newRequestSchema = z
   .object({
     serviceDayId: z.string().min(1, "Service selection is required"),
-    requestDate:
-      //   z.preprocess(
-      //     (val) => {
-      //   if (typeof val === "string" || val instanceof Date) {
-      //     const date = new Date(val);
-      //     return isNaN(date.getTime()) ? undefined : date;
-      //   }
-      //   return undefined;
-      // },
-      z.date({ message: "Service date is required" }).refine(
-        (date) => {
-          const now = new Date();
-          const today = new Date(now.toDateString());
-          return date >= today;
-        },
-        {
-          message: "Please select a valid date that is today or later",
-        }
-      ),
+    requestDate: z.date({ message: "Service date is required" }).refine(
+      (date) => {
+        const now = new Date();
+        const today = new Date(now.toDateString());
+        return date >= today;
+      },
+      {
+        message: "Please select a valid date that is today or later",
+      }
+    ),
     addressId: z.string().min(1, "Pickup address is required"),
     notes: z.string().optional(),
     isPickUp: z.boolean(),
@@ -94,20 +85,17 @@ export const newAdminRequestSchema = z
   .object({
     userId: z.string().min(1, "User selection is required"),
     serviceDayId: z.string().min(1, "Service selection is required"),
-    requestDate:
-      // z.preprocess(
-      //   (val) => (val instanceof Date ? new Date(val) : undefined),
-      z.date({ message: "Service date is required" }).refine(
-        (date) => {
-          const now = new Date();
-          const today = new Date(now.toDateString()); // Strip time
-          return date >= today;
-        },
-        {
-          message: "Please select a valid date that is today or later",
-        }
-        // )
-      ),
+    requestDate: z.date({ message: "Service date is required" }).refine(
+      (date) => {
+        const now = new Date();
+        const today = new Date(now.toDateString()); // Strip time
+        return date >= today;
+      },
+      {
+        message: "Please select a valid date that is today or later",
+      }
+      // )
+    ),
     addressId: z.string().min(1, "Pickup address is required"),
     notes: z.string().optional(),
     isPickUp: z.boolean(),
