@@ -123,10 +123,6 @@ export const ProfileManagement = () => {
   const [selectedBranchAddress, setSelectedBranchAddress] =
     useState<BranchAddress | null>(null);
 
-  const [emailNotifications, setEmailNotification] = useState(false);
-  const [smsNotifications, setSmsNotification] = useState(false);
-  const [whatsAppNotifications, setWhatsAppNotification] = useState(false);
-
   const [DeleteAddressDialog, confirmDeleteAddress] = useConfirm(
     "Delete Address",
     "Are you sure you want to delete this address? This is irreversible.",
@@ -807,7 +803,7 @@ export const ProfileManagement = () => {
                                 onChange={field.onChange}
                                 onBlur={field.onBlur}
                                 error={fieldState.error}
-                                disabled={loading}
+                                disabled={!isProfileEditing}
                               />
                             </FormControl>
                             <FormMessage />
@@ -1125,7 +1121,9 @@ export const ProfileManagement = () => {
                     </div>
                     <Switch
                       checked={profile?.twoFactorEnabled || false}
-                      onCheckedChange={toggle2FA}
+                      onCheckedChange={(checked) =>
+                        toggleUserSettings("twoFactorEnabled", !checked)
+                      }
                     />
                   </div>
                 </CardContent>
@@ -1226,81 +1224,107 @@ export const ProfileManagement = () => {
                 {/* Notification Form */}
                 <div className="space-y-6">
                   {/* Email Notification */}
-                  <div className="flex items-center justify-between">
-                    <Label>
-                      <MdMarkEmailUnread />
-                      Email Notification
-                    </Label>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <Label>
+                        <MdMarkEmailUnread />
+                        Email Notification
+                      </Label>
+                      <span className="text-xs text-gray-600 dark:text-gray-400">
+                        You need to verify your email to receive email
+                        notifications
+                      </span>
+                    </div>
                     <div className="flex items-center space-x-2">
                       <Badge
-                        className={cn(emailNotifications && "bg-green-500")}
-                        variant={emailNotifications ? "secondary" : "default"}
+                        className={cn(
+                          profile?.emailNotifications && "bg-green-500"
+                        )}
+                        variant={
+                          profile?.emailNotifications ? "secondary" : "default"
+                        }
                       >
-                        {emailNotifications ? "Enabled" : "Disabled"}
+                        {profile?.emailNotifications ? "Enabled" : "Disabled"}
                       </Badge>
                       <Switch
-                        checked={emailNotifications}
+                        checked={profile?.emailNotifications}
                         onCheckedChange={(checked) => {
-                          setEmailNotification(checked);
+                          toggleUserSettings("emailNotifications", !checked);
                         }}
-                        disabled={profile?.emailVerified ? false : true}
+                        disabled={!profile?.emailVerified}
                       />
                     </div>
                   </div>
 
                   {/* SMS Notification */}
-                  <div className="flex items-center justify-between">
-                    <Label>
-                      <FaSms />
-                      SMS Notification
-                    </Label>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <Label>
+                        <FaSms />
+                        SMS Notification
+                      </Label>
+                      <span className="text-xs text-gray-600 dark:text-gray-400">
+                        You need to verify your phone number to receive sms
+                        notifications
+                      </span>
+                    </div>
                     <div className="flex items-center space-x-2">
                       <Badge
-                        className={cn(smsNotifications && "bg-green-500")}
-                        variant={smsNotifications ? "secondary" : "default"}
+                        className={cn(
+                          profile?.smsNotifications && "bg-green-500"
+                        )}
+                        variant={
+                          profile?.smsNotifications ? "secondary" : "default"
+                        }
                       >
-                        {smsNotifications ? "Enabled" : "Disabled"}
+                        {profile?.smsNotifications ? "Enabled" : "Disabled"}
                       </Badge>
                       <Switch
-                        checked={smsNotifications}
+                        checked={profile?.smsNotifications}
                         onCheckedChange={(checked) => {
-                          setSmsNotification(checked);
+                          toggleUserSettings("smsNotifications", !checked);
                         }}
-                        disabled={profile?.phoneVerified ? false : true}
+                        disabled={!profile?.phoneVerified}
                       />
                     </div>
                   </div>
 
                   {/* whatsApp Notification */}
-                  <div className="flex items-center justify-between">
-                    <Label>
-                      <FaWhatsappSquare />
-                      whatsApp Notification
-                    </Label>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <Label>
+                        <FaWhatsappSquare />
+                        whatsApp Notification
+                      </Label>
+                      <span className="text-xs text-gray-600 dark:text-gray-400">
+                        You need whatsApp number to receive whatsApp
+                        notifications
+                      </span>
+                    </div>
                     <div className="flex items-center space-x-2">
                       <Badge
-                        className={cn(whatsAppNotifications && "bg-green-500")}
+                        className={cn(
+                          profile?.whatsAppNotifications && "bg-green-500"
+                        )}
                         variant={
-                          whatsAppNotifications ? "secondary" : "default"
+                          profile?.whatsAppNotifications
+                            ? "secondary"
+                            : "default"
                         }
                       >
-                        {whatsAppNotifications ? "Enabled" : "Disabled"}
+                        {profile?.whatsAppNotifications
+                          ? "Enabled"
+                          : "Disabled"}
                       </Badge>
                       <Switch
-                        checked={whatsAppNotifications}
+                        checked={profile?.whatsAppNotifications}
                         onCheckedChange={(checked) => {
-                          setWhatsAppNotification(checked);
+                          toggleUserSettings("whatsAppNotifications", !checked);
                         }}
                         disabled={!profile?.whatsappNumber}
                       />
                     </div>
                   </div>
-                  <Switch
-                    checked={profile?.twoFactorEnabled || false}
-                    onCheckedChange={(checked) =>
-                      toggleUserSettings("twoFactorEnabled", !checked)
-                    }
-                  />
                 </div>
               </CardContent>
             </Card>
@@ -1660,127 +1684,134 @@ export const ProfileManagement = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {organization?.systemBranchInfos.map((address) => (
-                        <div key={address.id} className="border rounded-lg p-4">
-                          <div className="flex flex-col md:flex-row gap-4 items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2 mb-2">
-                                <h3 className="font-semibold">
-                                  {address.branchName ??
-                                    `${address.churchCity} Branch`}
-                                </h3>
-                                <Badge
-                                  variant={
-                                    address.branchCategory === "HEADQUARTER"
-                                      ? "default"
-                                      : "secondary"
-                                  }
-                                  className="text-xs"
-                                >
-                                  {address.branchCategory === "HEADQUARTER" && (
-                                    <Star className="w-3 h-3 mr-1" />
-                                  )}
-                                  {address.branchCategory === "HEADQUARTER"
-                                    ? "Headquarter"
-                                    : "Branch"}
-                                </Badge>
+                      {(organization?.systemBranchInfos ?? []).map(
+                        (address) => (
+                          <div
+                            key={address.id}
+                            className="border rounded-lg p-4"
+                          >
+                            <div className="flex flex-col md:flex-row gap-4 items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <h3 className="font-semibold">
+                                    {address.branchName ??
+                                      `${address.churchCity} Branch`}
+                                  </h3>
+                                  <Badge
+                                    variant={
+                                      address.branchCategory === "HEADQUARTER"
+                                        ? "default"
+                                        : "secondary"
+                                    }
+                                    className="text-xs"
+                                  >
+                                    {address.branchCategory ===
+                                      "HEADQUARTER" && (
+                                      <Star className="w-3 h-3 mr-1" />
+                                    )}
+                                    {address.branchCategory === "HEADQUARTER"
+                                      ? "Headquarter"
+                                      : "Branch"}
+                                  </Badge>
+                                </div>
+
+                                <div className="flex items-start">
+                                  <MapPin className="size-4 mr-2 mt-1" />
+                                  <p className="text-xs">
+                                    <span className="font-semibold text-sm">
+                                      Address
+                                    </span>
+                                    <br />
+                                    {address.churchAddress}
+                                    <br />
+                                    {address.churchCity},{" "}
+                                    {address.churchProvince}{" "}
+                                    {address.churchPostalCode}
+                                    <br />
+                                    {address.churchCountry}
+                                  </p>
+                                </div>
+
+                                <div className="flex items-start mt-2">
+                                  <Phone className="size-4 mr-2 mt-1" />
+                                  <p className="text-xs">
+                                    <span className="font-semibold text-sm">
+                                      Phone
+                                    </span>
+                                    <br />
+                                    {address.churchPhone}
+                                  </p>
+                                </div>
+
+                                <div className="flex flex-col md:flex-row items-start gap-2 mt-2">
+                                  <Badge
+                                    variant="destructive"
+                                    className="text-sm"
+                                  >
+                                    <span className="font-semibold italic">
+                                      Request Cut-off Hours:
+                                    </span>
+                                    <span className="font-bold">
+                                      {address.requestCutOffInHrs} hrs
+                                    </span>
+                                  </Badge>
+
+                                  <Badge
+                                    variant="outline"
+                                    className="text-sm bg-lime-700"
+                                  >
+                                    <span className="font-semibold italic">
+                                      Default Max Distance for Drivers:
+                                    </span>
+                                    <span className="font-bold">
+                                      {address.defaultMaxDistance} km
+                                    </span>
+                                  </Badge>
+                                </div>
                               </div>
+                              <div className="flex flex-wrap gap-2 items-center">
+                                {address.branchCategory === "BRANCH" && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      handleSetHeadquarterAddress(address.id)
+                                    }
+                                  >
+                                    Set Headquarter
+                                  </Button>
+                                )}
 
-                              <div className="flex items-start">
-                                <MapPin className="size-4 mr-2 mt-1" />
-                                <p className="text-xs">
-                                  <span className="font-semibold text-sm">
-                                    Address
-                                  </span>
-                                  <br />
-                                  {address.churchAddress}
-                                  <br />
-                                  {address.churchCity}, {address.churchProvince}{" "}
-                                  {address.churchPostalCode}
-                                  <br />
-                                  {address.churchCountry}
-                                </p>
-                              </div>
-
-                              <div className="flex items-start mt-2">
-                                <Phone className="size-4 mr-2 mt-1" />
-                                <p className="text-xs">
-                                  <span className="font-semibold text-sm">
-                                    Phone
-                                  </span>
-                                  <br />
-                                  {address.churchPhone}
-                                </p>
-                              </div>
-
-                              <div className="flex flex-col md:flex-row items-start gap-2 mt-2">
-                                <Badge
-                                  variant="destructive"
-                                  className="text-sm"
-                                >
-                                  <span className="font-semibold italic">
-                                    Request Cut-off Hours:
-                                  </span>
-                                  <span className="font-bold">
-                                    {address.requestCutOffInHrs} hrs
-                                  </span>
-                                </Badge>
-
-                                <Badge
-                                  variant="outline"
-                                  className="text-sm bg-lime-700"
-                                >
-                                  <span className="font-semibold italic">
-                                    Default Max Distance for Drivers:
-                                  </span>
-                                  <span className="font-bold">
-                                    {address.defaultMaxDistance} km
-                                  </span>
-                                </Badge>
-                              </div>
-                            </div>
-                            <div className="flex flex-wrap gap-2 items-center">
-                              {address.branchCategory === "BRANCH" && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() =>
-                                    handleSetHeadquarterAddress(address.id)
-                                  }
-                                >
-                                  Set Headquarter
-                                </Button>
-                              )}
-
-                              <div className="flex items-center space-x-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  title="Edit Branch"
-                                  onClick={() => {
-                                    handleBranchAddressEdit(address);
-                                  }}
-                                >
-                                  <Edit className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  title="Delete Branch"
-                                  onClick={() => {
-                                    // address.branchCategory === "HEADQUARTER"
-                                    handleDeleteBranchAddress(address.id);
-                                  }}
-                                  className="text-red-600 hover:text-red-700"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
+                                <div className="flex items-center space-x-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    title="Edit Branch"
+                                    onClick={() => {
+                                      handleBranchAddressEdit(address);
+                                    }}
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    title="Delete Branch"
+                                    onClick={() => {
+                                      // address.branchCategory === "HEADQUARTER"
+                                      handleDeleteBranchAddress(address.id);
+                                    }}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
-                      {organization?.systemBranchInfos.length === 0 && (
+                        )
+                      )}
+                      {(organization?.systemBranchInfos ?? []).length === 0 && (
                         <div className="text-center py-8 text-gray-500">
                           <MapPin className="w-12 h-12 mx-auto mb-4 opacity-50" />
                           <p>No addresses added yet</p>
@@ -1792,122 +1823,6 @@ export const ProfileManagement = () => {
                     </div>
                   </CardContent>
                 </Card>
-                    {/* Update Button */}
-                    <Button type="submit" className="w-full">
-                      Update Password
-                    </Button>
-                  </form>
-                </Form>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="notifications">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notification Preferences</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* Notification Form */}
-              <div className="space-y-6">
-                {/* Email Notification */}
-                <div className="flex items-start justify-between">
-                  <div>
-                    <Label>
-                      <MdMarkEmailUnread />
-                      Email Notification
-                    </Label>
-                    <span className="text-xs text-gray-600 dark:text-gray-400">
-                      You need to verify your email to receive email
-                      notifications
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge
-                      className={cn(
-                        profile?.emailNotifications && "bg-green-500"
-                      )}
-                      variant={
-                        profile?.emailNotifications ? "secondary" : "default"
-                      }
-                    >
-                      {profile?.emailNotifications ? "Enabled" : "Disabled"}
-                    </Badge>
-                    <Switch
-                      checked={profile?.emailNotifications}
-                      onCheckedChange={(checked) => {
-                        toggleUserSettings("emailNotifications", !checked);
-                      }}
-                      disabled={!profile?.emailVerified}
-                    />
-                  </div>
-                </div>
-
-                {/* SMS Notification */}
-                <div className="flex items-start justify-between">
-                  <div>
-                    <Label>
-                      <FaSms />
-                      SMS Notification
-                    </Label>
-                    <span className="text-xs text-gray-600 dark:text-gray-400">
-                      You need to verify your phone number to receive sms
-                      notifications
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge
-                      className={cn(
-                        profile?.smsNotifications && "bg-green-500"
-                      )}
-                      variant={
-                        profile?.smsNotifications ? "secondary" : "default"
-                      }
-                    >
-                      {profile?.smsNotifications ? "Enabled" : "Disabled"}
-                    </Badge>
-                    <Switch
-                      checked={profile?.smsNotifications}
-                      onCheckedChange={(checked) => {
-                        toggleUserSettings("smsNotifications", !checked);
-                      }}
-                      disabled={!profile?.phoneVerified}
-                    />
-                  </div>
-                </div>
-
-                {/* whatsApp Notification */}
-                <div className="flex items-start justify-between">
-                  <div>
-                    <Label>
-                      <FaWhatsappSquare />
-                      whatsApp Notification
-                    </Label>
-                    <span className="text-xs text-gray-600 dark:text-gray-400">
-                      You need whatsApp number to receive whatsApp notifications
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge
-                      className={cn(
-                        profile?.whatsAppNotifications && "bg-green-500"
-                      )}
-                      variant={
-                        profile?.whatsAppNotifications ? "secondary" : "default"
-                      }
-                    >
-                      {profile?.whatsAppNotifications ? "Enabled" : "Disabled"}
-                    </Badge>
-                    <Switch
-                      checked={profile?.whatsAppNotifications}
-                      onCheckedChange={(checked) => {
-                        toggleUserSettings("whatsAppNotifications", !checked);
-                      }}
-                      disabled={!profile?.whatsappNumber}
-                    />
-                  </div>
-                </div>
               </div>
             </TabsContent>
           )}
