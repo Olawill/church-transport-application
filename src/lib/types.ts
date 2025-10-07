@@ -70,6 +70,8 @@ export interface PickupRequest {
   status: RequestStatus;
   isPickUp: boolean;
   isDropOff: boolean;
+  isGroupRide: boolean;
+  numberOfGroup: number | null;
   notes?: string | null;
   distance?: number | null;
   createdAt: Date;

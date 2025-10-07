@@ -12,6 +12,7 @@ import {
   Phone,
   Plus,
   User,
+  Users,
   UserSquareIcon,
   X,
   XCircle,
@@ -23,7 +24,6 @@ import { toast } from "sonner";
 
 import { columns } from "@/components/drivers/column";
 import { DataTable } from "@/components/drivers/data-table";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Accordion,
   AccordionContent,
@@ -46,6 +46,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -66,9 +67,9 @@ import {
   formatFilterDate,
   formatTime,
 } from "@/lib/utils";
-import { NewRequestForm } from "./new-request-form";
 import AdminNewUserRequest from "../admin/admin-new-user-request";
 import CustomDateCalendar from "../custom-request-calendar";
+import { NewRequestForm } from "./new-request-form";
 
 type Type = RequestType | "ALL";
 
@@ -523,6 +524,12 @@ export const RequestHistory = () => {
                           {request.isDropOff && (
                             <Badge className="bg-cyan-700">DropOff</Badge>
                           )}
+
+                          {request.isGroupRide && (
+                            <Badge className="bg-sky-300">
+                              <Users /> Group {request?.numberOfGroup}
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -768,7 +775,7 @@ export const RequestHistory = () => {
         </CardContent>
       </Card>
 
-      {/* Eidt Request Dialog */}
+      {/* Edit Request Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -795,6 +802,8 @@ export const RequestHistory = () => {
                     notes: selectedRequest.notes as string,
                     isPickUp: selectedRequest.isPickUp as boolean,
                     isDropOff: selectedRequest.isDropOff as boolean,
+                    isGroupRide: selectedRequest.isGroupRide as boolean,
+                    numberOfGroup: selectedRequest.numberOfGroup ?? null,
                   }}
                   setShowDialog={handleEditDialog}
                 />
@@ -803,6 +812,7 @@ export const RequestHistory = () => {
               <ScrollArea className="h-[540px] rounded-md py-4">
                 <AdminNewUserRequest
                   isNewUser={false}
+                  isGroupRequest={selectedRequest.isGroupRide}
                   newRequestData={{
                     requestId: selectedRequest.id as string,
                     userId: selectedRequest.userId as string,
@@ -812,6 +822,8 @@ export const RequestHistory = () => {
                     notes: selectedRequest.notes as string,
                     isPickUp: selectedRequest.isPickUp as boolean,
                     isDropOff: selectedRequest.isDropOff as boolean,
+                    isGroupRide: selectedRequest.isGroupRide as boolean,
+                    numberOfGroup: selectedRequest.numberOfGroup ?? null,
                   }}
                   setShowDialog={handleEditDialog}
                 />
