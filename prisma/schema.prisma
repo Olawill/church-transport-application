@@ -108,6 +108,10 @@ model User {
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
 
+  emailNotifications  Boolean       @default(false)
+  whatsAppNotifications Boolean     @default(false)
+  smsNotifications    Boolean       @default(false)
+
   accounts            Account[]
   sessions            Session[]
   addresses           Address[]
