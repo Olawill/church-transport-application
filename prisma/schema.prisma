@@ -18,6 +18,7 @@ enum UserRole {
   ADMIN
   TRANSPORTATION_TEAM
   USER
+  OWNER
 }
 
 enum UserStatus {
