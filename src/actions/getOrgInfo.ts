@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import { UserRole } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
+import { UserRole } from "@/generated/prisma";
 import { ChurchBranchContactInfoUpdateSchema } from "@/types/adminCreateNewUserSchema";
 
 // import { revalidatePath } from "next/cache";
@@ -22,7 +23,7 @@ export const getOrgInfo = async (orgId?: string) => {
   }
 
   // TODO: Remove this line and make orgId required
-  const organizationId = orgId ? orgId : "cmg9oivx30000m7n9zd4glcme";
+  const organizationId = orgId ? orgId : "cmggw9zpx0000it8ref73euxu";
 
   // TODO: Check if user is owner, show all branch
   // TODO: Check if user is admin, show only branch attached to admin
