@@ -1,7 +1,7 @@
 "use client";
 
-import Orb from "@/components/Orb";
-import Particles from "@/components/Particles";
+import Orb from "@/components/background/Orb";
+import Particles from "@/components/background/Particles";
 import { useTheme } from "next-themes";
 
 export const LayoutBackground = ({

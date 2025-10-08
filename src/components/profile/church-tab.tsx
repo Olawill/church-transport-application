@@ -7,7 +7,7 @@ import {
   Star,
   Trash2,
 } from "lucide-react";
-import { Form, UseFormReturn } from "react-hook-form";
+import { UseFormReturn } from "react-hook-form";
 
 import { PROVINCES } from "@/lib/types";
 import CustomPhoneInput from "../custom-phone-input";
@@ -35,6 +35,7 @@ import {
   DialogTrigger,
 } from "../ui/dialog";
 import {
+  Form,
   FormControl,
   FormField,
   FormItem,

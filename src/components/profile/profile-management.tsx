@@ -10,7 +10,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { cn } from "@/lib/utils";
 
-import { getOrgInfo } from "@/actions/getOrgInfo";
+import {
+  addBranch,
+  deleteBranch,
+  getOrgInfo,
+  setHeadquarter,
+  updateBranch,
+} from "@/actions/getOrgInfo";
 import { useConfirm } from "@/hooks/use-confirm";
 import {
   AddressUpdateSchema,
@@ -82,7 +88,8 @@ export const ProfileManagement = () => {
   const [selectedBranchAddress, setSelectedBranchAddress] =
     useState<BranchAddress | null>(null);
 
-  const isAdmin = session?.user.role === "ADMIN";
+  const isAdminOrOwner =
+    session?.user.role === "ADMIN" || session?.user.role === "OWNER";
 
   const [DeleteAddressDialog, confirmDeleteAddress] = useConfirm(
     "Delete Address",
@@ -157,10 +164,10 @@ export const ProfileManagement = () => {
       fetchAddresses();
     }
 
-    if (session?.user.role === "ADMIN") {
+    if (isAdminOrOwner) {
       fetchOrganization();
     }
-  }, [session]);
+  }, [session, isAdminOrOwner]);
 
   const fetchProfile = async () => {
     try {
@@ -313,25 +320,19 @@ export const ProfileManagement = () => {
     }
 
     try {
-      // const response = await fetch("/api/user/addresses", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify(validatedFields.data),
-      // });
-
-      // if (response.ok) {
-      //   await fetchAddresses();
-      //   setAddressDialogOpen(false);
-      //   addressForm.reset();
-      //   toast.success("Address added successfully");
-      console.log("Add branch address");
-      // } else {
-      //   const error = await response.json();
-      //   toast.error(error.message || "Failed to add address");
-      // }
+      const response = await addBranch(validatedFields.data);
+      if (response.success) {
+        await fetchOrganization();
+        setBranchAddressDialogOpen(false);
+        churchContactInfoForm.reset();
+        toast.success("Branch Added Successfully");
+      } else {
+        const error = response.error;
+        toast.error(error || "Failed to add branch");
+      }
     } catch (error) {
-      console.error("Error adding address:", error);
-      toast.error("Failed to add address");
+      console.error("Error adding branch:", error);
+      toast.error("Failed to add branch");
     }
   };
 
@@ -352,26 +353,24 @@ export const ProfileManagement = () => {
     }
 
     try {
-      // const response = await fetch(`/api/user/addresses/${selectedBranchAddress.id}`, {
-      //   method: "PUT",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify(validatedFields.data),
-      // });
+      const response = await updateBranch(
+        selectedBranchAddress.id,
+        validatedFields.data
+      );
 
-      // if (response.ok) {
-      //   await fetchAddresses();
-      //   setAddressDialogOpen(false);
-      //   setEditingAddress(null);
-      //   addressForm.reset();
-      //   toast.success("Address updated successfully");
-      // } else {
-      //   const error = await response.json();
-      //   toast.error(error.message || "Failed to update address");
-      // }
-      console.log("Updating address");
+      if (response.success) {
+        await fetchOrganization();
+        setBranchAddressDialogOpen(false);
+        setSelectedBranchAddress(null);
+        churchContactInfoForm.reset();
+      } else {
+        const error = response.error;
+        toast.error(error || "Failed to update branch");
+      }
+      console.log("Updating branch");
     } catch (error) {
-      console.error("Error updating address:", error);
-      toast.error("Failed to update address");
+      console.error("Error updating branch:", error);
+      toast.error("Failed to update branch");
     }
   };
 
@@ -429,21 +428,17 @@ export const ProfileManagement = () => {
 
   const handleSetHeadquarterAddress = async (addressId: string) => {
     try {
-      // const response = await fetch(
-      //   `/api/user/addresses/${addressId}/set-default`,
-      //   {
-      //     method: "PUT",
-      //   }
-      // );
+      const response = await setHeadquarter(addressId);
 
-      // if (response.ok) {
-      //   await fetchAddresses();
-      //   toast.success("Default address updated");
-      // }
-      console.log(`Setting ${addressId} as headquarter`);
+      if (response.success) {
+        await fetchOrganization();
+        toast.success("Headquarter address set");
+      } else {
+        toast.error(response.error || "Failed to set headquarters");
+      }
     } catch (error) {
-      console.error("Failed to set default address:", error);
-      toast.error("Failed to set default address");
+      console.error("Failed to set headquarters:", error);
+      toast.error("Failed to set headquarters");
     }
   };
 
@@ -473,18 +468,17 @@ export const ProfileManagement = () => {
     if (!ok) return;
 
     try {
-      // const response = await fetch(`/api/user/addresses/${addressId}`, {
-      //   method: "DELETE",
-      // });
+      const response = await deleteBranch(addressId);
 
-      // if (response.ok) {
-      //   await fetchAddresses();
-      //   toast.success("Address deleted");
-      // }
-      console.log(`Deleting branch information for ${addressId}`);
+      if (response.success) {
+        await fetchOrganization();
+        toast.success("Branch deleted");
+      } else {
+        toast.error(response.error || "Failed to delete branch");
+      }
     } catch (error) {
-      console.error("Failed to delete address:", error);
-      toast.error("Failed to delete address");
+      console.error("Failed to delete branch:", error);
+      toast.error("Failed to delete branch");
     }
   };
 
@@ -558,7 +552,8 @@ export const ProfileManagement = () => {
     }
   };
 
-  if (loading) return <ProfileManagementSkeleton isAdmin={isAdmin} />;
+  if (loading)
+    return <ProfileManagementSkeleton isAdminOrOwner={isAdminOrOwner} />;
 
   return (
     <>
@@ -571,14 +566,14 @@ export const ProfileManagement = () => {
           <TabsList
             className={cn(
               "grid w-full grid-cols-4",
-              session?.user.role === "ADMIN" && "grid-cols-5"
+              isAdminOrOwner && "grid-cols-5"
             )}
           >
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="addresses">Addresses</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            {session?.user.role === "ADMIN" && (
+            {isAdminOrOwner && (
               <TabsTrigger value="church">Church Settings</TabsTrigger>
             )}
           </TabsList>
@@ -630,7 +625,7 @@ export const ProfileManagement = () => {
             />
           </TabsContent>
 
-          {isAdmin && (
+          {isAdminOrOwner && (
             <TabsContent value="church">
               <ChurchTab
                 organization={organization}

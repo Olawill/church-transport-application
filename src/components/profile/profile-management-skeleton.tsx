@@ -1,11 +1,12 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { Skeleton } from "../ui/skeleton";
+
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const ProfileManagementSkeleton = ({
-  isAdmin,
+  isAdminOrOwner,
 }: {
-  isAdmin: boolean;
+  isAdminOrOwner: boolean;
 }) => {
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
@@ -13,13 +14,18 @@ export const ProfileManagementSkeleton = ({
 
       <Tabs defaultValue="profile" className="w-full">
         <TabsList
-          className={cn("grid w-full grid-cols-4", isAdmin && "grid-cols-5")}
+          className={cn(
+            "grid w-full grid-cols-4",
+            isAdminOrOwner && "grid-cols-5"
+          )}
         >
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="addresses">Addresses</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          {isAdmin && <TabsTrigger value="church">Church Settings</TabsTrigger>}
+          {isAdminOrOwner && (
+            <TabsTrigger value="church">Church Settings</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="profile">
@@ -157,7 +163,7 @@ export const ProfileManagementSkeleton = ({
           </div>
         </TabsContent>
 
-        {isAdmin && (
+        {isAdminOrOwner && (
           <TabsContent value="church">
             <div className="border rounded-lg shadow-sm">
               <div className="p-6 border-b">
