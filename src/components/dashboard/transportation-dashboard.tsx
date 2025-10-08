@@ -43,6 +43,7 @@ export const TransportationDashboard = () => {
 
   useEffect(() => {
     fetchRequests({ status: statusFilter, maxDistance });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [maxDistance, statusFilter]);
 
   const handleAcceptRequest = async (requestId: string) => {

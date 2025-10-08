@@ -27,6 +27,7 @@ export const UserDashboard = () => {
     if (session?.user) {
       fetchRequests();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
   const getStatusColor = (status: string) => {

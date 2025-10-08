@@ -99,6 +99,7 @@ export const NewRequestForm = ({
   useEffect(() => {
     fetchServiceDays();
     fetchAddresses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const serviceDayId = useWatch({
@@ -117,6 +118,7 @@ export const NewRequestForm = ({
         form.setValue("requestDate", nextDate);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serviceDayId, serviceDays]);
 
   const addressId = form.watch("addressId");
