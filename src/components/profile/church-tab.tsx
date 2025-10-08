@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ChurchBranchContactInfoUpdateSchema } from "@/types/adminCreateNewUserSchema";
+import { useEffect } from "react";
 import { CustomPagination, usePagination } from "../custom-pagination";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -95,6 +96,21 @@ export const ChurchTab = ({
     organization?.systemBranchInfos ?? []
   );
   const totalBranches = (organization?.systemBranchInfos ?? []).length;
+
+  useEffect(() => {
+    if (totalBranches === 0) {
+      return;
+    }
+
+    const totalPages =
+      Math.ceil(totalBranches / itemsPerPage) === 0
+        ? 1
+        : Math.ceil(totalBranches / itemsPerPage);
+
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, itemsPerPage, totalBranches, setCurrentPage]);
 
   return (
     <div className="space-y-6">
