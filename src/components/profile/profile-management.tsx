@@ -29,6 +29,7 @@ import { ChurchTab } from "@/components/profile/church-tab";
 import { NotificationsTab } from "@/components/profile/notifications-tab";
 import { ProfileTab } from "@/components/profile/profile-tab";
 import { SecurityTab } from "@/components/profile/security-tab";
+import { ProfileManagementSkeleton } from "./profile-management-skeleton";
 
 export interface Address {
   id: string;
@@ -80,6 +81,8 @@ export const ProfileManagement = () => {
   const [branchAddressDialogOpen, setBranchAddressDialogOpen] = useState(false);
   const [selectedBranchAddress, setSelectedBranchAddress] =
     useState<BranchAddress | null>(null);
+
+  const isAdmin = session?.user.role === "ADMIN";
 
   const [DeleteAddressDialog, confirmDeleteAddress] = useConfirm(
     "Delete Address",
@@ -555,7 +558,7 @@ export const ProfileManagement = () => {
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <ProfileManagementSkeleton isAdmin={isAdmin} />;
 
   return (
     <>
@@ -627,7 +630,7 @@ export const ProfileManagement = () => {
             />
           </TabsContent>
 
-          {session?.user.role === "ADMIN" && (
+          {isAdmin && (
             <TabsContent value="church">
               <ChurchTab
                 organization={organization}
