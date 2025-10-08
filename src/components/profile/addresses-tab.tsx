@@ -34,6 +34,7 @@ import {
 
 import { PROVINCES } from "@/lib/types";
 import { AddressUpdateSchema } from "@/types/adminCreateNewUserSchema";
+import { CustomPagination, usePagination } from "../custom-pagination";
 
 interface AddressesTabProps {
   isAddressEditing: boolean;
@@ -68,6 +69,17 @@ export const AddressesTab = ({
   addresses,
   loading,
 }: AddressesTabProps) => {
+  const {
+    currentPage,
+    itemsPerPage,
+    setCurrentPage,
+    setItemsPerPage,
+    paginateItems,
+  } = usePagination(10);
+
+  // Get paginated addresses
+  const paginatedAddresses = paginateItems(addresses);
+
   return (
     <Card>
       <CardHeader>
@@ -268,7 +280,7 @@ export const AddressesTab = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {addresses.map((address) => (
+          {paginatedAddresses.map((address) => (
             <div key={address.id} className="border rounded-lg p-4">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -327,6 +339,15 @@ export const AddressesTab = ({
               <p className="text-sm">Add your first address to get started</p>
             </div>
           )}
+
+          <CustomPagination
+            currentPage={currentPage}
+            totalItems={addresses.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            onItemsPerPageChange={setItemsPerPage}
+            itemName="addresses"
+          />
         </div>
       </CardContent>
     </Card>

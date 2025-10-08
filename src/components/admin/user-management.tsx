@@ -45,13 +45,21 @@ import {
 import { useConfirm } from "@/hooks/use-confirm";
 import { AnalyticsService } from "@/lib/analytics";
 import { User } from "@/lib/types";
+import {
+  CustomPagination,
+  usePaginationWithFilters,
+} from "../custom-pagination";
+
+// Define filter types
+type UserFilters = {
+  roleFilter: string;
+  statusFilter: string;
+};
 
 export const UserManagement = () => {
   const { data: session } = useSession();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [roleFilter, setRoleFilter] = useState("ALL");
-  const [statusFilter, setStatusFilter] = useState("ALL");
 
   const [UpdateRoleDialog, confirmUpdateRole] = useConfirm(
     "Change role",
@@ -59,11 +67,41 @@ export const UserManagement = () => {
     true
   );
 
+  const {
+    currentPage,
+    itemsPerPage,
+    filters,
+    setCurrentPage,
+    setItemsPerPage,
+    paginateItems,
+    updateFilter,
+    clearFilters,
+  } = usePaginationWithFilters<UserFilters>(10, {
+    roleFilter: "ALL",
+    statusFilter: "ALL",
+  });
+
+  // Filter users based on filters
+  const filteredUsers = users.filter((user) => {
+    const matchesRole =
+      filters.roleFilter === "ALL" || user.role === filters.roleFilter;
+    const matchesStatus =
+      filters.statusFilter === "ALL" || user.status === filters.statusFilter;
+    return matchesRole && matchesStatus;
+  });
+
+  // Get paginated users
+  const paginatedUsers = paginateItems(filteredUsers);
+
   useEffect(() => {
     fetchUsers();
-  }, [roleFilter, statusFilter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.roleFilter, filters.statusFilter]);
 
   const fetchUsers = async () => {
+    const roleFilter = filters.roleFilter;
+    const statusFilter = filters.statusFilter;
+
     try {
       const params = new URLSearchParams();
       if (roleFilter !== "ALL") {
@@ -250,15 +288,29 @@ export const UserManagement = () => {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center">
-              <Filter className="mr-2 h-5 w-5" />
-              Filters
+              <div className="flex items-center justify-between w-full">
+                <span className="flex items-center">
+                  <Filter className="mr-2 size-5" />
+                  Filters
+                </span>
+                {(filters.roleFilter !== "ALL" ||
+                  filters.statusFilter !== "ALL") && (
+                  <Button variant="outline" onClick={clearFilters}>
+                    <XCircle className="size-4" />
+                    Clear Filters
+                  </Button>
+                )}
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
                 <label className="text-sm font-medium mb-2 block">Role</label>
-                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <Select
+                  value={filters.roleFilter}
+                  onValueChange={(value) => updateFilter("roleFilter", value)}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -268,13 +320,16 @@ export const UserManagement = () => {
                     <SelectItem value="TRANSPORTATION_TEAM">
                       Transportation Team
                     </SelectItem>
-                    <SelectItem value="USER">Regular Users</SelectItem>
+                    <SelectItem value="USER">Users</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex-1">
                 <label className="text-sm font-medium mb-2 block">Status</label>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <Select
+                  value={filters.statusFilter}
+                  onValueChange={(value) => updateFilter("statusFilter", value)}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -295,10 +350,11 @@ export const UserManagement = () => {
           <CardHeader>
             <CardTitle className="text-lg">Users</CardTitle>
             <CardDescription>
-              {statusFilter === "PENDING" && "Users pending approval"}
-              {statusFilter === "APPROVED" && "Approved and active users"}
-              {statusFilter === "REJECTED" && "Rejected user accounts"}
-              {statusFilter === "ALL" && "All registered users"}
+              {filters.statusFilter === "PENDING" && "Users pending approval"}
+              {filters.statusFilter === "APPROVED" &&
+                "Approved and active users"}
+              {filters.statusFilter === "REJECTED" && "Rejected user accounts"}
+              {filters.statusFilter === "ALL" && "All registered users"}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -322,7 +378,7 @@ export const UserManagement = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {users.map((user) => (
+                {paginatedUsers.map((user) => (
                   <div key={user.id} className="border rounded-lg p-6">
                     <div className="flex justify-between items-start mb-4">
                       <div>
@@ -352,7 +408,7 @@ export const UserManagement = () => {
                           </div>
                         )}
                       </div>
-                      <div className="flex flex-col space-y-2">
+                      <div className="flex flex-col items-end space-y-2">
                         <Badge className={getStatusColor(user.status)}>
                           {user.status.toLowerCase()}
                         </Badge>
@@ -427,6 +483,16 @@ export const UserManagement = () => {
                     </div>
                   </div>
                 ))}
+
+                {/* Pagination */}
+                <CustomPagination
+                  currentPage={currentPage}
+                  totalItems={filteredUsers.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPage}
+                  onItemsPerPageChange={setItemsPerPage}
+                  itemName="users"
+                />
               </div>
             )}
           </CardContent>

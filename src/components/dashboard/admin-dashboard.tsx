@@ -13,6 +13,7 @@ import {
   TrendingUp,
   Users,
   UserX,
+  XCircleIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -24,6 +25,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -54,7 +56,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useSession } from "next-auth/react";
 import { CartesianGrid, Line, LineChart, XAxis } from "recharts";
+import {
+  CustomPagination,
+  usePaginationWithFilters,
+} from "../custom-pagination";
 
 // import { DashboardStats } from "@/lib/types";
 
@@ -109,19 +116,36 @@ const generateChartConfig = (tooltipLabel: string, chartLabel: string) => {
   } satisfies ChartConfig;
 };
 
+type UserFilters = {
+  searchQuery: string;
+};
+
 export const AdminDashboard = () => {
+  const { data: session } = useSession();
   const router = useRouter();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
 
   const [currentTab, setCurrentTab] = useState("overview");
 
   const [banDialogOpen, setBanDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [banReason, setBanReason] = useState("");
+
+  const {
+    currentPage,
+    itemsPerPage,
+    filters,
+    setCurrentPage,
+    setItemsPerPage,
+    paginateItems,
+    updateFilter,
+    clearFilters,
+  } = usePaginationWithFilters<UserFilters>(20, {
+    searchQuery: "",
+  });
 
   useEffect(() => {
     Promise.all([fetchStats(), fetchUsers(), fetchAnalytics()]).finally(() =>
@@ -234,10 +258,33 @@ export const AdminDashboard = () => {
 
   const filteredUsers = users.filter(
     (user) =>
-      user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase())
+      (user.firstName
+        .toLowerCase()
+        .includes(filters.searchQuery.toLowerCase()) ||
+        user.lastName
+          .toLowerCase()
+          .includes(filters.searchQuery.toLowerCase()) ||
+        user.email.toLowerCase().includes(filters.searchQuery.toLowerCase())) &&
+      user.id !== session?.user.id
   );
+
+  // Get paginated users
+  const paginatedUsers = paginateItems(filteredUsers);
+
+  useEffect(() => {
+    if (filteredUsers.length === 0) {
+      return;
+    }
+
+    const totalPages =
+      Math.ceil(filteredUsers.length / itemsPerPage) === 0
+        ? 1
+        : Math.ceil(filteredUsers.length / itemsPerPage);
+
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, filteredUsers.length, itemsPerPage, setCurrentPage]);
 
   const total = useMemo(
     () => ({
@@ -801,13 +848,21 @@ export const AdminDashboard = () => {
                 User Management
                 <div className="flex items-center space-x-2">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-gray-400" />
                     <Input
                       placeholder="Search users..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      value={filters.searchQuery}
+                      onChange={(e) =>
+                        updateFilter("searchQuery", e.target.value)
+                      }
                       className="pl-9 w-64"
                     />
+                    {filters.searchQuery && (
+                      <XCircleIcon
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 size-4 text-gray-400 cursor-pointer"
+                        onClick={clearFilters}
+                      />
+                    )}
                   </div>
                 </div>
               </CardTitle>
@@ -825,7 +880,7 @@ export const AdminDashboard = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredUsers.map((user) => (
+                  {paginatedUsers.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">
                         {user.firstName} {user.lastName}
@@ -839,7 +894,7 @@ export const AdminDashboard = () => {
                               ? "text-red-600"
                               : user.role === "TRANSPORTATION_TEAM"
                                 ? "text-blue-600"
-                                : "text-gray-600"
+                                : "text-gray-600 dark:text-gray-400"
                           }
                         >
                           {user.role.replace("_", " ")}
@@ -908,9 +963,31 @@ export const AdminDashboard = () => {
                       </TableCell>
                     </TableRow>
                   ))}
+
+                  {paginatedUsers.length === 0 && (
+                    <TableRow>
+                      <TableCell
+                        className="font-medium text-center"
+                        colSpan={6}
+                      >
+                        No users found
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
+            <CardFooter>
+              <CustomPagination
+                currentPage={currentPage}
+                totalItems={filteredUsers.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+                onItemsPerPageChange={setItemsPerPage}
+                itemName="users"
+                className="w-full"
+              />
+            </CardFooter>
           </Card>
         </TabsContent>
 

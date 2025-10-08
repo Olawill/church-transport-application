@@ -35,6 +35,7 @@ import { ChurchTab } from "@/components/profile/church-tab";
 import { NotificationsTab } from "@/components/profile/notifications-tab";
 import { ProfileTab } from "@/components/profile/profile-tab";
 import { SecurityTab } from "@/components/profile/security-tab";
+import { ProfileManagementSkeleton } from "./profile-management-skeleton";
 
 export interface Address {
   id: string;
@@ -86,6 +87,9 @@ export const ProfileManagement = () => {
   const [branchAddressDialogOpen, setBranchAddressDialogOpen] = useState(false);
   const [selectedBranchAddress, setSelectedBranchAddress] =
     useState<BranchAddress | null>(null);
+
+  const isAdminOrOwner =
+    session?.user?.role === "ADMIN" || session?.user?.role === "OWNER";
 
   const [DeleteAddressDialog, confirmDeleteAddress] = useConfirm(
     "Delete Address",
@@ -160,10 +164,10 @@ export const ProfileManagement = () => {
       fetchAddresses();
     }
 
-    if (session?.user.role === "ADMIN" || session?.user.role === "OWNER") {
+    if (isAdminOrOwner) {
       fetchOrganization();
     }
-  }, [session]);
+  }, [session, isAdminOrOwner]);
 
   const fetchProfile = async () => {
     try {
@@ -548,7 +552,8 @@ export const ProfileManagement = () => {
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading)
+    return <ProfileManagementSkeleton isAdminOrOwner={isAdminOrOwner} />;
 
   return (
     <>
@@ -561,16 +566,15 @@ export const ProfileManagement = () => {
           <TabsList
             className={cn(
               "grid w-full grid-cols-4",
-              session?.user.role === "ADMIN" && "grid-cols-5"
+              isAdminOrOwner && "grid-cols-5"
             )}
           >
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="addresses">Addresses</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            {(session?.user.role === "ADMIN" ||
-              session?.user.role === "OWNER") && (
-              <TabsTrigger value="church">Church Info & Settings</TabsTrigger>
+            {isAdminOrOwner && (
+              <TabsTrigger value="church">Church Settings</TabsTrigger>
             )}
           </TabsList>
 
@@ -621,8 +625,7 @@ export const ProfileManagement = () => {
             />
           </TabsContent>
 
-          {(session?.user.role === "ADMIN" ||
-            session?.user.role === "OWNER") && (
+          {isAdminOrOwner && (
             <TabsContent value="church">
               <ChurchTab
                 organization={organization}
