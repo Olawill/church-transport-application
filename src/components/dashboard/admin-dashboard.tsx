@@ -271,6 +271,21 @@ export const AdminDashboard = () => {
   // Get paginated users
   const paginatedUsers = paginateItems(filteredUsers);
 
+  useEffect(() => {
+    if (filteredUsers.length === 0) {
+      return;
+    }
+
+    const totalPages =
+      Math.ceil(filteredUsers.length / itemsPerPage) === 0
+        ? 1
+        : Math.ceil(filteredUsers.length / itemsPerPage);
+
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, filteredUsers.length, itemsPerPage, setCurrentPage]);
+
   const total = useMemo(
     () => ({
       registrations: analytics?.registrations.reduce(
