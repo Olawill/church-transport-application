@@ -323,8 +323,8 @@ export const ProfileManagement = () => {
         churchContactInfoForm.reset();
         toast.success("Branch Added Successfully");
       } else {
-        const error = await response.error;
-        toast.error(error || "Failed to add brancg");
+        const error = response.error;
+        toast.error(error || "Failed to add branch");
       }
     } catch (error) {
       console.error("Error adding branch:", error);
@@ -358,9 +358,9 @@ export const ProfileManagement = () => {
         await fetchOrganization();
         setBranchAddressDialogOpen(false);
         setSelectedBranchAddress(null);
-        addressForm.reset();
+        churchContactInfoForm.reset();
       } else {
-        const error = await response.error;
+        const error = response.error;
         toast.error(error || "Failed to update branch");
       }
       console.log("Updating branch");
@@ -429,6 +429,8 @@ export const ProfileManagement = () => {
       if (response.success) {
         await fetchOrganization();
         toast.success("Headquarter address set");
+      } else {
+        toast.error(response.error || "Failed to set headquarters");
       }
     } catch (error) {
       console.error("Failed to set headquarters:", error);
@@ -467,6 +469,8 @@ export const ProfileManagement = () => {
       if (response.success) {
         await fetchOrganization();
         toast.success("Branch deleted");
+      } else {
+        toast.error(response.error || "Failed to delete branch");
       }
     } catch (error) {
       console.error("Failed to delete branch:", error);

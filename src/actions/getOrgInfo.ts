@@ -11,7 +11,11 @@ import { ChurchBranchContactInfoUpdateSchema } from "@/types/adminCreateNewUserS
 export const getOrgInfo = async (orgId?: string) => {
   const session = await auth();
 
-  if (!session) {
+  if (
+    !session ||
+    (session.user.role !== UserRole.ADMIN &&
+      session.user.role !== UserRole.OWNER)
+  ) {
     return {
       error: "You are not authorized",
     };
@@ -21,6 +25,7 @@ export const getOrgInfo = async (orgId?: string) => {
   const organizationId = orgId ? orgId : "cmggw9zpx0000it8ref73euxu";
 
   // TODO: Check if user is owner, show all branch
+  // TODO: Check if user is admin, show only branch attached to admin
 
   try {
     const organization = await prisma.systemConfig.findFirst({
@@ -48,7 +53,11 @@ export const getOrgInfo = async (orgId?: string) => {
 export const setHeadquarter = async (addressId: string, orgId?: string) => {
   const session = await auth();
 
-  if (!session || session.user.role !== UserRole.ADMIN) {
+  if (
+    !session ||
+    (session.user.role !== UserRole.ADMIN &&
+      session.user.role !== UserRole.OWNER)
+  ) {
     return {
       error: "You are not authorized",
     };
@@ -60,6 +69,9 @@ export const setHeadquarter = async (addressId: string, orgId?: string) => {
   // TODO: Check if user is admin or owner
   if (session.user.role === UserRole.ADMIN) {
     console.log("You are an admin");
+  }
+  if (session.user.role === UserRole.OWNER) {
+    console.log("You are an owner");
   }
   try {
     // Check if address exist
@@ -118,7 +130,11 @@ export const addBranch = async (
   const session = await auth();
 
   // TODO: Check authentication and if user is admin or owner
-  if (!session || session.user.role !== UserRole.ADMIN) {
+  if (
+    !session ||
+    (session.user.role !== UserRole.ADMIN &&
+      session.user.role !== UserRole.OWNER)
+  ) {
     return {
       error: "You are not authorized",
     };
@@ -166,7 +182,11 @@ export const updateBranch = async (
   const session = await auth();
 
   // TODO: Check if user is admin or owner
-  if (!session || session.user.role !== UserRole.ADMIN) {
+  if (
+    !session ||
+    (session.user.role !== UserRole.ADMIN &&
+      session.user.role !== UserRole.OWNER)
+  ) {
     return {
       error: "You are not authorized to perform this task",
     };
@@ -217,7 +237,11 @@ export const updateBranch = async (
 export const deleteBranch = async (addressId: string, orgId?: string) => {
   const session = await auth();
 
-  if (!session || session.user.role !== UserRole.ADMIN) {
+  if (
+    !session ||
+    (session.user.role !== UserRole.ADMIN &&
+      session.user.role !== UserRole.OWNER)
+  ) {
     return {
       error: "You are not authorized",
     };
