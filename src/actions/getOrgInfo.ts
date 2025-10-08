@@ -3,7 +3,6 @@
 import { auth } from "@/auth";
 import { UserRole } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
-import { UserRole } from "@/generated/prisma";
 import { ChurchBranchContactInfoUpdateSchema } from "@/types/adminCreateNewUserSchema";
 
 // import { revalidatePath } from "next/cache";
