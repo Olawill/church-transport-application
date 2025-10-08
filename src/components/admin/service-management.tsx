@@ -42,6 +42,7 @@ import {
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { CustomPagination, usePagination } from "../custom-pagination";
 
 export const ServiceManagement = () => {
   const [serviceDays, setServiceDays] = useState<ServiceDay[]>([]);
@@ -54,6 +55,17 @@ export const ServiceManagement = () => {
     "Are you sure you want to delete this service? This is irreversible.",
     true
   );
+
+  const {
+    currentPage,
+    itemsPerPage,
+    setCurrentPage,
+    setItemsPerPage,
+    paginateItems,
+  } = usePagination(10);
+
+  // Get paginated services
+  const paginatedServices = paginateItems(serviceDays);
 
   const serviceForm = useForm<ServiceDaySchema>({
     resolver: zodResolver(serviceDaySchema),
@@ -476,54 +488,65 @@ export const ServiceManagement = () => {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {serviceDays.map((service) => (
-                  <div
-                    key={service.id}
-                    className="border rounded-lg p-4 hover:bg-gray-700"
-                  >
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <h3 className="font-semibold">{service.name}</h3>
-                        <div className="flex items-center space-x-2 mt-1 text-sm">
-                          <Calendar className="h-4 w-4" />
-                          <span>{getDayName(service.dayOfWeek)}</span>
-                          <Clock className="h-4 w-4 ml-2" />
-                          <span>{formatTime(service.time)}</span>
+              <div className="space-y-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {paginatedServices.map((service) => (
+                    <div
+                      key={service.id}
+                      className="border rounded-lg p-4 hover:bg-gray-700"
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h3 className="font-semibold">{service.name}</h3>
+                          <div className="flex items-center space-x-2 mt-1 text-sm">
+                            <Calendar className="h-4 w-4" />
+                            <span>{getDayName(service.dayOfWeek)}</span>
+                            <Clock className="h-4 w-4 ml-2" />
+                            <span>{formatTime(service.time)}</span>
+                          </div>
+                        </div>
+                        <div className="flex flex-row items-end space-x-1">
+                          <Badge
+                            className={getServiceTypeColor(service.serviceType)}
+                          >
+                            {service.serviceType.toLowerCase()}
+                          </Badge>
+                          <Badge
+                            className={getServiceStatusColor(service.isActive)}
+                          >
+                            {service.isActive ? "active" : "inactive"}
+                          </Badge>
                         </div>
                       </div>
-                      <div className="flex flex-row items-end space-x-1">
-                        <Badge
-                          className={getServiceTypeColor(service.serviceType)}
+
+                      <div className="flex justify-end space-x-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEdit(service)}
                         >
-                          {service.serviceType.toLowerCase()}
-                        </Badge>
-                        <Badge
-                          className={getServiceStatusColor(service.isActive)}
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDelete(service.id)}
                         >
-                          {service.isActive ? "active" : "inactive"}
-                        </Badge>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
+                  ))}
+                </div>
 
-                    <div className="flex justify-end space-x-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleEdit(service)}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDelete(service.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                <CustomPagination
+                  currentPage={currentPage}
+                  totalItems={serviceDays.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPage}
+                  onItemsPerPageChange={setItemsPerPage}
+                  itemName="services"
+                />
               </div>
             )}
           </CardContent>

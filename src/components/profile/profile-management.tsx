@@ -576,7 +576,7 @@ export const ProfileManagement = () => {
             <TabsTrigger value="security">Security</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             {session?.user.role === "ADMIN" && (
-              <TabsTrigger value="church">Church Info & Settings</TabsTrigger>
+              <TabsTrigger value="church">Church Settings</TabsTrigger>
             )}
           </TabsList>
 

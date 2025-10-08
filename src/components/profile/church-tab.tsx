@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ChurchBranchContactInfoUpdateSchema } from "@/types/adminCreateNewUserSchema";
+import { CustomPagination, usePagination } from "../custom-pagination";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -80,6 +81,20 @@ export const ChurchTab = ({
   handleDeleteBranchAddress,
   loading,
 }: ChurchTabProps) => {
+  const {
+    currentPage,
+    itemsPerPage,
+    setCurrentPage,
+    setItemsPerPage,
+    paginateItems,
+  } = usePagination(10);
+
+  // Get paginated branches
+  const paginatedBranches = paginateItems(
+    organization?.systemBranchInfos ?? []
+  );
+  const totalBranches = (organization?.systemBranchInfos ?? []).length;
+
   return (
     <div className="space-y-6">
       {/* Church Information */}
@@ -419,9 +434,9 @@ export const ChurchTab = ({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {(organization?.systemBranchInfos ?? []).map((address) => (
-              <div key={address.id} className="border rounded-lg p-4">
-                <div className="flex flex-col md:flex-row gap-4 items-start justify-between">
+            {paginatedBranches.map((address) => (
+              <div key={address.id} className="border rounded-lg px-2 py-4">
+                <div className="flex flex-col md:flex-row gap-2 items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-2">
                       <h3 className="font-semibold">
@@ -487,11 +502,12 @@ export const ChurchTab = ({
                       </Badge>
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-2 items-center">
+                  <div className="flex flex-wrap gap-2 items-center -ml-2">
                     {address.branchCategory === "BRANCH" && (
                       <Button
                         variant="outline"
                         size="sm"
+                        className="mr-4"
                         onClick={() => handleSetHeadquarterAddress(address.id)}
                       >
                         Set Headquarter
@@ -526,7 +542,7 @@ export const ChurchTab = ({
                 </div>
               </div>
             ))}
-            {(organization?.systemBranchInfos ?? []).length === 0 && (
+            {totalBranches === 0 && (
               <div className="text-center py-8 text-gray-500">
                 <MapPin className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p>No addresses added yet</p>
@@ -535,6 +551,15 @@ export const ChurchTab = ({
                 </p>
               </div>
             )}
+
+            <CustomPagination
+              currentPage={currentPage}
+              totalItems={totalBranches}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+              onItemsPerPageChange={setItemsPerPage}
+              itemName="branches"
+            />
           </div>
         </CardContent>
       </Card>

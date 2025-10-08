@@ -68,6 +68,7 @@ import {
   formatTime,
 } from "@/lib/utils";
 import AdminNewUserRequest from "../admin/admin-new-user-request";
+import { CustomPagination, usePaginationWithStore } from "../custom-pagination";
 import CustomDateCalendar from "../custom-request-calendar";
 import { NewRequestForm } from "./new-request-form";
 
@@ -101,10 +102,22 @@ export const RequestHistory = () => {
     {}
   );
 
+  const {
+    currentPage,
+    itemsPerPage,
+    setCurrentPage,
+    setItemsPerPage,
+    paginateItems,
+  } = usePaginationWithStore(10, [statusFilter, typeFilter, requestDateFilter]);
+
+  // Get paginated requests
+  const paginatedRequests = paginateItems(requests);
+
   useEffect(() => {
     if (session?.user) {
       fetchRequests();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, statusFilter, typeFilter, requestDateFilter]);
 
   useEffect(() => {
@@ -374,8 +387,22 @@ export const RequestHistory = () => {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center">
-            <Filter className="mr-2 h-5 w-5" />
-            Filters
+            <div className="flex items-center justify-between w-full">
+              <span className="flex items-center">
+                <Filter className="mr-2 size-5" />
+                Filters
+              </span>
+
+              {/* Clear Button */}
+              {(statusFilter !== "ALL" ||
+                typeFilter !== "ALL" ||
+                requestDateFilter) && (
+                <Button variant="outline" onClick={clearFilters}>
+                  <XCircle className="size-4" />
+                  Clear Filters
+                </Button>
+              )}
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -429,17 +456,6 @@ export const RequestHistory = () => {
                 setRequestDateFilter={setRequestDateFilter}
                 requestDateFilter={requestDateFilter}
               />
-            </div>
-            {/* Clear Button */}
-            <div className="flex-1">
-              {(statusFilter !== "ALL" ||
-                typeFilter !== "ALL" ||
-                requestDateFilter) && (
-                <Button variant="outline" type="button" onClick={clearFilters}>
-                  <XCircle className="size-4" />
-                  Clear Filter
-                </Button>
-              )}
             </div>
           </div>
         </CardContent>
@@ -502,7 +518,7 @@ export const RequestHistory = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {requests.map((request) => (
+              {paginatedRequests.map((request) => (
                 <div key={request.id} className="border rounded-lg p-6">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center space-x-3">
@@ -770,6 +786,16 @@ export const RequestHistory = () => {
                     )}
                 </div>
               ))}
+
+              {/* Pagination */}
+              <CustomPagination
+                currentPage={currentPage}
+                totalItems={requests.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+                onItemsPerPageChange={setItemsPerPage}
+                itemName="requests"
+              />
             </div>
           )}
         </CardContent>
