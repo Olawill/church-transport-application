@@ -160,7 +160,7 @@ export const ProfileManagement = () => {
       fetchAddresses();
     }
 
-    if (session?.user.role === "ADMIN") {
+    if (session?.user.role === "ADMIN" || session?.user.role === "OWNER") {
       fetchOrganization();
     }
   }, [session]);
@@ -568,7 +568,8 @@ export const ProfileManagement = () => {
             <TabsTrigger value="addresses">Addresses</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            {session?.user.role === "ADMIN" && (
+            {(session?.user.role === "ADMIN" ||
+              session?.user.role === "OWNER") && (
               <TabsTrigger value="church">Church Info & Settings</TabsTrigger>
             )}
           </TabsList>
@@ -620,7 +621,8 @@ export const ProfileManagement = () => {
             />
           </TabsContent>
 
-          {session?.user.role === "ADMIN" && (
+          {(session?.user.role === "ADMIN" ||
+            session?.user.role === "OWNER") && (
             <TabsContent value="church">
               <ChurchTab
                 organization={organization}
