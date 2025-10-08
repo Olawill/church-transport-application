@@ -89,7 +89,7 @@ export const ProfileManagement = () => {
     useState<BranchAddress | null>(null);
 
   const isAdminOrOwner =
-    session?.user.role === "ADMIN" || session?.user.role === "OWNER";
+    session?.user?.role === "ADMIN" || session?.user?.role === "OWNER";
 
   const [DeleteAddressDialog, confirmDeleteAddress] = useConfirm(
     "Delete Address",
