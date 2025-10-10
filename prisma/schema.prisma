@@ -185,6 +185,7 @@ model PickupRequest {
   isGroupRide         Boolean           @default(false)
   numberOfGroup       Int?
   distance            Float?            // Distance from driver to pickup location
+  seriesId   String?         // FK to PickupSeries
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
@@ -194,8 +195,17 @@ model PickupRequest {
   address             Address           @relation(fields: [addressId], references: [id])
 
   cancelledRequests   DriverRequestCancel[]
+  series     PickupSeries?   @relation(fields: [seriesId], references: [id])
 
   @@map("pickup_requests")
+}
+
+model PickupSeries {
+  id              String            @id @default(cuid())
+  createdAt       DateTime          @default(now())
+  pickupRequests  PickupRequest[]
+
+  @@map("pickup_series")
 }
 
 model DriverRequestCancel {
