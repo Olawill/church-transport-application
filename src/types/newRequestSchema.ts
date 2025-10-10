@@ -1,14 +1,23 @@
+import { differenceInWeeks } from "date-fns/differenceInWeeks";
+import { differenceInMonths } from "date-fns/differenceInMonths";
 import { z } from "zod";
+import { validateRequestDate } from "@/actions/validRequestDate";
 
-export const validateRequest = (
+export const validateRequest = async (
   data: {
     isPickUp: boolean;
     isDropOff: boolean;
     isGroupRide: boolean;
     numberOfGroup: number | null;
+    isRecurring: boolean;
+    endDate?: Date;
+    serviceDayId: string;
+    requestDate: Date;
   },
   ctx: z.RefinementCtx
 ) => {
+  const result = await validateRequestDate(data.requestDate, data.serviceDayId);
+
   const pickupDropoffMessage =
     "Please select at least one option: Pickup or Drop-off";
 
@@ -55,6 +64,69 @@ export const validateRequest = (
       });
     }
   }
+
+  // Recurring request logic
+  if (data.isRecurring) {
+    const startDate = data.requestDate ?? new Date();
+    startDate.setHours(0, 0, 0, 0);
+
+    if (!data.endDate) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Please select the end date for the recurring request",
+        path: ["endDate"],
+      });
+      return;
+    }
+    data.endDate.setHours(0, 0, 0, 0);
+
+    const durationPeriodInWeeks = differenceInWeeks(data.endDate, startDate);
+
+    const durationPeriodInMonths = differenceInMonths(data.endDate, startDate);
+
+    if (durationPeriodInWeeks < 2) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Please select the end date that is greater than a week",
+        path: ["endDate"],
+      });
+    }
+
+    if (durationPeriodInMonths > 3) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Please select an end date at least 3 months away",
+        path: ["endDate"],
+      });
+    }
+  } else {
+    if (data.endDate !== undefined) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Recurring Ride End Date is not required",
+        path: ["endDate"],
+      });
+    }
+  }
+
+  // Ensure request falls on day of week
+  if (result.error) {
+    ctx.addIssue({
+      code: "custom",
+      message: result.message,
+      path: ["requestDate"],
+    });
+  } else {
+    const { isServiceDayOfWeek, dayOfWeek } = result.validData;
+
+    if (!isServiceDayOfWeek) {
+      ctx.addIssue({
+        code: "custom",
+        message: `Request date for this service should be ${dayOfWeek}`,
+        path: ["requestDate"],
+      });
+    }
+  }
 };
 
 export const newRequestSchema = z
@@ -76,6 +148,8 @@ export const newRequestSchema = z
     isDropOff: z.boolean(),
     isGroupRide: z.boolean(),
     numberOfGroup: z.number().int().min(2).max(10).nullable(),
+    isRecurring: z.boolean(),
+    endDate: z.date().optional(),
   })
   .superRefine(validateRequest);
 
@@ -102,6 +176,8 @@ export const newAdminRequestSchema = z
     isDropOff: z.boolean(),
     isGroupRide: z.boolean(),
     numberOfGroup: z.number().int().min(2).max(10).nullable(),
+    isRecurring: z.boolean(),
+    endDate: z.date().optional(),
   })
   .superRefine(validateRequest);
 
