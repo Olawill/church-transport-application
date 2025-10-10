@@ -1,6 +1,9 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { Frequency, frequencyMap, Ordinal, ordinalMap } from "./types";
+import { format } from "date-fns/format";
+import { setDay } from "date-fns/setDay";
+import { addDays, addMonths, startOfMonth } from "date-fns";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -87,107 +90,192 @@ export function getNextServiceDate(dayOfWeek: number): Date {
   return nextDate;
 }
 
-export function updatedGetNextServiceDate(
-  dayOfWeek: number,
-  frequency: Frequency = "weekly",
-  ordinal: Ordinal = "next"
-): Date {
-  if (dayOfWeek < 0 || dayOfWeek > 6) {
-    throw new Error(
-      "Invalid day of week: must be between 0 (Sunday=0) and 6 (Saturday=6)"
-    );
-  }
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const monthsToAdd = frequencyMap[frequency];
-
-  // ✅ "next" mode (uses today if it's the same weekday)
-  if (ordinal === "next") {
-    const baseDate = new Date(today);
-    const isTodayTargetDay = baseDate.getDay() === dayOfWeek;
-
-    if (!isTodayTargetDay) {
-      let daysToAdd = dayOfWeek - baseDate.getDay();
-      if (daysToAdd < 0) daysToAdd += 7;
-      baseDate.setDate(baseDate.getDate() + daysToAdd);
+export function getNextOccurrencesOfWeekdays({
+  fromDate,
+  allowedWeekdays = [],
+  count,
+  endDate,
+  frequency = "WEEKLY",
+  ordinal = "NEXT",
+}: {
+  fromDate: Date;
+  allowedWeekdays: number[];
+  count: number;
+  endDate?: Date;
+  frequency?: Frequency;
+  ordinal?: Ordinal;
+}): Date[] {
+  const results: Date[] = [];
+  let current = new Date(
+    fromDate.getFullYear(),
+    fromDate.getMonth(),
+    fromDate.getDate()
+  );
+  const frequencyStep = frequencyMap[frequency] || 1;
+  let iterations = 0;
+  const maxIterations = 10000;
+  // === Handle WEEKLY, DAILY, NONE - only support NEXT ordinal ===
+  if (frequency === "WEEKLY" || frequency === "DAILY" || frequency === "NONE") {
+    // Force ordinal to NEXT for these frequencies
+    while (
+      endDate
+        ? current.toISOString().split("T")[0] <=
+          endDate.toISOString().split("T")[0]
+        : results.length < count
+    ) {
+      if (
+        allowedWeekdays.length === 0 ||
+        allowedWeekdays.includes(current.getDay())
+      ) {
+        results.push(new Date(current));
+      }
+      current = addDays(current, 1);
+      iterations++;
+      if (iterations > maxIterations) break;
     }
+    return results;
+  }
 
-    if (monthsToAdd === 0) {
-      return baseDate;
+  if (frequencyStep > 0) {
+    // Monthly or longer frequency path
+    if (ordinal === "NEXT") {
+      // Extract just the date parts, ignoring time/timezone
+      const getDateOnly = (date: Date) => {
+        // Extract UTC date parts and create local date
+        return new Date(
+          date.getUTCFullYear(),
+          date.getUTCMonth(),
+          date.getUTCDate()
+        );
+      };
+      // Set date to end of day (23:59:59.999)
+      const getEndOfDay = (date: Date) => {
+        // Extract UTC date parts and create local date at end of day
+        const d = new Date(
+          date.getUTCFullYear(),
+          date.getUTCMonth(),
+          date.getUTCDate()
+        );
+        d.setHours(23, 59, 59, 999);
+        return d;
+      };
+
+      let anchorDate = getDateOnly(fromDate);
+      const normalizedFromDate = getDateOnly(fromDate);
+      const normalizedEndDate = endDate ? getEndOfDay(endDate) : null;
+      while (
+        results.length < count &&
+        (!normalizedEndDate || anchorDate <= normalizedEndDate)
+      ) {
+        const anchorDayOfWeek = anchorDate.getDay();
+        for (const targetWeekday of allowedWeekdays) {
+          const daysDiff = targetWeekday - anchorDayOfWeek;
+          const targetDate = new Date(
+            anchorDate.getFullYear(),
+            anchorDate.getMonth(),
+            anchorDate.getDate() + daysDiff
+          );
+          if (targetDate >= normalizedFromDate) {
+            if (
+              normalizedEndDate &&
+              (targetDate.getFullYear() > normalizedEndDate.getFullYear() ||
+                (targetDate.getFullYear() === normalizedEndDate.getFullYear() &&
+                  targetDate.getMonth() > normalizedEndDate.getMonth()) ||
+                (targetDate.getFullYear() === normalizedEndDate.getFullYear() &&
+                  targetDate.getMonth() === normalizedEndDate.getMonth() &&
+                  targetDate.getDate() > normalizedEndDate.getDate()))
+            ) {
+              continue;
+            }
+            results.push(targetDate);
+            if (results.length >= count) break;
+          }
+        }
+        if (results.length >= count) break;
+        anchorDate = addMonths(anchorDate, frequencyStep);
+        iterations++;
+        if (iterations > maxIterations) break;
+      }
+      return results.sort((a, b) => a.getTime() - b.getTime());
+    } else {
+      // Ordinal is FIRST, SECOND, THIRD, FOURTH, LAST
+      while (
+        (!endDate && results.length < count) ||
+        (endDate &&
+          current.toISOString().split("T")[0] <=
+            endDate.toISOString().split("T")[0])
+      ) {
+        const monthStart = startOfMonth(current);
+        for (const weekday of allowedWeekdays) {
+          let date: Date;
+          if (ordinal === "LAST") {
+            date = getLastWeekdayOfMonth(monthStart, weekday);
+          } else {
+            const nth = ordinalMap[ordinal];
+            date = getNthWeekdayOfMonth(monthStart, weekday, nth);
+          }
+          if (
+            date >= fromDate &&
+            (!endDate ||
+              date.toISOString().split("T")[0] <=
+                endDate.toISOString().split("T")[0])
+          ) {
+            results.push(date);
+          }
+        }
+        current = addMonths(current, frequencyStep);
+        iterations++;
+        if (iterations > maxIterations) break;
+      }
+      // Sort because multiple weekdays can produce unordered results
+      return results.sort((a, b) => a.getTime() - b.getTime()).slice(0, count);
     }
-
-    // Add months and re-align to the desired day of week
-    const result = new Date(baseDate);
-    result.setMonth(result.getMonth() + monthsToAdd);
-
-    // Adjust weekday again after month increment
-    const adjustedDay = result.getDay();
-    let offset = dayOfWeek - adjustedDay;
-    if (offset < 0) offset += 7;
-
-    result.setDate(result.getDate() + offset);
-
-    return result;
   }
-
-  // ✅ "last" mode — find last weekday in target month
-  if (ordinal === "last") {
-    const lastDay = getLastWeekdayOfMonth(today, monthsToAdd, dayOfWeek);
-    return lastDay;
-  }
-
-  // ✅ first, second, third, fourth
-  if (ordinal in ordinalMap) {
-    const nth = ordinalMap[ordinal as keyof typeof ordinalMap];
-    const nthDate = getNthWeekdayOfMonth(today, monthsToAdd, dayOfWeek, nth);
-    return nthDate;
-  }
-
-  throw new Error(`Unsupported ordinal: ${ordinal}`);
+  return results;
 }
 
-function getNthWeekdayOfMonth(
-  fromDate: Date,
-  monthsToAdd: number,
-  dayOfWeek: number,
-  nth: number
-): Date {
-  const targetMonth = new Date(fromDate);
-  targetMonth.setMonth(targetMonth.getMonth() + monthsToAdd);
-  targetMonth.setDate(1); // Start at the first of the month
+function getNthWeekdayOfMonth(base: Date, weekday: number, nth: number): Date {
+  // base = first of month, UTC
+  // const year = base.getUTCFullYear();
+  const year = base.getFullYear();
+  // const month = base.getUTCMonth();
+  const month = base.getMonth();
 
-  const firstDay = targetMonth.getDay();
-  let offset = dayOfWeek - firstDay;
-  if (offset < 0) offset += 7;
+  // const firstDay = new Date(Date.UTC(year, month, 1));
+  const firstDay = new Date(year, month, 1);
+  // const firstWeekday = firstDay.getUTCDay();
+  const firstWeekday = firstDay.getDay();
 
-  const dayOfMonth = 1 + offset + (nth - 1) * 7;
-  targetMonth.setDate(dayOfMonth);
+  // Calculate offset to first occurrence of desired weekday
+  const offset = ((weekday - firstWeekday + 7) % 7) + (nth - 1) * 7;
 
-  // If it goes past the month (e.g. 5th Friday in Feb), fallback to last
-  if (targetMonth.getMonth() !== (fromDate.getMonth() + monthsToAdd) % 12) {
-    return getLastWeekdayOfMonth(fromDate, monthsToAdd, dayOfWeek);
+  // const date = new Date(Date.UTC(year, month, 1 + offset));
+  const date = new Date(year, month, 1 + offset);
+
+  // Check if the calculated date is still in the same month
+  if (date.getMonth() !== month) {
+    // Return an invalid date that will be filtered out
+    return new Date(year, month, 0); // Last day of previous month
   }
 
-  return targetMonth;
+  return date;
 }
 
-function getLastWeekdayOfMonth(
-  fromDate: Date,
-  monthsToAdd: number,
-  dayOfWeek: number
-): Date {
-  const targetMonth = new Date(fromDate);
-  targetMonth.setMonth(targetMonth.getMonth() + monthsToAdd + 1); // move to 1st of the next month
-  targetMonth.setDate(0); // back to last day of target month
+function getLastWeekdayOfMonth(base: Date, weekday: number): Date {
+  // const year = base.getUTCFullYear();
+  const year = base.getFullYear();
+  // const month = base.getUTCMonth();
+  const month = base.getMonth();
+  // const lastDayOfMonth = new Date(Date.UTC(year, month + 1, 0)); // last day of month in UTC
+  const lastDayOfMonth = new Date(year, month + 1, 0); // last day of month in UTC
+  // const lastWeekday = lastDayOfMonth.getUTCDay();
+  const lastWeekday = lastDayOfMonth.getDay();
 
-  const lastDay = targetMonth.getDay();
-  let offset = lastDay - dayOfWeek;
-  if (offset < 0) offset += 7;
+  const offset = (lastWeekday - weekday + 7) % 7;
+  // lastDayOfMonth.setUTCDate(lastDayOfMonth.getUTCDate() - offset);
+  lastDayOfMonth.setDate(lastDayOfMonth.getDate() - offset);
 
-  targetMonth.setDate(targetMonth.getDate() - offset);
-  return targetMonth;
+  return lastDayOfMonth;
 }
 
 // Format user's full name
@@ -256,3 +344,9 @@ export const capitalize = (str: string) =>
 // Filter Date Format
 export const formatFilterDate = (date: Date) =>
   date.toISOString().split("T")[0]; // "YYYY-MM-DD"
+
+export const getDayNameFromNumber = (dayNumber: number) => {
+  // `setDay` sets the day of week on a given base date
+  const date = setDay(new Date(), dayNumber);
+  return format(date, "EEEE"); // EEEE = full weekday name
+};
