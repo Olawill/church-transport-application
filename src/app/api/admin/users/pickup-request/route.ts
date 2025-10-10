@@ -4,12 +4,13 @@ import { z } from "zod";
 import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import { UserRole } from "@/generated/prisma";
+import { PickupRequest, UserRole } from "@/generated/prisma";
 import { AnalyticsService } from "@/lib/analytics";
 import { prisma } from "@/lib/db";
 import { geocodeAddress } from "@/lib/geocoding";
 import { validateRequest } from "@/types/newRequestSchema";
 import bcrypt from "bcryptjs";
+import { getNextOccurrencesOfWeekdays } from "@/lib/utils";
 
 const payloadSchema = z
   .object({
@@ -24,12 +25,15 @@ const payloadSchema = z
     province: z.string().min(1),
     postalCode: z.string().min(1),
     serviceDayId: z.string().min(1),
-    requestDate: z.union([z.string(), z.date()]),
+    // requestDate: z.union([z.string(), z.date()]),
+    requestDate: z.date(),
     notes: z.string().optional(),
     isPickUp: z.boolean(),
     isDropOff: z.boolean(),
     isGroupRide: z.boolean(),
     numberOfGroup: z.number().int().min(2).max(10).nullable(),
+    isRecurring: z.boolean(),
+    endDate: z.date().optional(),
   })
   .superRefine(validateRequest);
 
@@ -67,6 +71,8 @@ export const POST = async (request: NextRequest) => {
       isDropOff,
       isGroupRide,
       numberOfGroup,
+      isRecurring,
+      endDate,
     } = parsed.data;
 
     // Check if user already exist
@@ -202,34 +208,108 @@ export const POST = async (request: NextRequest) => {
       );
     }
 
-    const pickupRequest = await prisma.pickupRequest.create({
-      data: {
-        userId: newUser.id,
-        serviceDayId,
-        addressId: newAddress.id,
-        requestDate: serviceDateTime,
-        notes: notes || null,
-        status: "PENDING",
-        isPickUp,
-        isDropOff,
-        isGroupRide,
-        numberOfGroup,
-      },
-      include: {
-        serviceDay: true,
-        address: true,
-      },
-    });
+    if (isRecurring && !endDate) {
+      return NextResponse.json(
+        { error: "You need to have an end date to create recurring requests" },
+        { status: 400 }
+      );
+    }
+
+    let allRequests: PickupRequest[] = [];
+    let seriesId: string | null = null;
+
+    if (!isRecurring) {
+      const pickupRequest = await prisma.pickupRequest.create({
+        data: {
+          userId: newUser.id,
+          serviceDayId,
+          addressId: newAddress.id,
+          requestDate: serviceDateTime,
+          notes: notes || null,
+          status: "PENDING",
+          isPickUp,
+          isDropOff,
+          isGroupRide,
+          numberOfGroup,
+        },
+        include: {
+          serviceDay: true,
+          address: true,
+        },
+      });
+      allRequests.push(pickupRequest);
+    } else {
+      const allRequestDates = getNextOccurrencesOfWeekdays({
+        fromDate: serviceDateTime,
+        allowedWeekdays: [serviceDay.dayOfWeek],
+        count: 1,
+        endDate,
+      });
+
+      // use Transaction to create many request
+      const { series, requests } = await prisma.$transaction(async (tx) => {
+        // 1️⃣ Create the series first
+        const series = await tx.pickupSeries.create({
+          data: {},
+        });
+
+        // 2️⃣ Create all related pickup requests referencing the same seriesId
+        const requests = await Promise.all(
+          allRequestDates.map((d) =>
+            tx.pickupRequest.create({
+              data: {
+                userId: newUser.id,
+                serviceDayId,
+                addressId: newAddress.id,
+                requestDate: d,
+                isPickUp,
+                isDropOff,
+                notes: notes || null,
+                status: "PENDING",
+                isGroupRide,
+                numberOfGroup,
+                seriesId: series.id, // link to the series
+              },
+              include: {
+                serviceDay: true,
+                address: true,
+              },
+            })
+          )
+        );
+
+        return { series, requests };
+      });
+      allRequests = requests;
+      seriesId = series.id;
+    }
 
     // Track pickup request creation
-    await AnalyticsService.trackPickupRequest(
-      newUser.id,
-      pickupRequest.id,
-      serviceDayId,
-      newAddress.id
-    );
+    if (!isRecurring) {
+      await AnalyticsService.trackEvent({
+        eventType: "admin_user_pickup_request_created",
+        userId: newUser.id,
+        metadata: {
+          adminId: session.user.id,
+          requestId: allRequests[0].id,
+          serviceDayId,
+          addressId: newAddress.id,
+        },
+      });
+    } else {
+      await AnalyticsService.trackEvent({
+        eventType: "admin_user_recurring_pickup_request_created",
+        userId: newUser.id,
+        metadata: {
+          adminId: session.user.id,
+          seriesId,
+          serviceDayId,
+          addressId: newAddress.id,
+        },
+      });
+    }
 
-    return NextResponse.json(pickupRequest, { status: 201 });
+    return NextResponse.json(allRequests, { status: 201 });
   } catch (error) {
     console.error("Error creating user:", error);
     return NextResponse.json(
