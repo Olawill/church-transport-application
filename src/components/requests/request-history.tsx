@@ -639,6 +639,7 @@ export const RequestHistory = () => {
                               className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                               onClick={() => {
                                 setSelectedRequest(request);
+                                console.log(request);
                                 setEditDialogOpen(true);
                               }}
                             >
@@ -830,6 +831,9 @@ export const RequestHistory = () => {
                     isDropOff: selectedRequest.isDropOff as boolean,
                     isGroupRide: selectedRequest.isGroupRide as boolean,
                     numberOfGroup: selectedRequest.numberOfGroup ?? null,
+                    isRecurring: selectedRequest.isRecurring as boolean,
+                    endDate: selectedRequest.endDate ?? undefined,
+                    seriesId: selectedRequest.seriesId ?? null,
                   }}
                   setShowDialog={handleEditDialog}
                 />
@@ -839,6 +843,7 @@ export const RequestHistory = () => {
                 <AdminNewUserRequest
                   isNewUser={false}
                   isGroupRequest={selectedRequest.isGroupRide}
+                  isRecurringRequest={selectedRequest.isRecurring}
                   newRequestData={{
                     requestId: selectedRequest.id as string,
                     userId: selectedRequest.userId as string,
@@ -850,6 +855,9 @@ export const RequestHistory = () => {
                     isDropOff: selectedRequest.isDropOff as boolean,
                     isGroupRide: selectedRequest.isGroupRide as boolean,
                     numberOfGroup: selectedRequest.numberOfGroup ?? null,
+                    isRecurring: selectedRequest.isRecurring as boolean,
+                    endDate: selectedRequest.endDate ?? undefined,
+                    seriesId: selectedRequest.seriesId ?? null,
                   }}
                   setShowDialog={handleEditDialog}
                 />
