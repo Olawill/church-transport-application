@@ -11,6 +11,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { redirect, usePathname, useRouter } from "next/navigation";
@@ -25,8 +26,35 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
-import { Separator } from "../ui/separator";
+import { Separator } from "@/components/ui/separator";
+
+const navigationItems = [
+  {
+    name: "Dashboard",
+    href: "/dashboard",
+    icon: Home,
+    roles: ["ADMIN", "TRANSPORTATION_TEAM", "USER"],
+  },
+  {
+    name: "Requests",
+    href: "/requests",
+    icon: Calendar,
+    roles: ["ADMIN", "TRANSPORTATION_TEAM", "USER"],
+  },
+  { name: "Users", href: "/admin/users", icon: Users, roles: ["ADMIN"] },
+  {
+    name: "Services",
+    href: "/admin/services",
+    icon: Calendar,
+    roles: ["ADMIN"],
+  },
+  {
+    name: "Transportation",
+    href: "/transportation",
+    icon: Car,
+    roles: ["TRANSPORTATION_TEAM"],
+  },
+];
 
 export const Header = () => {
   const { data: session, status } = useSession();
@@ -64,34 +92,6 @@ export const Header = () => {
   }
 
   if (!session?.user) return null;
-
-  const navigationItems = [
-    {
-      name: "Dashboard",
-      href: "/dashboard",
-      icon: Home,
-      roles: ["ADMIN", "TRANSPORTATION_TEAM", "USER"],
-    },
-    {
-      name: "Requests",
-      href: "/requests",
-      icon: Calendar,
-      roles: ["ADMIN", "TRANSPORTATION_TEAM", "USER"],
-    },
-    { name: "Users", href: "/admin/users", icon: Users, roles: ["ADMIN"] },
-    {
-      name: "Services",
-      href: "/admin/services",
-      icon: Calendar,
-      roles: ["ADMIN"],
-    },
-    {
-      name: "Transportation",
-      href: "/transportation",
-      icon: Car,
-      roles: ["TRANSPORTATION_TEAM"],
-    },
-  ];
 
   const userNavigationItems = navigationItems.filter((item) =>
     item.roles.includes(session.user.role)
@@ -223,65 +223,79 @@ export const Header = () => {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t bg-secondary py-4">
-            <nav className="space-y-2">
-              {userNavigationItems.map((item) => (
-                <Link
-                  key={item.name}
-                  href={{ pathname: item.href }}
-                  className={cn(
-                    "flex items-center space-x-2 text-gray-600 dark:text-gray-200 hover:text-gray-900 px-3 py-2 rounded-md text-base font-medium",
-                    pathname === item.href && "bg-blue-500"
-                  )}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <item.icon className="h-5 w-5" />
-                  <span>{item.name}</span>
-                </Link>
-              ))}
-              <div className="border-t pt-4 mt-4">
-                <div className="flex items-center space-x-3 px-3 py-2">
-                  <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                    <User className="h-4 w-4 text-gray-600" />
+          <>
+            <div
+              className="fixed inset-0 bg-black/20 lg:hidden z-40"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            <div
+              className={cn(
+                "lg:hidden absolute top-16 left-0 right-0 border-t bg-secondary py-4 shadow-lg z-50",
+                "transition-all duration-300 ease-in-out",
+                mobileMenuOpen
+                  ? "opacity-100 translate-y-0"
+                  : "opacity-0 -translate-y-4 pointer-events-none"
+              )}
+            >
+              <nav className="space-y-2">
+                {userNavigationItems.map((item) => (
+                  <Link
+                    key={item.name}
+                    href={{ pathname: item.href }}
+                    className={cn(
+                      "flex items-center space-x-2 text-gray-600 dark:text-gray-200 hover:text-gray-900 px-3 py-2 rounded-md text-base font-medium",
+                      pathname === item.href && "bg-blue-500"
+                    )}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <item.icon className="h-5 w-5" />
+                    <span>{item.name}</span>
+                  </Link>
+                ))}
+                <div className="border-t pt-4 mt-4">
+                  <div className="flex items-center space-x-3 px-3 py-2">
+                    <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                      <User className="h-4 w-4 text-gray-600" />
+                    </div>
+                    <div className="text-sm">
+                      <p className="text-gray-900 dark:text-gray-200 font-medium">
+                        {session.user.firstName} {session.user.lastName}
+                      </p>
+                      <p className="text-gray-500 dark:text-gray-300 capitalize">
+                        {session.user.role?.toLowerCase().replace("_", " ")}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-sm">
-                    <p className="text-gray-900 dark:text-gray-200 font-medium">
-                      {session.user.firstName} {session.user.lastName}
-                    </p>
-                    <p className="text-gray-500 dark:text-gray-300 capitalize">
-                      {session.user.role?.toLowerCase().replace("_", " ")}
-                    </p>
-                  </div>
+                  <Separator className="my-2" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      router.push("/profile");
+                      setMobileMenuOpen(false);
+                    }}
+                    className={cn(
+                      "w-full justify-start text-gray-600 dark:text-gray-200 hover:text-gray-900 px-3 py-3 text-base",
+                      pathname === "/profile" && "bg-blue-500"
+                    )}
+                  >
+                    <User className="size-5" />
+                    Profile
+                  </Button>
+                  <Separator className="my-2" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSignOut}
+                    className="w-full justify-start text-gray-600 dark:text-gray-200 hover:text-gray-900 px-3 py-2 text-base"
+                  >
+                    <LogOut className="size-5" />
+                    Sign out
+                  </Button>
                 </div>
-                <Separator className="my-2" />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    router.push("/profile");
-                    setMobileMenuOpen(false);
-                  }}
-                  className={cn(
-                    "w-full justify-start text-gray-600 dark:text-gray-200 hover:text-gray-900 px-3 py-3 text-base",
-                    pathname === "/profile" && "bg-blue-500"
-                  )}
-                >
-                  <User className="size-5" />
-                  Profile
-                </Button>
-                <Separator className="my-2" />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleSignOut}
-                  className="w-full justify-start text-gray-600 dark:text-gray-200 hover:text-gray-900 px-3 py-2 text-base"
-                >
-                  <LogOut className="size-5" />
-                  Sign out
-                </Button>
-              </div>
-            </nav>
-          </div>
+              </nav>
+            </div>
+          </>
         )}
       </div>
     </header>
