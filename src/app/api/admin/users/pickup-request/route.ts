@@ -11,6 +11,13 @@ import { geocodeAddress } from "@/lib/geocoding";
 import { validateRequest } from "@/types/newRequestSchema";
 import bcrypt from "bcryptjs";
 import { getNextOccurrencesOfWeekdays } from "@/lib/utils";
+import {
+  convertStringDateToDate,
+  TRANSACTION_CONFIG,
+  validateDayOfWeek,
+  validateEndDateLimit,
+  validatePickUpRequestTiming,
+} from "@/lib/pickup-utils";
 
 const payloadSchema = z
   .object({
@@ -25,17 +32,26 @@ const payloadSchema = z
     province: z.string().min(1),
     postalCode: z.string().min(1),
     serviceDayId: z.string().min(1),
-    // requestDate: z.union([z.string(), z.date()]),
-    requestDate: z.date(),
+    requestDate: z.string(),
     notes: z.string().optional(),
     isPickUp: z.boolean(),
     isDropOff: z.boolean(),
     isGroupRide: z.boolean(),
     numberOfGroup: z.number().int().min(2).max(10).nullable(),
     isRecurring: z.boolean(),
-    endDate: z.date().optional(),
+    endDate: z.string().optional(),
   })
   .superRefine(validateRequest);
+
+const validatePassword = (isLoginRequired: boolean, password?: string) => {
+  if (isLoginRequired && (!password || password.length < 8)) {
+    return {
+      valid: false,
+      error: "Password is required and must be at least 8 characters",
+    };
+  }
+  return { valid: true };
+};
 
 export const POST = async (request: NextRequest) => {
   try {
@@ -46,10 +62,12 @@ export const POST = async (request: NextRequest) => {
     }
 
     const body = await request.json();
-    const parsed = payloadSchema.safeParse(body);
+    const parsed = await payloadSchema.safeParseAsync(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "Invalid request payload" },
+        {
+          error: "Invalid request payload",
+        },
         { status: 400 }
       );
     }
@@ -75,10 +93,45 @@ export const POST = async (request: NextRequest) => {
       endDate,
     } = parsed.data;
 
-    // Check if user already exist
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
+    // Early validation
+    const passwordValidation = validatePassword(isLoginRequired, password);
+    if (!passwordValidation.valid) {
+      return NextResponse.json(
+        { error: passwordValidation.error },
+        { status: 400 }
+      );
+    }
+
+    // Convert requestDate
+    const normalizedRequestDate = convertStringDateToDate(requestDate);
+    // Convert endDate
+    const normalizedEndDate = endDate
+      ? convertStringDateToDate(endDate)
+      : undefined;
+
+    // Validate endDate limit
+    const endDateValidation = validateEndDateLimit(
+      normalizedEndDate,
+      normalizedRequestDate,
+      isRecurring
+    );
+    if (!endDateValidation.valid) {
+      return NextResponse.json(
+        { error: endDateValidation.error },
+        { status: 400 }
+      );
+    }
+
+    // OPTIMIZATION 3: Parallel validation queries (user + serviceDay)
+    const [existingUser, serviceDay] = await Promise.all([
+      prisma.user.findUnique({
+        where: { email },
+        select: { id: true }, // Only fetch what we need
+      }),
+      prisma.serviceDay.findUnique({
+        where: { id: serviceDayId },
+      }),
+    ]);
 
     if (existingUser) {
       return NextResponse.json(
@@ -87,231 +140,252 @@ export const POST = async (request: NextRequest) => {
       );
     }
 
-    //Hash password
-    let hashedPassword: string | null = null;
-    if (isLoginRequired) {
-      if (!password || password.length < 8) {
-        return NextResponse.json(
-          { error: "Password is required and must be at least 8 characters" },
-          { status: 400 }
-        );
-      }
-      const salt = await bcrypt.genSalt(12);
-      hashedPassword = await bcrypt.hash(password, salt);
-    }
-
-    // Get coordinates for addresses
-    const coordinates = await geocodeAddress({
-      street,
-      city,
-      province,
-      postalCode,
-      country: "Canada",
-    });
-
-    if (coordinates === null) {
-      return NextResponse.json(
-        { error: "Invalid address information" },
-        { status: 400 }
-      );
-    }
-
-    // Create user and address using transaction for atomicity
-    const result = await prisma.$transaction(async (tx) => {
-      const newUser = await tx.user.create({
-        data: {
-          firstName,
-          lastName,
-          email,
-          phone: phone || null,
-          password: hashedPassword,
-          role: "USER",
-          status: "APPROVED",
-        },
-      });
-
-      // Create default address
-      const newAddress = await tx.address.create({
-        data: {
-          userId: newUser.id,
-          name: "Home",
-          street,
-          city,
-          province,
-          postalCode,
-          country: "Canada",
-          latitude: coordinates?.latitude || null,
-          longitude: coordinates?.longitude || null,
-          isDefault: true,
-        },
-      });
-      return { newUser, newAddress };
-    });
-
-    //
-    const { newUser, newAddress } = result;
-
-    // Track user creating by admin event
-    await AnalyticsService.trackEvent({
-      eventType: "admin_user_creation",
-      userId: newUser.id,
-      metadata: { createdBy: session.user.id },
-    });
-
-    if (!newUser.id || !serviceDayId || !newAddress.id || !requestDate) {
-      return NextResponse.json(
-        {
-          error: "User, Service day, address, and request date are required",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Check cutoff: 1 hour before the service start time for the selected date
-    const serviceDateTime = new Date(requestDate);
-    const serviceDay = await prisma.serviceDay.findUnique({
-      where: { id: serviceDayId },
-    });
     if (!serviceDay) {
       return NextResponse.json(
         { error: "Invalid service day" },
         { status: 400 }
       );
     }
-    const [hh, mm] = serviceDay.time.split(":").map((n) => parseInt(n, 10));
-    const serviceStart = new Date(serviceDateTime);
-    serviceStart.setHours(hh || 0, mm || 0, 0, 0);
-    const cutoff = new Date(serviceStart.getTime() - 60 * 60 * 1000);
 
-    if (Date.now() > cutoff.getTime()) {
+    const dayValidation = validateDayOfWeek(serviceDay, normalizedRequestDate);
+    if (!dayValidation.valid) {
+      return NextResponse.json({ error: dayValidation.error }, { status: 400 });
+    }
+
+    const timingValidation = validatePickUpRequestTiming(
+      serviceDay,
+      normalizedRequestDate
+    );
+    if (!timingValidation.valid) {
       return NextResponse.json(
-        {
-          error: "Cannot request pickup less than 1 hour before service time",
-        },
+        { error: timingValidation.error },
         { status: 400 }
       );
     }
 
-    // Check if user already has a request for this service day and date
-    const existingRequest = await prisma.pickupRequest.findFirst({
-      where: {
-        userId: newUser.id,
-        serviceDayId,
-        requestDate: serviceDateTime,
-      },
-    });
+    // Parallel processing of password hashing and geocoding
+    const [hashedPassword, coordinates] = await Promise.all([
+      isLoginRequired && password
+        ? bcrypt.hash(password, 12)
+        : Promise.resolve(null),
+      geocodeAddress({
+        street,
+        city,
+        province,
+        postalCode,
+        country: "Canada",
+      }),
+    ]);
 
-    if (existingRequest) {
+    // Verify coordinates
+    if (coordinates === null) {
       return NextResponse.json(
-        { error: "You already have a pickup request for this service" },
+        { error: "Invalid address - unable to geocode location" },
         { status: 400 }
       );
     }
 
-    if (isRecurring && !endDate) {
-      return NextResponse.json(
-        { error: "You need to have an end date to create recurring requests" },
-        { status: 400 }
-      );
-    }
-
-    let allRequests: PickupRequest[] = [];
-    let seriesId: string | null = null;
-
-    if (!isRecurring) {
-      const pickupRequest = await prisma.pickupRequest.create({
-        data: {
-          userId: newUser.id,
-          serviceDayId,
-          addressId: newAddress.id,
-          requestDate: serviceDateTime,
-          notes: notes || null,
-          status: "PENDING",
-          isPickUp,
-          isDropOff,
-          isGroupRide,
-          numberOfGroup,
-        },
-        include: {
-          serviceDay: true,
-          address: true,
-        },
-      });
-      allRequests.push(pickupRequest);
-    } else {
-      const allRequestDates = getNextOccurrencesOfWeekdays({
-        fromDate: serviceDateTime,
+    // Calculate request dates before transaction
+    let allRequestDates: Date[] = [];
+    if (isRecurring && endDate) {
+      allRequestDates = getNextOccurrencesOfWeekdays({
+        fromDate: normalizedRequestDate,
         allowedWeekdays: [serviceDay.dayOfWeek],
         count: 1,
-        endDate,
+        endDate: normalizedEndDate,
       });
+    }
 
-      // use Transaction to create many request
-      const { series, requests } = await prisma.$transaction(async (tx) => {
-        // 1️⃣ Create the series first
-        const series = await tx.pickupSeries.create({
-          data: {},
+    // Single comprehensive transaction for ALL operations
+    const { newUser, newAddress, allRequests, seriesId } =
+      await prisma.$transaction(async (tx) => {
+        // Create user
+        const newUser = await tx.user.create({
+          data: {
+            firstName,
+            lastName,
+            email,
+            phone: phone,
+            password: hashedPassword,
+            role: "USER",
+            status: "APPROVED",
+          },
         });
 
-        // 2️⃣ Create all related pickup requests referencing the same seriesId
-        const requests = await Promise.all(
-          allRequestDates.map((d) =>
-            tx.pickupRequest.create({
-              data: {
-                userId: newUser.id,
-                serviceDayId,
-                addressId: newAddress.id,
-                requestDate: d,
-                isPickUp,
-                isDropOff,
-                notes: notes || null,
-                status: "PENDING",
-                isGroupRide,
-                numberOfGroup,
-                seriesId: series.id, // link to the series
-              },
-              include: {
-                serviceDay: true,
-                address: true,
-              },
-            })
-          )
-        );
+        // Create default address
+        const newAddress = await tx.address.create({
+          data: {
+            userId: newUser.id,
+            name: "Home",
+            street,
+            city,
+            province,
+            postalCode,
+            country: "Canada",
+            latitude: coordinates.latitude,
+            longitude: coordinates.longitude,
+            isDefault: true,
+          },
+        });
 
-        return { series, requests };
-      });
-      allRequests = requests;
-      seriesId = series.id;
-    }
+        // Check for duplicate request (within transaction for consistency)
+        const existingRequest = await tx.pickupRequest.findFirst({
+          where: {
+            userId: newUser.id,
+            serviceDayId,
+            requestDate,
+          },
+          select: { id: true },
+        });
 
-    // Track pickup request creation
-    if (!isRecurring) {
-      await AnalyticsService.trackEvent({
-        eventType: "admin_user_pickup_request_created",
+        if (existingRequest) {
+          throw new Error("Duplicate pickup request for this service");
+        }
+
+        let allRequests: PickupRequest[] = [];
+        let seriesId: string | null = null;
+
+        if (!isRecurring) {
+          // Create single pickup request
+          const pickupRequest = await tx.pickupRequest.create({
+            data: {
+              userId: newUser.id,
+              serviceDayId,
+              addressId: newAddress.id,
+              requestDate: normalizedRequestDate,
+              notes,
+              status: "PENDING",
+              isPickUp,
+              isDropOff,
+              isGroupRide,
+              numberOfGroup,
+            },
+            include: {
+              serviceDay: true,
+              address: true,
+            },
+          });
+          allRequests.push(pickupRequest);
+        } else {
+          // Create series
+          const series = await tx.pickupSeries.create({
+            data: {},
+          });
+          seriesId = series.id;
+
+          // Create all recurring requests in parallel
+          const requests = await Promise.all(
+            allRequestDates.map((d) =>
+              tx.pickupRequest.create({
+                data: {
+                  userId: newUser.id,
+                  serviceDayId,
+                  addressId: newAddress.id,
+                  requestDate: d,
+                  isPickUp,
+                  isDropOff,
+                  notes,
+                  status: "PENDING",
+                  isGroupRide,
+                  numberOfGroup,
+                  seriesId: series.id,
+                },
+                include: {
+                  serviceDay: true,
+                  address: true,
+                },
+              })
+            )
+          );
+          allRequests = requests;
+        }
+
+        return { newUser, newAddress, allRequests, seriesId };
+      }, TRANSACTION_CONFIG);
+
+    // Fire-and-forget analytics (don't block response)
+    const analyticsPromises = [
+      AnalyticsService.trackEvent({
+        eventType: "admin_user_creation",
         userId: newUser.id,
-        metadata: {
-          adminId: session.user.id,
-          requestId: allRequests[0].id,
-          serviceDayId,
-          addressId: newAddress.id,
-        },
-      });
-    } else {
-      await AnalyticsService.trackEvent({
-        eventType: "admin_user_recurring_pickup_request_created",
-        userId: newUser.id,
-        metadata: {
-          adminId: session.user.id,
-          seriesId,
-          serviceDayId,
-          addressId: newAddress.id,
-        },
-      });
-    }
+        metadata: { createdBy: session.user.id },
+      }),
+      isRecurring
+        ? AnalyticsService.trackEvent({
+            eventType: "admin_user_recurring_pickup_request_created",
+            userId: newUser.id,
+            metadata: {
+              adminId: session.user.id,
+              seriesId,
+              serviceDayId,
+              addressId: newAddress.id,
+            },
+          })
+        : AnalyticsService.trackEvent({
+            eventType: "admin_user_pickup_request_created",
+            userId: newUser.id,
+            metadata: {
+              admin: session.user.id,
+              requestId: allRequests[0].id,
+              serviceDayId,
+              addressId: newAddress.id,
+            },
+          }),
+    ];
 
-    return NextResponse.json(allRequests, { status: 201 });
+    Promise.all(analyticsPromises).catch((err) =>
+      console.error("Analytics tracking failed:", err)
+    );
+
+    // Return structured response with user info
+    return NextResponse.json(
+      {
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
+        },
+        address: {
+          id: newAddress.id,
+          street: newAddress.street,
+          city: newAddress.city,
+        },
+        requests: allRequests,
+        seriesId,
+      },
+      { status: 201 }
+    );
   } catch (error) {
-    console.error("Error creating user:", error);
+    console.error("Error creating user and pickup request:", error);
+
+    // OPTIMIZATION 11: Better error handling with specific messages
+    if (error instanceof Error) {
+      if (error.message.includes("Duplicate pickup request")) {
+        return NextResponse.json(
+          { error: "You already have a pickup request for this service" },
+          { status: 400 }
+        );
+      }
+      if (error.message.includes("Unique constraint")) {
+        return NextResponse.json(
+          { error: "A user with this email already exists" },
+          { status: 400 }
+        );
+      }
+
+      // Add more specific Prisma error handling
+      if (error.message.includes("Transaction")) {
+        return NextResponse.json(
+          {
+            error: "Database transaction failed. No data was created.",
+            code: "TRANSACTION_FAILED",
+          },
+          { status: 500 }
+        );
+      }
+    }
+
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   Calendar,
   Car,
+  CarFront,
   CheckCircle,
   Clock,
   Filter,
@@ -71,6 +72,8 @@ import AdminNewUserRequest from "../admin/admin-new-user-request";
 import { CustomPagination, usePaginationWithStore } from "../custom-pagination";
 import CustomDateCalendar from "../custom-request-calendar";
 import { NewRequestForm } from "./new-request-form";
+import { CarBack } from "../icons/car-back";
+import { ButtonGroup } from "../ui/button-group";
 
 type Type = RequestType | "ALL";
 
@@ -361,7 +364,7 @@ export const RequestHistory = () => {
                 <p className="text-2xl font-bold">{pickUpRequest}</p>
               </div>
               <div className="p-3 rounded-full bg-lime-100 text-lime-700">
-                <Car className="h-6 w-6" />
+                <CarFront className="size-6" />
               </div>
             </div>
           </CardContent>
@@ -376,7 +379,7 @@ export const RequestHistory = () => {
                 <p className="text-2xl font-bold">{dropOffRequest}</p>
               </div>
               <div className="p-3 rounded-full bg-cyan-100 text-cyan-700">
-                <CheckCircle className="h-6 w-6" />
+                <CarBack className="size-6" />
               </div>
             </div>
           </CardContent>
@@ -535,10 +538,16 @@ export const RequestHistory = () => {
                         </p>
                         <div className="flex items-center gap-2">
                           {request.isPickUp && (
-                            <Badge className="bg-lime-700">PickUp</Badge>
+                            <Badge className="bg-lime-700">
+                              <CarFront className="size-4" />
+                              PickUp
+                            </Badge>
                           )}
                           {request.isDropOff && (
-                            <Badge className="bg-cyan-700">DropOff</Badge>
+                            <Badge className="bg-cyan-700">
+                              <CarBack className="size-4" />
+                              DropOff
+                            </Badge>
                           )}
 
                           {request.isGroupRide && (
@@ -627,6 +636,7 @@ export const RequestHistory = () => {
                     </div>
 
                     <div className="space-x-1">
+                      {/* <ButtonGroup> */}
                       {/* Action buttons for users */}
                       {(isUser || isAdmin) &&
                         canCancelOrEditRequest(request) && (
@@ -646,6 +656,7 @@ export const RequestHistory = () => {
                               <Pencil className="size-4" />
                               <span className="max-sm:hidden">Edit</span>
                             </Button>
+
                             {/* Cancel Button */}
                             <Button
                               variant="outline"
@@ -691,7 +702,7 @@ export const RequestHistory = () => {
                                 ? "Hide Drivers"
                                 : "Show Drivers"
                             }
-                            className="text-green-600 hover:text-green-700 hover:bg-red-50 max-sm:mt-2"
+                            className="text-green-600 hover:text-green-700 hover:bg-red-50"
                             onClick={() => {
                               toggleAccordion(request.id);
                             }}
@@ -704,6 +715,7 @@ export const RequestHistory = () => {
                             </span>
                           </Button>
                         )}
+                      {/* </ButtonGroup> */}
                     </div>
                   </div>
 
@@ -844,6 +856,7 @@ export const RequestHistory = () => {
                   isNewUser={false}
                   isGroupRequest={selectedRequest.isGroupRide}
                   isRecurringRequest={selectedRequest.isRecurring}
+                  formRequestDate={selectedRequest.requestDate}
                   newRequestData={{
                     requestId: selectedRequest.id as string,
                     userId: selectedRequest.userId as string,

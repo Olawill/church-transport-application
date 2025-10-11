@@ -61,9 +61,14 @@ import { newRequestSchema, NewRequestSchema } from "@/types/newRequestSchema";
 import { Input } from "../ui/input";
 import { Switch } from "../ui/switch";
 import { PickUpDropOffField } from "./pickup-dropoff-field";
+import { addMonths } from "date-fns/addMonths";
+import { useConfirm } from "@/hooks/use-confirm";
 
 interface NewRequestFormProps {
-  newRequestData?: NewRequestSchema & { requestId: string };
+  newRequestData?: NewRequestSchema & {
+    requestId: string;
+    seriesId: string | null;
+  };
   setShowDialog?: (value: boolean) => void;
 }
 
@@ -82,6 +87,14 @@ export const NewRequestForm = ({
   );
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
 
+  const [SeriesUpdateDialog, confirmSeriesUpdate] = useConfirm(
+    "Update Series",
+    "Do you want to update the entire occurence?",
+    true,
+    "Update occurence",
+    "Update series"
+  );
+
   const form = useForm<NewRequestSchema>({
     resolver: zodResolver(newRequestSchema),
     defaultValues: {
@@ -92,6 +105,8 @@ export const NewRequestForm = ({
       isDropOff: newRequestData?.isDropOff ?? false,
       isGroupRide: newRequestData?.isGroupRide ?? false,
       numberOfGroup: newRequestData?.numberOfGroup ?? null,
+      isRecurring: newRequestData?.isRecurring ?? false,
+      endDate: newRequestData?.endDate ?? undefined,
       notes: newRequestData?.notes || "",
     },
   });
@@ -108,7 +123,7 @@ export const NewRequestForm = ({
   });
 
   useEffect(() => {
-    if (serviceDayId && serviceDays.length > 0) {
+    if (!newRequestData && serviceDayId && serviceDays.length > 0) {
       const service = serviceDays.find((s) => s.id === serviceDayId);
       setSelectedService(service || null);
 
@@ -181,7 +196,7 @@ export const NewRequestForm = ({
   };
 
   const handleSubmit = async (values: NewRequestSchema) => {
-    const validatedFields = newRequestSchema.safeParse(values);
+    const validatedFields = await newRequestSchema.safeParseAsync(values);
 
     if (!validatedFields.success) {
       toast.error("Please fill in all required fields");
@@ -214,11 +229,19 @@ export const NewRequestForm = ({
   };
 
   const handleUpdate = async (values: NewRequestSchema) => {
-    const validatedFields = newRequestSchema.safeParse(values);
+    const validatedFields = await newRequestSchema.safeParseAsync(values);
 
     if (!validatedFields.success) {
       toast.error("Please fill in all required fields");
       return;
+    }
+
+    // To update series or not
+    let updateSeries: boolean = false;
+    if (newRequestData?.seriesId) {
+      const ok = await confirmSeriesUpdate();
+
+      if (ok) updateSeries = true;
     }
 
     setLoading(true);
@@ -232,6 +255,7 @@ export const NewRequestForm = ({
         body: JSON.stringify({
           requestId: newRequestData?.requestId,
           ...validatedFields.data,
+          updateSeries,
         }),
       });
       if (response.ok) {
@@ -251,353 +275,489 @@ export const NewRequestForm = ({
   };
 
   const isGroupRequest = form.watch("isGroupRide");
+  const isRecurringRequest = form.watch("isRecurring");
+  const formRequestDate = form.watch("requestDate");
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center space-x-3 mb-2">
-            {newRequestData ? (
-              <Button variant="ghost" size="icon" className="cursor-none">
-                <Pencil className="size-4" />
-              </Button>
-            ) : (
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/requests">
-                  <ArrowLeft className="size-4" />
-                </Link>
-              </Button>
-            )}
-            <h1 className="text-2xl font-bold">
-              {newRequestData ? "Update" : "New"} Ride Request
-            </h1>
+    <>
+      <SeriesUpdateDialog />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center space-x-3 mb-2">
+              {newRequestData ? (
+                <Button variant="ghost" size="icon" className="cursor-none">
+                  <Pencil className="size-4" />
+                </Button>
+              ) : (
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/requests">
+                    <ArrowLeft className="size-4" />
+                  </Link>
+                </Button>
+              )}
+              <h1 className="text-2xl font-bold">
+                {newRequestData ? "Update" : "New"} Ride Request
+              </h1>
+            </div>
+            <p className="text-primary">
+              Request transportation to church services
+            </p>
           </div>
-          <p className="text-primary">
-            Request transportation to church services
-          </p>
         </div>
-      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Request Details</CardTitle>
-          <CardDescription>
-            Please {newRequestData ? "update" : "provide"} the details for your
-            pickup request
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form
-              onSubmit={
-                newRequestData
-                  ? form.handleSubmit(handleUpdate)
-                  : form.handleSubmit(handleSubmit)
-              }
-              className="space-y-6"
-            >
-              {/* Service Selection */}
-              <FormField
-                control={form.control}
-                name="serviceDayId"
-                render={({ field }) => (
-                  <FormItem className="space-y-2">
-                    <FormLabel>Church Service</FormLabel>
-                    <Select
-                      defaultValue={field.value}
-                      onValueChange={field.onChange}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select a service" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {serviceDays.map((service) => (
-                          <SelectItem key={service.id} value={service.id}>
-                            <div className="flex items-center space-x-2">
-                              <CalendarIcon className="h-4 w-4" />
-                              <span>
-                                {service.name} - {formatTime(service.time)}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {selectedService && (
-                      <FormDescription className="mt-2 p-3 bg-blue-50 rounded-lg">
-                        <span className="flex items-center space-x-2 text-sm text-blue-700">
-                          <Clock className="h-4 w-4" />
-                          <span>
-                            Service starts at {formatTime(selectedService.time)}{" "}
-                            every{" "}
-                            {
-                              [
-                                "Sunday",
-                                "Monday",
-                                "Tuesday",
-                                "Wednesday",
-                                "Thursday",
-                                "Friday",
-                                "Saturday",
-                              ][selectedService.dayOfWeek]
-                            }
-                          </span>
-                        </span>
-                      </FormDescription>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Date Selection */}
-              <FormField
-                control={form.control}
-                name="requestDate"
-                render={({ field }) => {
-                  const today = new Date();
-                  today.setHours(0, 0, 0, 0);
-
-                  return (
-                    <FormItem className="space-y-2">
-                      <FormLabel>Service Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild className="w-full">
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(
-                                  new Date(formatDate(new Date(field.value))),
-                                  "PPP"
-                                )
-                              ) : (
-                                <span>Select a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={
-                              new Date(formatDate(new Date(field.value)))
-                            }
-                            onSelect={field.onChange}
-                            disabled={(date) => date < today}
-                            captionLayout="dropdown"
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormDescription className="text-xs text-gray-500">
-                        Requests must be made at least 1 hour before the service
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  );
-                }}
-              />
-
-              {/* Address Selection */}
-              <FormField
-                control={form.control}
-                name="addressId"
-                render={({ field }) => (
-                  <FormItem className="space-y-2">
-                    <FormLabel>Pickup Address</FormLabel>
-                    <Select
-                      defaultValue={field.value}
-                      onValueChange={field.onChange}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select pickup address" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {addresses.map((address) => (
-                          <SelectItem key={address.id} value={address.id}>
-                            <div className="flex items-center space-x-2">
-                              <MapPin className="h-4 w-4" />
-                              <span>{formatAddress(address)}</span>
-                              {address.isDefault && (
-                                <span className="text-xs text-blue-600">
-                                  (Default)
-                                </span>
-                              )}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {selectedAddress && (
-                      <FormDescription className="mt-2 p-3 bg-gray-50 rounded-lg">
-                        <span className="flex items-center space-x-2 text-sm text-gray-700">
-                          <MapPin className="h-4 w-4" />
-                          <span>{formatAddress(selectedAddress)}</span>
-                        </span>
-                        <span className="text-xs text-gray-500 mt-1">
-                          Please ensure this address is correct before
-                          submitting your request
-                        </span>
-                      </FormDescription>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {/* Pickup and Dropoff Options */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <PickUpDropOffField form={form} />
-              </div>
-
-              {/* Group Ride */}
-              <div className="flex flex-col justify-between rounded-lg border p-3 shadow-sm">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Request Details</CardTitle>
+            <CardDescription>
+              Please {newRequestData ? "update" : "provide"} the details for
+              your pickup request
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form
+                onSubmit={
+                  newRequestData
+                    ? form.handleSubmit(handleUpdate)
+                    : form.handleSubmit(handleSubmit)
+                }
+                className="space-y-6"
+              >
+                {/* Service Selection */}
                 <FormField
                   control={form.control}
-                  name="isGroupRide"
+                  name="serviceDayId"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between pb-3">
-                      <div className="space-y-0.5">
-                        <FormLabel>Group Ride</FormLabel>
-                        <FormDescription>
-                          Is the request for a group (2 or more people)?.
+                    <FormItem className="space-y-2">
+                      <FormLabel>Church Service</FormLabel>
+                      <Select
+                        defaultValue={field.value}
+                        onValueChange={field.onChange}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select a service" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {serviceDays.map((service) => (
+                            <SelectItem key={service.id} value={service.id}>
+                              <div className="flex items-center space-x-2">
+                                <CalendarIcon className="h-4 w-4" />
+                                <span>
+                                  {service.name} - {formatTime(service.time)}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {selectedService && (
+                        <FormDescription className="mt-2 p-3 bg-blue-50 rounded-lg">
+                          <span className="flex items-center space-x-2 text-sm text-blue-700">
+                            <Clock className="h-4 w-4" />
+                            <span>
+                              Service starts at{" "}
+                              {formatTime(selectedService.time)} every{" "}
+                              {
+                                [
+                                  "Sunday",
+                                  "Monday",
+                                  "Tuesday",
+                                  "Wednesday",
+                                  "Thursday",
+                                  "Friday",
+                                  "Saturday",
+                                ][selectedService.dayOfWeek]
+                              }
+                            </span>
+                          </span>
                         </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={(checked) => {
-                            form.setValue("numberOfGroup", !checked ? null : 2);
-                            field.onChange(checked);
-                          }}
-                        />
-                      </FormControl>
+                      )}
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                {isGroupRequest && (
+                {/* Date Selection */}
+                <FormField
+                  control={form.control}
+                  name="requestDate"
+                  render={({ field }) => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+
+                    const maxEndMonth = addMonths(today, 12);
+
+                    return (
+                      <FormItem className="space-y-2">
+                        <FormLabel>Service Date</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild className="w-full">
+                            <FormControl>
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "w-full pl-3 text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                {field.value ? (
+                                  format(
+                                    new Date(formatDate(new Date(field.value))),
+                                    "PPP"
+                                  )
+                                ) : (
+                                  <span>Select a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={
+                                new Date(formatDate(new Date(field.value)))
+                              }
+                              onSelect={field.onChange}
+                              endMonth={maxEndMonth}
+                              defaultMonth={
+                                field.value ? new Date(field.value) : today
+                              }
+                              disabled={(date) => date < today}
+                              captionLayout="dropdown"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormDescription className="text-xs text-gray-500">
+                          Requests must be made at least 1 hour before the
+                          service
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+
+                {/* Address Selection */}
+                <FormField
+                  control={form.control}
+                  name="addressId"
+                  render={({ field }) => (
+                    <FormItem className="space-y-2">
+                      <FormLabel>Pickup Address</FormLabel>
+                      <Select
+                        defaultValue={field.value}
+                        onValueChange={field.onChange}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select pickup address" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {addresses.map((address) => (
+                            <SelectItem key={address.id} value={address.id}>
+                              <div className="flex items-center space-x-2">
+                                <MapPin className="h-4 w-4" />
+                                <span>{formatAddress(address)}</span>
+                                {address.isDefault && (
+                                  <span className="text-xs text-blue-600">
+                                    (Default)
+                                  </span>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {selectedAddress && (
+                        <FormDescription className="mt-2 p-3 bg-gray-50 rounded-lg">
+                          <span className="flex items-center space-x-2 text-sm text-gray-700">
+                            <MapPin className="h-4 w-4" />
+                            <span>{formatAddress(selectedAddress)}</span>
+                          </span>
+                          <span className="text-xs text-gray-500 mt-1">
+                            Please ensure this address is correct before
+                            submitting your request
+                          </span>
+                        </FormDescription>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {/* Pickup and Dropoff Options */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <PickUpDropOffField form={form} />
+                </div>
+
+                {/* Group Ride */}
+                <div className="flex flex-col justify-between rounded-lg border p-3 shadow-sm">
                   <FormField
                     control={form.control}
-                    name="numberOfGroup"
+                    name="isGroupRide"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Number of people</FormLabel>
+                      <FormItem className="flex flex-row items-center justify-between pb-3">
+                        <div className="space-y-0.5">
+                          <FormLabel>Group Ride</FormLabel>
+                          <FormDescription>
+                            Is the request for a group (2 or more people)?.
+                          </FormDescription>
+                        </div>
                         <FormControl>
-                          <Input
-                            placeholder="Enter number of people"
-                            type="number"
-                            {...field}
-                            value={field.value ?? ""}
-                            min={2}
-                            max={10}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              // Convert empty string to null, otherwise to integer
-                              field.onChange(
-                                val === "" ? null : parseInt(val, 10)
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={(checked) => {
+                              form.setValue(
+                                "numberOfGroup",
+                                !checked ? null : 2
                               );
+                              field.onChange(checked);
                             }}
                           />
                         </FormControl>
-                        <FormMessage />
                       </FormItem>
                     )}
                   />
-                )}
-              </div>
 
-              {/* Notes */}
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem className="space-y-2">
-                    <FormLabel>Additional Notes</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        {...field}
-                        id="notes"
-                        placeholder="Any special instructions or requirements..."
-                        className="resize-none"
-                        rows={5}
-                      />
-                    </FormControl>
-                    <FormDescription className="text-xs text-gray-500">
-                      Optional: Let your driver know about any special
-                      requirements or instructions
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Important Information */}
-              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <h4 className="font-semibold text-yellow-800 mb-2">
-                  Important Information
-                </h4>
-                <ul className="text-sm text-yellow-700 space-y-1">
-                  <li>
-                    • Pickup requests must be submitted latest 1 hour before the
-                    service
-                  </li>
-                  <li>
-                    • A driver will accept your request and contact you with
-                    details
-                  </li>
-                  <li>
-                    • Please be ready at your pickup address 10 minutes early
-                  </li>
-                  <li>• Cancel your request if your plans change</li>
-                </ul>
-              </div>
-
-              {/* Submit Button */}
-              <div className="flex justify-end space-x-3 pt-4">
-                {newRequestData ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowDialog?.(false)}
-                  >
-                    Cancel
-                  </Button>
-                ) : (
-                  <Button asChild type="button" variant="outline">
-                    <Link href="/requests" aria-label="Cancel Pickup Request">
-                      Cancel
-                    </Link>
-                  </Button>
-                )}
-                <Button type="submit" disabled={loading}>
-                  {loading ? (
-                    newRequestData ? (
-                      "Updating Request..."
-                    ) : (
-                      "Creating Request..."
-                    )
-                  ) : (
-                    <>
-                      <Send className="mr-2 h-4 w-4" />
-                      {newRequestData ? "Update Request" : "Submit Request"}
-                    </>
+                  {isGroupRequest && (
+                    <FormField
+                      control={form.control}
+                      name="numberOfGroup"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Number of people</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Enter number of people"
+                              type="number"
+                              {...field}
+                              value={field.value ?? ""}
+                              min={2}
+                              max={10}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                // Convert empty string to null, otherwise to integer
+                                field.onChange(
+                                  val === "" ? null : parseInt(val, 10)
+                                );
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   )}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
-    </div>
+                </div>
+
+                {/* Recurring Request */}
+                {!newRequestData && (
+                  <div className="flex flex-col justify-between rounded-lg border p-3 shadow-sm">
+                    <FormField
+                      control={form.control}
+                      name="isRecurring"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between pb-3">
+                          <div className="space-y-0.5">
+                            <FormLabel>Recurring Request</FormLabel>
+                            <FormDescription>
+                              Will you like to make a multiple request for this
+                              service? Service Date must be a valid date to
+                              enable recurring ride requests.
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={(checked) => {
+                                const startDate = form.getValues("requestDate");
+                                const maxEndDate = addMonths(startDate, 3);
+                                form.setValue(
+                                  "endDate",
+                                  !checked ? undefined : maxEndDate
+                                );
+                                field.onChange(checked);
+                              }}
+                              disabled={!formRequestDate}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    {isRecurringRequest && (
+                      <FormField
+                        control={form.control}
+                        name="endDate"
+                        render={({ field }) => {
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+
+                          const startDate = form.getValues("requestDate");
+
+                          const maxEndDate = addMonths(startDate, 3);
+
+                          const maxEndMonth = addMonths(today, 4);
+
+                          return (
+                            <FormItem className="space-y-2">
+                              <FormLabel>End Date</FormLabel>
+                              <Popover>
+                                <PopoverTrigger asChild className="w-full">
+                                  <FormControl>
+                                    <Button
+                                      variant={"outline"}
+                                      className={cn(
+                                        "w-full pl-3 text-left font-normal",
+                                        !field.value && "text-muted-foreground"
+                                      )}
+                                    >
+                                      {field.value ? (
+                                        format(
+                                          new Date(
+                                            formatDate(new Date(field.value))
+                                          ),
+                                          "PPP"
+                                        )
+                                      ) : (
+                                        <span>Select a date</span>
+                                      )}
+                                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                    </Button>
+                                  </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                  className="w-auto p-0"
+                                  align="start"
+                                >
+                                  <Calendar
+                                    mode="single"
+                                    selected={
+                                      // field.value
+                                      //? // new Date(formatDate(field.value))
+                                      new Date(
+                                        formatDate(
+                                          new Date(field.value as Date)
+                                        )
+                                      )
+                                      // : undefined
+                                    }
+                                    endMonth={maxEndMonth}
+                                    defaultMonth={
+                                      field.value
+                                        ? new Date(field.value)
+                                        : today
+                                    }
+                                    onSelect={field.onChange}
+                                    disabled={(date) =>
+                                      date < today || date > maxEndDate
+                                    }
+                                    captionLayout="dropdown"
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                              <FormDescription className="text-xs text-gray-500">
+                                End date must be between 2 weeks and 3 months
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          );
+                        }}
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* Notes */}
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem className="space-y-2">
+                      <FormLabel>Additional Notes</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          id="notes"
+                          placeholder="Any special instructions or requirements..."
+                          className="resize-none"
+                          rows={5}
+                        />
+                      </FormControl>
+                      <FormDescription className="text-xs text-gray-500">
+                        Optional: Let your driver know about any special
+                        requirements or instructions
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Important Information */}
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <h4 className="font-semibold text-yellow-800 mb-2">
+                    Important Information
+                  </h4>
+                  <ul className="text-sm text-yellow-700 space-y-1">
+                    <li>
+                      • Pickup requests must be submitted latest 1 hour before
+                      the service
+                    </li>
+                    <li>
+                      • A driver will accept your request and contact you with
+                      details
+                    </li>
+                    <li>
+                      • Please be ready at your pickup address 10 minutes early
+                    </li>
+                    <li>• Cancel your request if your plans change</li>
+                  </ul>
+                </div>
+
+                {/* Submit Button */}
+                <div className="flex justify-end space-x-3 pt-4">
+                  {newRequestData ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowDialog?.(false)}
+                    >
+                      Cancel
+                    </Button>
+                  ) : (
+                    <Button asChild type="button" variant="outline">
+                      <Link href="/requests" aria-label="Cancel Pickup Request">
+                        Cancel
+                      </Link>
+                    </Button>
+                  )}
+                  <Button
+                    type="submit"
+                    disabled={loading || !form.formState.isDirty}
+                  >
+                    {loading ? (
+                      newRequestData ? (
+                        "Updating Request..."
+                      ) : (
+                        "Creating Request..."
+                      )
+                    ) : (
+                      <>
+                        <Send className="mr-2 h-4 w-4" />
+                        {newRequestData ? "Update Request" : "Submit Request"}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </div>
+    </>
   );
 };

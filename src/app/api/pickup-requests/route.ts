@@ -1,17 +1,74 @@
+//api/pickup-request/route.ts
+import { z } from "zod";
+
 import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import { Prisma, RequestStatus, UserRole } from "@/generated/prisma";
+import {
+  PickupRequest,
+  Prisma,
+  RequestStatus,
+  UserRole,
+} from "@/generated/prisma";
 import { AnalyticsService } from "@/lib/analytics";
 import { prisma } from "@/lib/db";
-import { calculateDistance } from "@/lib/utils";
+import { calculateDistance, getNextOccurrencesOfWeekdays } from "@/lib/utils";
+import { validateRequest } from "@/types/newRequestSchema";
+import {
+  convertStringDateToDate,
+  TRANSACTION_CONFIG,
+  validateDayOfWeek,
+  validateEndDateLimit,
+  validatePickUpRequestTiming,
+} from "@/lib/pickup-utils";
+
+// Zod schema for request validation
+const payloadSchema = z
+  .object({
+    userId: z.string().optional(),
+    requestId: z.string().optional(),
+    serviceDayId: z.string().min(1),
+    addressId: z.string(),
+    requestDate: z.string(),
+    notes: z.string().optional(),
+    isPickUp: z.boolean(),
+    isDropOff: z.boolean(),
+    isGroupRide: z.boolean(),
+    numberOfGroup: z.number().int().min(2).max(10).nullable(),
+    isRecurring: z.boolean(),
+    updateSeries: z.boolean().optional(),
+    endDate: z.string().optional(),
+  })
+  .superRefine(validateRequest);
+
+type DuplicationType = {
+  serviceDayId: string;
+  requestDate: Date;
+  userId: string;
+};
+
+const validateRequestDuplicate = async ({
+  serviceDayId,
+  requestDate,
+  userId,
+}: DuplicationType) => {
+  const similarRequest = await prisma.pickupRequest.findFirst({
+    where: {
+      serviceDayId,
+      userId,
+      requestDate,
+    },
+  });
+
+  return !!similarRequest;
+};
 
 export const GET = async (request: NextRequest) => {
   try {
     const session = await auth();
 
     if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -139,6 +196,15 @@ export const POST = async (request: NextRequest) => {
     }
 
     const body = await request.json();
+
+    const validatedBody = await payloadSchema.safeParseAsync(body);
+
+    if (!validatedBody.success) {
+      return NextResponse.json(
+        { error: "Invalid request payload" },
+        { status: 400 }
+      );
+    }
     const {
       userId,
       serviceDayId,
@@ -148,150 +214,199 @@ export const POST = async (request: NextRequest) => {
       isDropOff,
       isGroupRide,
       numberOfGroup,
+      isRecurring,
+      endDate,
       notes,
-    } = body;
+    } = validatedBody.data;
 
     const isAdmin = session.user.role === UserRole.ADMIN;
+    const targetUserId = isAdmin ? userId : session.user.id;
 
-    if (isAdmin) {
-      if (!userId) {
-        return NextResponse.json(
-          { error: "User does not exist" },
-          { status: 400 }
-        );
-      }
+    // Optimization: Parallel validation queries instead of sequential
+    const [serviceDay, address, existingRequest, existingUser] =
+      await Promise.all([
+        prisma.serviceDay.findUnique({ where: { id: serviceDayId } }),
+        prisma.address.findFirst({
+          where: {
+            id: addressId,
+            userId: targetUserId,
+          },
+        }),
+        prisma.pickupRequest.findFirst({
+          where: {
+            userId: targetUserId,
+            serviceDayId,
+            requestDate,
+          },
+        }),
 
-      const existingUser = await prisma.user.findUnique({
-        where: { id: userId },
-      });
-      if (!existingUser) {
-        return NextResponse.json(
-          { error: "User does not exist" },
-          { status: 400 }
-        );
-      }
+        // Only fetch user if admin is creating on behalf of another user
+        isAdmin && userId
+          ? prisma.user.findUnique({ where: { id: userId } })
+          : Promise.resolve(true),
+      ]);
+
+    // Validate all at once
+    if (isAdmin && !existingUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Required fields
-    if (
-      !serviceDayId ||
-      !addressId ||
-      !requestDate ||
-      (!isPickUp && !isDropOff)
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "Service day, address, request date, isPickUp, and isDropOff are required",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Check if it's too late to request pickup (less than 1 hour before service)
-    const serviceDateTime = new Date(requestDate);
-
-    if (isNaN(serviceDateTime.getTime())) {
-      return NextResponse.json(
-        { error: "Invalid request date" },
-        { status: 400 }
-      );
-    }
-
-    const serviceDay = await prisma.serviceDay.findUnique({
-      where: { id: serviceDayId },
-    });
     if (!serviceDay) {
-      return NextResponse.json(
-        { error: "Invalid service day" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Service not found" }, { status: 404 });
     }
-
-    // Ensure request is at least 1 hour before service
-    const [hh, mm] = serviceDay.time.split(":").map((n) => parseInt(n, 10));
-    const serviceStart = new Date(serviceDateTime);
-    serviceStart.setHours(hh || 0, mm || 0, 0, 0);
-    const cutoff = new Date(serviceStart.getTime() - 60 * 60 * 1000);
-
-    if (Date.now() > cutoff.getTime()) {
-      return NextResponse.json(
-        {
-          error: "Cannot request pickup less than 1 hour before service time",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Validate that the user owns the address
-    const address = await prisma.address.findFirst({
-      where: {
-        id: addressId,
-        userId: isAdmin ? userId : session.user.id,
-      },
-    });
 
     if (!address) {
-      return NextResponse.json({ error: "Invalid address" }, { status: 400 });
+      return NextResponse.json({ error: "Address not found" }, { status: 404 });
     }
-
-    // Check if user already has a request for this service day and date
-    const existingRequest = await prisma.pickupRequest.findFirst({
-      where: {
-        userId: isAdmin ? userId : session.user.id,
-        serviceDayId,
-        requestDate: serviceDateTime,
-      },
-    });
 
     if (existingRequest) {
       return NextResponse.json(
         { error: "You already have a pickup request for this service" },
+        { status: 404 }
+      );
+    }
+    // Convert requestDate
+    const normalizedRequestDate = convertStringDateToDate(requestDate);
+    // Convert endDate
+    const normalizedEndDate = endDate
+      ? convertStringDateToDate(endDate)
+      : undefined;
+
+    // Check if it's too late to request pickup (less than 1 hour before service)
+    const timingValidation = validatePickUpRequestTiming(
+      serviceDay,
+      normalizedRequestDate
+    );
+    if (!timingValidation.valid) {
+      return NextResponse.json(
+        { error: timingValidation.error },
         { status: 400 }
       );
     }
 
-    const pickupRequest = await prisma.pickupRequest.create({
-      data: {
-        userId: isAdmin ? userId : session.user.id,
-        serviceDayId,
-        addressId,
-        requestDate: serviceDateTime,
-        isPickUp,
-        isDropOff,
-        notes: notes || null,
-        status: "PENDING",
-        isGroupRide,
-        numberOfGroup,
-      },
-      include: {
-        serviceDay: true,
-        address: true,
-      },
-    });
+    // Validate requestDate has the same day of week
+    const dayValidation = validateDayOfWeek(serviceDay, normalizedRequestDate);
+    if (!dayValidation.valid) {
+      return NextResponse.json({ error: dayValidation.error }, { status: 400 });
+    }
 
-    // Track pickup request creation
-    if (isAdmin) {
-      await AnalyticsService.trackEvent({
-        eventType: "admin_user_pickup_request_created",
-        userId,
-        metadata: {
-          adminId: session.user.id,
-          requestId: pickupRequest.id,
-          serviceDayId,
-          addressId,
-        },
-      });
-    } else {
-      await AnalyticsService.trackPickupRequest(
-        session.user.id,
-        pickupRequest.id,
-        serviceDayId,
-        addressId
+    // Validate endDate limit
+    const endDateValidation = validateEndDateLimit(
+      normalizedEndDate,
+      normalizedRequestDate,
+      isRecurring
+    );
+    if (!endDateValidation.valid) {
+      return NextResponse.json(
+        { error: endDateValidation.error },
+        { status: 400 }
       );
     }
 
-    return NextResponse.json(pickupRequest, { status: 201 });
+    let allRequests: PickupRequest[] = [];
+    let seriesId: string | null = null;
+
+    if (!isRecurring) {
+      const pickupRequest = await prisma.pickupRequest.create({
+        data: {
+          userId: targetUserId as string,
+          serviceDayId,
+          addressId,
+          requestDate: normalizedRequestDate,
+          isPickUp,
+          isDropOff,
+          notes,
+          status: "PENDING",
+          isGroupRide,
+          numberOfGroup,
+        },
+        include: {
+          serviceDay: true,
+          address: true,
+        },
+      });
+      allRequests.push(pickupRequest);
+    } else {
+      // Get all request dates
+      const allRequestDates = getNextOccurrencesOfWeekdays({
+        fromDate: normalizedRequestDate,
+        allowedWeekdays: [serviceDay.dayOfWeek],
+        count: 1,
+        endDate: normalizedEndDate,
+      });
+
+      // use Transaction to create many request
+      const { series, requests } = await prisma.$transaction(async (tx) => {
+        // 1️⃣ Create the series first
+        const series = await tx.pickupSeries.create({
+          data: {},
+        });
+
+        // 2️⃣ Create all related pickup requests referencing the same seriesId
+        const requests = await Promise.all(
+          allRequestDates.map((d) =>
+            tx.pickupRequest.create({
+              data: {
+                userId: targetUserId as string,
+                serviceDayId,
+                addressId,
+                requestDate: d,
+                isPickUp,
+                isDropOff,
+                notes,
+                status: "PENDING",
+                isGroupRide,
+                numberOfGroup,
+                seriesId: series.id, // link to the series
+              },
+              include: {
+                serviceDay: true,
+                address: true,
+              },
+            })
+          )
+        );
+
+        return { series, requests };
+      }, TRANSACTION_CONFIG);
+      allRequests = requests;
+      seriesId = series.id;
+    }
+
+    // OPTIMIZATION: Batch analytics tracking (fire and forget)
+    // Track pickup request creation
+    const trackingPromise = isAdmin
+      ? AnalyticsService.trackEvent({
+          eventType: isRecurring
+            ? "admin_user_recurring_pickup_request_created"
+            : "admin_user_pickup_request_created",
+          userId,
+          metadata: {
+            adminId: session.user.id,
+            ...(isRecurring ? { seriesId } : { requestId: allRequests[0].id }),
+            serviceDayId,
+            addressId,
+          },
+        })
+      : isRecurring
+        ? AnalyticsService.trackEvent({
+            eventType: "recurring_pickup_request_created",
+            userId: session.user.id,
+            metadata: { seriesId, serviceDayId, addressId },
+          })
+        : AnalyticsService.trackPickupRequest(
+            session.user.id,
+            allRequests[0].id,
+            serviceDayId,
+            addressId
+          );
+
+    // Don't await analytics - let it complete in background
+    trackingPromise.catch((err) =>
+      console.error("Analytics tracking failed:", err)
+    );
+
+    return NextResponse.json(allRequests, { status: 201 });
   } catch (error) {
     console.error("Error creating pickup request:", error);
     return NextResponse.json(
@@ -313,6 +428,13 @@ export const PATCH = async (request: NextRequest) => {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
     const body = await request.json();
+    const validatedBody = await payloadSchema.safeParseAsync(body);
+    if (!validatedBody.success) {
+      return NextResponse.json(
+        { error: "Invalid request payload" },
+        { status: 400 }
+      );
+    }
     const {
       requestId,
       userId,
@@ -324,149 +446,273 @@ export const PATCH = async (request: NextRequest) => {
       isGroupRide,
       numberOfGroup,
       notes,
-    } = body;
+      updateSeries,
+    } = validatedBody.data;
 
     const isAdmin = session.user.role === UserRole.ADMIN;
 
-    if (isAdmin) {
-      if (!userId) {
-        return NextResponse.json(
-          {
-            error: "User not found",
-          },
-          { status: 400 }
-        );
-      }
+    const targetUserId = isAdmin ? userId : session.user.id;
 
-      // Check if the user exists
-      const existingUser = await prisma.user.findUnique({
-        where: {
-          id: userId,
-        },
-      });
+    // OPTIMIZATION: Parallel validation queries
+    const [existingRequest, serviceDay, address, existingUser] =
+      await Promise.all([
+        prisma.pickupRequest.findUnique({ where: { id: requestId } }),
+        prisma.serviceDay.findUnique({ where: { id: serviceDayId } }),
+        prisma.address.findFirst({
+          where: { id: addressId, userId: targetUserId },
+        }),
+        isAdmin && userId
+          ? prisma.user.findUnique({ where: { id: userId } })
+          : Promise.resolve(true),
+      ]);
 
-      if (!existingUser) {
-        return NextResponse.json(
-          { error: "User does not exist" },
-          { status: 400 }
-        );
-      }
-    }
-
-    if (
-      !requestId ||
-      !serviceDayId ||
-      !addressId ||
-      !requestDate ||
-      (!isDropOff && !isPickUp)
-    ) {
+    // Consolidated validation
+    if (isAdmin && !existingUser) {
       return NextResponse.json(
-        {
-          error:
-            "Request, Service day, address, request date, isPickUp, and isDropOff are required",
-        },
+        { error: "User does not exist" },
         { status: 400 }
       );
     }
-
-    // Check if it's too late to request pickup (less than 1 hour before service)
-    const serviceDateTime = new Date(requestDate);
-    const serviceDay = await prisma.serviceDay.findUnique({
-      where: { id: serviceDayId },
-    });
-    if (!serviceDay) {
-      return NextResponse.json(
-        { error: "Invalid service day" },
-        { status: 400 }
-      );
-    }
-    const [hh, mm] = serviceDay.time.split(":").map((n) => parseInt(n, 10));
-    const serviceStart = new Date(serviceDateTime);
-    serviceStart.setHours(hh || 0, mm || 0, 0, 0);
-    const cutoff = new Date(serviceStart.getTime() - 60 * 60 * 1000);
-
-    if (Date.now() > cutoff.getTime()) {
-      return NextResponse.json(
-        {
-          error: "Cannot request pickup less than 1 hour before service time",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Validate that the user owns the address
-    const address = await prisma.address.findFirst({
-      where: {
-        id: addressId,
-        userId: isAdmin ? userId : session.user.id,
-      },
-    });
-
-    if (!address) {
-      return NextResponse.json({ error: "Invalid address" }, { status: 400 });
-    }
-
-    // Check if user already has a request for this service day and date
-    const existingRequest = await prisma.pickupRequest.findUnique({
-      where: {
-        id: requestId,
-      },
-    });
-
     if (!existingRequest) {
       return NextResponse.json(
         { error: "The Pickup Request does not exist" },
         { status: 400 }
       );
     }
-
-    const pickupRequest = await prisma.pickupRequest.update({
-      where: {
-        id: requestId,
-      },
-      data: {
-        serviceDayId,
-        addressId,
-        requestDate: serviceDateTime,
-        isDropOff,
-        isPickUp,
-        notes: notes || null,
-        isGroupRide,
-        numberOfGroup,
-      },
-      include: {
-        serviceDay: true,
-        address: true,
-      },
-    });
-
-    // Track pickup request creation
-    if (isAdmin) {
-      await AnalyticsService.trackEvent({
-        eventType: "admin_user_pickup_request_updated",
-        userId,
-        metadata: {
-          adminId: session.user.id,
-          requestId: pickupRequest.id,
-          serviceDayId,
-          addressId,
-        },
-      });
-    } else {
-      await AnalyticsService.trackEvent({
-        eventType: "pickup_request_updated",
-        userId: session.user.id,
-        metadata: {
-          requestId,
-          serviceDayId,
-          addressId,
-          timestamp: new Date().toISOString(),
-        },
-      });
+    if (!serviceDay) {
+      return NextResponse.json(
+        { error: "Invalid service day" },
+        { status: 400 }
+      );
+    }
+    if (!address) {
+      return NextResponse.json({ error: "Invalid address" }, { status: 400 });
     }
 
-    return NextResponse.json(pickupRequest, { status: 201 });
+    // Convert requestDate
+    const normalizedRequestDate = convertStringDateToDate(requestDate);
+
+    // Check if it's too late to request pickup (less than 1 hour before service)
+    const timingValidation = validatePickUpRequestTiming(
+      serviceDay,
+      normalizedRequestDate
+    );
+    if (!timingValidation.valid) {
+      return NextResponse.json(
+        { error: timingValidation.error },
+        { status: 400 }
+      );
+    }
+
+    //Verify requestDate's day is the same as serive day
+    const dayValidation = validateDayOfWeek(serviceDay, normalizedRequestDate);
+    if (!dayValidation.valid) {
+      return NextResponse.json({ error: dayValidation.error }, { status: 400 });
+    }
+
+    // array for request updated
+    let allUpdatedRequest: PickupRequest[] = [];
+
+    if (!updateSeries) {
+      const isSameRequest = await validateRequestDuplicate({
+        serviceDayId,
+        userId: targetUserId as string,
+        requestDate: normalizedRequestDate,
+      });
+      if (isSameRequest) {
+        return NextResponse.json(
+          { error: "You already have a pickup request for this service" },
+          { status: 404 }
+        );
+      }
+      const pickupRequest = await prisma.pickupRequest.update({
+        where: {
+          id: requestId,
+        },
+        data: {
+          serviceDayId,
+          addressId,
+          requestDate: normalizedRequestDate,
+          isDropOff,
+          isPickUp,
+          notes: notes || null,
+          isGroupRide,
+          numberOfGroup,
+        },
+        include: {
+          serviceDay: true,
+          address: true,
+        },
+      });
+      allUpdatedRequest.push(pickupRequest);
+    } else {
+      // 🔁 Update all requests in the same series
+      if (!existingRequest.seriesId) {
+        return NextResponse.json(
+          { error: "This request is not part of a series" },
+          { status: 400 }
+        );
+      }
+
+      const seriesId = existingRequest.seriesId;
+
+      // get existingRequestDate, existingServiceDayId and seriesId
+      const isSameRequestDate =
+        existingRequest.requestDate.toISOString().split("T")[0] ===
+          normalizedRequestDate.toISOString().split("T")[0] &&
+        existingRequest.serviceDayId === serviceDayId;
+
+      // Use transaction
+      if (isSameRequestDate) {
+        allUpdatedRequest = await prisma.$transaction(async (tx) => {
+          await tx.pickupRequest.updateMany({
+            where: {
+              seriesId,
+              requestDate: {
+                gte: requestDate,
+              },
+            },
+            data: {
+              addressId,
+              isDropOff,
+              isPickUp,
+              notes: notes || null,
+              isGroupRide,
+              numberOfGroup,
+            },
+          });
+
+          // Fetech updated records within the same transaction
+          return await tx.pickupRequest.findMany({
+            where: {
+              seriesId,
+              requestDate: { gte: requestDate },
+            },
+            include: { serviceDay: true, address: true },
+            orderBy: { requestDate: "asc" },
+          });
+        }, TRANSACTION_CONFIG);
+      } else {
+        // OPTIMIZATION: Use a single transaction for complex series updates
+        allUpdatedRequest = await prisma.$transaction(async (tx) => {
+          const [requestsToUpdate, totalCount] = await Promise.all([
+            tx.pickupRequest.findMany({
+              where: {
+                seriesId,
+                requestDate: { gte: existingRequest.requestDate },
+              },
+              orderBy: { requestDate: "asc" },
+              select: { id: true },
+            }),
+            tx.pickupRequest.count({
+              where: {
+                seriesId,
+                requestDate: { gte: existingRequest.requestDate },
+              },
+            }),
+          ]);
+
+          // Get all dates
+          const allDates = getNextOccurrencesOfWeekdays({
+            fromDate: normalizedRequestDate,
+            allowedWeekdays: [serviceDay.dayOfWeek],
+            count: totalCount,
+          });
+
+          if (allDates.length !== requestsToUpdate.length) {
+            throw new Error("Error updating service date for the series");
+          }
+
+          const duplicates = await Promise.all(
+            requestsToUpdate.map((_, index) => {
+              return validateRequestDuplicate({
+                serviceDayId,
+                userId: targetUserId as string,
+                requestDate: allDates[index],
+              });
+            })
+          );
+
+          // Check if all are non-duplicates (false)
+          const hasDuplicate = duplicates.some((b) => b);
+
+          if (hasDuplicate) {
+            throw new Error("DUPLICATE_REQUEST");
+          }
+
+          // Batch update using Promise.all within the transaction
+          return await Promise.all(
+            requestsToUpdate.map(({ id }, index) =>
+              tx.pickupRequest.update({
+                where: { id },
+                data: {
+                  serviceDayId,
+                  requestDate: allDates[index],
+                  addressId,
+                  isDropOff,
+                  isPickUp,
+                  notes: notes || null,
+                  isGroupRide,
+                  numberOfGroup,
+                },
+                include: { serviceDay: true, address: true },
+              })
+            )
+          );
+        }, TRANSACTION_CONFIG);
+      }
+    }
+
+    // Fire and forget analytics
+    // Track pickup request creation
+    const trackingPromise = isAdmin
+      ? AnalyticsService.trackEvent({
+          eventType: updateSeries
+            ? "admin_user_recurring_pickup_request_updated"
+            : "admin_user_pickup_request_updated",
+          userId,
+          metadata: {
+            adminId: session.user.id,
+            ...(updateSeries
+              ? { seriesId: existingRequest.seriesId }
+              : { requestId: allUpdatedRequest[0].id }),
+            serviceDayId,
+            addressId,
+          },
+        })
+      : updateSeries
+        ? AnalyticsService.trackEvent({
+            eventType: "recurring_pickup_request_updated",
+            userId: session.user.id,
+            metadata: {
+              seriesId: existingRequest.seriesId,
+              serviceDayId,
+              addressId,
+            },
+          })
+        : AnalyticsService.trackEvent({
+            eventType: "pickup_request_updated",
+            userId: session.user.id,
+            metadata: {
+              requestId: allUpdatedRequest[0].id,
+              serviceDayId,
+              addressId,
+            },
+          });
+
+    // Don't await analytics - let it complete in background
+    trackingPromise.catch((err) =>
+      console.error("Analytics tracking failed:", err)
+    );
+
+    return NextResponse.json(allUpdatedRequest, { status: 201 });
   } catch (error) {
+    if (error instanceof Error && error.message === "DUPLICATE_REQUEST") {
+      return NextResponse.json(
+        { error: "You already have a pickup request for this service" },
+        { status: 409 }
+      );
+    }
     console.error("Error updating pickup request:", error);
     return NextResponse.json(
       { error: "Internal server error" },
@@ -480,7 +726,7 @@ export const PUT = async (request: NextRequest) => {
     const session = await auth();
 
     if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     const body = await request.json();

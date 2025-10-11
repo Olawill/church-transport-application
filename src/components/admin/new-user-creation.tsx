@@ -62,6 +62,8 @@ const NewUserCreationForm = () => {
       isPickUp: true,
       isGroupRide: false,
       numberOfGroup: null,
+      isRecurring: false,
+      endDate: undefined,
       requestDate: undefined,
     },
   });
@@ -90,7 +92,7 @@ const NewUserCreationForm = () => {
   };
 
   const onSubmit = async (values: NewUserSchema) => {
-    const validatedFields = newUserSchema.safeParse(values);
+    const validatedFields = await newUserSchema.safeParseAsync(values);
 
     if (!validatedFields.success) {
       toast.error("Please fill in all required fields");
@@ -139,6 +141,8 @@ const NewUserCreationForm = () => {
   };
 
   const isGroupRequest = form?.watch("isGroupRide");
+  const isRecurringRequest = form?.watch("isRecurring");
+  const formRequestDate = form?.watch("requestDate");
 
   return (
     <div>
@@ -316,9 +320,7 @@ const NewUserCreationForm = () => {
               </div>
 
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Address Information
-                </h3>
+                <h3 className="text-lg font-semibold">Address Information</h3>
 
                 <FormField
                   control={form.control}
@@ -450,6 +452,8 @@ const NewUserCreationForm = () => {
                     isNewUser={true}
                     form={form}
                     isGroupRequest={isGroupRequest}
+                    isRecurringRequest={isRecurringRequest}
+                    formRequestDate={formRequestDate}
                   />
                 )}
               </div>
@@ -473,7 +477,10 @@ const NewUserCreationForm = () => {
                     )}
                   </Button>
                 ) : (
-                  <Button type="submit" disabled={loading}>
+                  <Button
+                    type="submit"
+                    disabled={loading || !form.formState.isDirty}
+                  >
                     {loading ? (
                       "Creating User..."
                     ) : (

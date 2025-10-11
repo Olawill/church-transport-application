@@ -122,6 +122,7 @@ model User {
   otps                OTP[]
   subscription        Subscription?
 
+  @@index([email])
   @@map("users")
 }
 
@@ -153,6 +154,7 @@ model Address {
   pickupRequests      PickupRequest[]
 
   @@unique([userId, name])              // Prevent duplicate address names per user
+  @@index([userId, isDefault])
   @@map("addresses")
 }
 
@@ -197,6 +199,9 @@ model PickupRequest {
   cancelledRequests   DriverRequestCancel[]
   series     PickupSeries?   @relation(fields: [seriesId], references: [id])
 
+  @@index([userId, serviceDayId, requestDate]) // For duplicate checking
+  @@index([seriesId, requestDate]) // For series queries
+  @@index([status, requestDate]) // For filtering
   @@map("pickup_requests")
 }
 

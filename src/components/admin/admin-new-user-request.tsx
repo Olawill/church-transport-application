@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { format } from "date-fns";
+import { addMonths, format } from "date-fns";
 import {
   ArrowLeft,
   CalendarIcon,
@@ -66,18 +66,26 @@ import { useForm, UseFormReturn, useWatch } from "react-hook-form";
 import { PickUpDropOffField } from "../requests/pickup-dropoff-field";
 import { Input } from "../ui/input";
 import { Switch } from "../ui/switch";
+import { useConfirm } from "@/hooks/use-confirm";
 
 interface AdminNewUserRequestProps {
   isNewUser: boolean;
   isGroupRequest: boolean;
+  isRecurringRequest: boolean;
+  formRequestDate: Date | undefined;
   form?: UseFormReturn<NewUserSchema>;
-  newRequestData?: NewAdminRequestSchema & { requestId: string };
+  newRequestData?: NewAdminRequestSchema & {
+    requestId: string;
+    seriesId: string | null;
+  };
   setShowDialog?: (value: boolean) => void;
 }
 const AdminNewUserRequest = ({
   isNewUser,
   isGroupRequest,
+  isRecurringRequest,
   form,
+  formRequestDate,
   newRequestData,
   setShowDialog,
 }: AdminNewUserRequestProps) => {
@@ -94,6 +102,16 @@ const AdminNewUserRequest = ({
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
+  const [SeriesUpdateDialog, confirmSeriesUpdate] = useConfirm(
+    "Update Series",
+    "Do you want to update the entire occurence?",
+    true,
+    "Update occurence",
+    "Update series"
+  );
+
+  console.log({ newRequestData });
+
   const newRequestForm = useForm<NewAdminRequestSchema>({
     resolver: zodResolver(newAdminRequestSchema),
     defaultValues: {
@@ -105,6 +123,8 @@ const AdminNewUserRequest = ({
       isDropOff: newRequestData?.isDropOff ?? false,
       isGroupRide: newRequestData?.isGroupRide ?? false,
       numberOfGroup: newRequestData?.numberOfGroup ?? null,
+      isRecurring: newRequestData?.isRecurring ?? false,
+      endDate: newRequestData?.endDate ?? undefined,
       notes: newRequestData?.notes || "",
     },
   });
@@ -137,7 +157,7 @@ const AdminNewUserRequest = ({
   });
 
   useEffect(() => {
-    if (newServiceDayId && serviceDays.length > 0) {
+    if (!newRequestData && newServiceDayId && serviceDays.length > 0) {
       const service = serviceDays.find((s) => s.id === newServiceDayId);
       setSelectedService(service || null);
 
@@ -273,12 +293,14 @@ const AdminNewUserRequest = ({
   };
 
   const handleSubmit = async (values: NewAdminRequestSchema) => {
-    const validatedFields = newAdminRequestSchema.safeParse(values);
+    const validatedFields = await newAdminRequestSchema.safeParseAsync(values);
 
     if (!validatedFields.success) {
       toast.error("Please fill in all required fields");
       return;
     }
+
+    console.log(validatedFields.data);
 
     setLoading(true);
 
@@ -306,11 +328,19 @@ const AdminNewUserRequest = ({
   };
 
   const handleUpdate = async (values: NewAdminRequestSchema) => {
-    const validatedFields = newAdminRequestSchema.safeParse(values);
+    const validatedFields = await newAdminRequestSchema.safeParseAsync(values);
 
     if (!validatedFields.success) {
       toast.error("Please fill in all required fields");
       return;
+    }
+
+    // To update series or not
+    let updateSeries: boolean = false;
+    if (newRequestData?.seriesId) {
+      const ok = await confirmSeriesUpdate();
+
+      if (ok) updateSeries = true;
     }
 
     setLoading(true);
@@ -324,6 +354,7 @@ const AdminNewUserRequest = ({
         body: JSON.stringify({
           requestId: newRequestData?.requestId,
           ...validatedFields.data,
+          updateSeries,
         }),
       });
       if (response.ok) {
@@ -343,9 +374,12 @@ const AdminNewUserRequest = ({
   };
 
   const isGroupRequestNewForm = newRequestForm.watch("isGroupRide");
+  const isRecurringRequestNewForm = newRequestForm.watch("isRecurring");
+  const newFormRequestDate = newRequestForm.watch("requestDate");
 
   return (
     <>
+      <SeriesUpdateDialog />
       {isNewUser ? (
         <>
           {/* Service Selection */}
@@ -521,6 +555,110 @@ const AdminNewUserRequest = ({
               />
             )}
           </div>
+
+          {/* Recurring Request */}
+          <div className="flex flex-col justify-between rounded-lg border p-3 shadow-sm">
+            <FormField
+              control={form?.control}
+              name="isRecurring"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between pb-3">
+                  <div className="space-y-0.5">
+                    <FormLabel>Recurring Request</FormLabel>
+                    <FormDescription>
+                      Will you like to make a multiple request for this service?
+                      Service Date must be a valid date to enable recurring ride
+                      requests.
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={(checked) => {
+                        const startDate = form?.getValues("requestDate");
+                        const maxEndDate = addMonths(startDate as Date, 3);
+                        form?.setValue(
+                          "endDate",
+                          !checked ? undefined : maxEndDate
+                        );
+                        field.onChange(checked);
+                      }}
+                      disabled={!formRequestDate}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            {isRecurringRequest && (
+              <FormField
+                control={form?.control}
+                name="endDate"
+                render={({ field }) => {
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+
+                  const startDate = form?.getValues("requestDate");
+
+                  const maxEndDate = addMonths(startDate as Date, 3);
+
+                  const maxEndMonth = addMonths(today, 4);
+
+                  return (
+                    <FormItem className="space-y-2">
+                      <FormLabel>End Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild className="w-full">
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(
+                                  new Date(formatDate(new Date(field.value))),
+                                  "PPP"
+                                )
+                              ) : (
+                                <span>Select a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={
+                              field.value
+                                ? new Date(formatDate(field.value))
+                                : undefined
+                            }
+                            endMonth={maxEndMonth}
+                            defaultMonth={
+                              field.value ? new Date(field.value) : today
+                            }
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                              date < today || date > maxEndDate
+                            }
+                            captionLayout="dropdown"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormDescription className="text-xs text-gray-500">
+                        End date must be between 2 weeks and 3 months
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
+              />
+            )}
+          </div>
         </>
       ) : (
         <div className="space-y-6">
@@ -688,6 +826,8 @@ const AdminNewUserRequest = ({
                       const today = new Date();
                       today.setHours(0, 0, 0, 0);
 
+                      console.log({ field });
+
                       return (
                         <FormItem className="space-y-2">
                           <FormLabel>Service Date</FormLabel>
@@ -854,6 +994,124 @@ const AdminNewUserRequest = ({
                     )}
                   </div>
 
+                  {/* Recurring Request */}
+                  {!newRequestData && (
+                    <div className="flex flex-col justify-between rounded-lg border p-3 shadow-sm">
+                      <FormField
+                        control={newRequestForm.control}
+                        name="isRecurring"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between pb-3">
+                            <div className="space-y-0.5">
+                              <FormLabel>Recurring Request</FormLabel>
+                              <FormDescription>
+                                Will you like to make a multiple request for
+                                this service? Service Date must be a valid date
+                                to enable recurring ride requests.
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={(checked) => {
+                                  const startDate =
+                                    newRequestForm.getValues("requestDate");
+                                  const maxEndDate = addMonths(
+                                    startDate as Date,
+                                    3
+                                  );
+                                  newRequestForm.setValue(
+                                    "endDate",
+                                    !checked ? undefined : maxEndDate
+                                  );
+                                  field.onChange(checked);
+                                }}
+                                disabled={!newFormRequestDate}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      {isRecurringRequestNewForm && (
+                        <FormField
+                          control={newRequestForm.control}
+                          name="endDate"
+                          render={({ field }) => {
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+
+                            const startDate = form?.getValues("requestDate");
+
+                            const maxEndDate = addMonths(startDate as Date, 3);
+
+                            const maxEndMonth = addMonths(today, 4);
+
+                            return (
+                              <FormItem className="space-y-2">
+                                <FormLabel>End Date</FormLabel>
+                                <Popover>
+                                  <PopoverTrigger asChild className="w-full">
+                                    <FormControl>
+                                      <Button
+                                        variant={"outline"}
+                                        className={cn(
+                                          "w-full pl-3 text-left font-normal",
+                                          !field.value &&
+                                            "text-muted-foreground"
+                                        )}
+                                      >
+                                        {field.value ? (
+                                          format(
+                                            new Date(
+                                              formatDate(new Date(field.value))
+                                            ),
+                                            "PPP"
+                                          )
+                                        ) : (
+                                          <span>Select a date</span>
+                                        )}
+                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                      </Button>
+                                    </FormControl>
+                                  </PopoverTrigger>
+                                  <PopoverContent
+                                    className="w-auto p-0"
+                                    align="start"
+                                  >
+                                    <Calendar
+                                      mode="single"
+                                      selected={
+                                        field.value
+                                          ? new Date(formatDate(field.value))
+                                          : undefined
+                                      }
+                                      endMonth={maxEndMonth}
+                                      defaultMonth={
+                                        field.value
+                                          ? new Date(field.value)
+                                          : today
+                                      }
+                                      onSelect={field.onChange}
+                                      disabled={(date) =>
+                                        date < today || date > maxEndDate
+                                      }
+                                      captionLayout="dropdown"
+                                    />
+                                  </PopoverContent>
+                                </Popover>
+                                <FormDescription className="text-xs text-gray-500">
+                                  End date must be between 2 weeks and 3 months
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            );
+                          }}
+                        />
+                      )}
+                    </div>
+                  )}
+
                   {/* Notes */}
                   <FormField
                     control={newRequestForm.control}
@@ -921,7 +1179,10 @@ const AdminNewUserRequest = ({
                         </Link>
                       </Button>
                     )}
-                    <Button type="submit" disabled={loading}>
+                    <Button
+                      type="submit"
+                      disabled={loading || !newRequestForm.formState.isDirty}
+                    >
                       {loading ? (
                         newRequestData ? (
                           "Updating Request..."

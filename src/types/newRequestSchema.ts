@@ -10,13 +10,19 @@ export const validateRequest = async (
     isGroupRide: boolean;
     numberOfGroup: number | null;
     isRecurring: boolean;
-    endDate?: Date;
+    endDate?: Date | string;
     serviceDayId: string;
-    requestDate: Date;
+    requestDate: Date | string;
   },
   ctx: z.RefinementCtx
 ) => {
-  const result = await validateRequestDate(data.requestDate, data.serviceDayId);
+  const requestDate =
+    typeof data.requestDate === "string"
+      ? new Date(data.requestDate)
+      : data.requestDate;
+  const endDate =
+    typeof data.endDate === "string" ? new Date(data.endDate) : data.endDate;
+  const result = await validateRequestDate(requestDate, data.serviceDayId);
 
   const pickupDropoffMessage =
     "Please select at least one option: Pickup or Drop-off";
@@ -67,10 +73,10 @@ export const validateRequest = async (
 
   // Recurring request logic
   if (data.isRecurring) {
-    const startDate = data.requestDate ?? new Date();
+    const startDate = requestDate ?? new Date();
     startDate.setHours(0, 0, 0, 0);
 
-    if (!data.endDate) {
+    if (!endDate) {
       ctx.addIssue({
         code: "custom",
         message: "Please select the end date for the recurring request",
@@ -78,11 +84,11 @@ export const validateRequest = async (
       });
       return;
     }
-    data.endDate.setHours(0, 0, 0, 0);
+    endDate.setHours(0, 0, 0, 0);
 
-    const durationPeriodInWeeks = differenceInWeeks(data.endDate, startDate);
+    const durationPeriodInWeeks = differenceInWeeks(endDate, startDate);
 
-    const durationPeriodInMonths = differenceInMonths(data.endDate, startDate);
+    const durationPeriodInMonths = differenceInMonths(endDate, startDate);
 
     if (durationPeriodInWeeks < 2) {
       ctx.addIssue({
