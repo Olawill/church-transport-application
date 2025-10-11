@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import {
   PickupRequest,
   Prisma,
+  PrismaClient,
   RequestStatus,
   UserRole,
 } from "@/generated/prisma";
@@ -48,13 +49,11 @@ type DuplicationType = {
   excludeRequestId?: string;
 };
 
-const validateRequestDuplicate = async ({
-  serviceDayId,
-  requestDate,
-  userId,
-  excludeRequestId,
-}: DuplicationType) => {
-  const similarRequest = await prisma.pickupRequest.findFirst({
+const validateRequestDuplicate = async (
+  { serviceDayId, requestDate, userId, excludeRequestId }: DuplicationType,
+  db: Prisma.TransactionClient | PrismaClient = prisma
+) => {
+  const similarRequest = await db.pickupRequest.findFirst({
     where: {
       serviceDayId,
       userId,
@@ -489,6 +488,15 @@ export const PATCH = async (request: NextRequest) => {
         { status: 400 }
       );
     }
+
+    // Enforce ownership for regular users
+    if (
+      session.user.role === UserRole.USER &&
+      existingRequest.userId !== session.user.id
+    ) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
     if (!serviceDay) {
       return NextResponse.json(
         { error: "Invalid service day" },
@@ -537,7 +545,7 @@ export const PATCH = async (request: NextRequest) => {
             error:
               "You already have a pickup request for this service occurrence",
           },
-          { status: 404 }
+          { status: 409 }
         );
       }
       const pickupRequest = await prisma.pickupRequest.update({
@@ -640,11 +648,14 @@ export const PATCH = async (request: NextRequest) => {
 
           const duplicates = await Promise.all(
             requestsToUpdate.map((_, index) => {
-              return validateRequestDuplicate({
-                serviceDayId,
-                userId: targetUserId as string,
-                requestDate: allDates[index],
-              });
+              return validateRequestDuplicate(
+                {
+                  serviceDayId,
+                  userId: targetUserId as string,
+                  requestDate: allDates[index],
+                },
+                tx
+              );
             })
           );
 
