@@ -13,7 +13,9 @@ import { ReactNode, useState } from "react";
 export const useConfirm = (
   title: string,
   message: string,
-  update?: boolean
+  update?: boolean,
+  cancelText?: string,
+  confirmText?: string
 ): [() => ReactNode, () => Promise<unknown>] => {
   const [promise, setPromise] = useState<{
     resolve: (value: boolean) => void;
@@ -39,14 +41,14 @@ export const useConfirm = (
 
   const ConfirmDialog = () => (
     <Dialog open={promise !== null} onOpenChange={handleCancel}>
-      <DialogContent>
+      <DialogContent className="mx-8">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{message}</DialogDescription>
         </DialogHeader>
         <DialogFooter className="pt-2">
           <Button variant="outline" onClick={handleCancel}>
-            Cancel
+            {cancelText || "Cancel"}
           </Button>
           <Button
             variant={update ? "default" : "destructive"}
@@ -55,7 +57,7 @@ export const useConfirm = (
               update && "bg-[#007A5A] hover:bg-[#007A5A]/80 text-white"
             )}
           >
-            Confirm
+            {confirmText ? confirmText : "Confirm"}
           </Button>
         </DialogFooter>
       </DialogContent>

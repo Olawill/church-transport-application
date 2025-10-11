@@ -72,7 +72,10 @@ export interface PickupRequest {
   isDropOff: boolean;
   isGroupRide: boolean;
   numberOfGroup: number | null;
+  isRecurring: boolean;
+  endDate?: Date;
   notes?: string | null;
+  seriesId: string | null;
   distance?: number | null;
   createdAt: Date;
   updatedAt: Date;
@@ -102,37 +105,41 @@ export interface DistanceOption {
 }
 
 export type Frequency =
-  | "weekly"
-  | "monthly"
-  | "every 2 months"
-  | "quarterly"
-  | "every 4 months"
-  | "every 6 months"
-  | "yearly";
+  | "DAILY"
+  | "WEEKLY"
+  | "MONTHLY"
+  | "EVERY_2_MONTHS"
+  | "QUARTERLY"
+  | "EVERY_4_MONTHS"
+  | "EVERY_6_MONTHS"
+  | "YEARLY"
+  | "NONE";
 
 export type Ordinal =
-  | "next" // next occurrence of the weekday from today
-  | "first"
-  | "second"
-  | "third"
-  | "fourth"
-  | "last";
+  | "NEXT" // next occurrence of the weekday from today
+  | "FIRST"
+  | "SECOND"
+  | "THIRD"
+  | "FOURTH"
+  | "LAST";
 
-export const ordinalMap: Record<Exclude<Ordinal, "next" | "last">, number> = {
-  first: 1,
-  second: 2,
-  third: 3,
-  fourth: 4,
+export const ordinalMap: Record<Exclude<Ordinal, "NEXT" | "LAST">, number> = {
+  FIRST: 1,
+  SECOND: 2,
+  THIRD: 3,
+  FOURTH: 4,
 };
 
 export const frequencyMap: Record<Frequency, number> = {
-  weekly: 0,
-  monthly: 1,
-  "every 2 months": 2,
-  quarterly: 3,
-  "every 4 months": 4,
-  "every 6 months": 6,
-  yearly: 12,
+  DAILY: 0,
+  WEEKLY: 0,
+  MONTHLY: 1,
+  EVERY_2_MONTHS: 2,
+  QUARTERLY: 3,
+  EVERY_4_MONTHS: 4,
+  EVERY_6_MONTHS: 6,
+  YEARLY: 12,
+  NONE: 0,
 };
 
 export const DISTANCE_OPTIONS: DistanceOption[] = [

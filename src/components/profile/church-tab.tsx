@@ -120,12 +120,17 @@ export const ChurchTab = ({
           <CardTitle className="flex items-center">
             <Building2Icon className="w-5 h-5 mr-2" />
             <div className="flex items-center gap-2">
-              <p className="font-medium">{organization?.churchName}</p>
-              {organization?.churchAcronym && (
-                <Badge className="text-sm text-gray-600">
-                  {organization?.churchAcronym}
-                </Badge>
+              {organization && (
+                <>
+                  <p className="font-medium">{organization?.churchName}</p>
+                  {organization?.churchAcronym && (
+                    <Badge className="text-sm text-gray-600">
+                      {organization?.churchAcronym}
+                    </Badge>
+                  )}
+                </>
               )}
+              {!organization && <p>Your church info will be displayed here</p>}
             </div>
           </CardTitle>
         </CardHeader>
