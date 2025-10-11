@@ -13,7 +13,7 @@ import {
 import { AnalyticsService } from "@/lib/analytics";
 import { prisma } from "@/lib/db";
 import { calculateDistance, getNextOccurrencesOfWeekdays } from "@/lib/utils";
-import { validateRequest } from "@/types/newRequestSchema";
+import { serverValidateRequest } from "@/types/newRequestSchema";
 import {
   convertStringDateToDate,
   TRANSACTION_CONFIG,
@@ -39,24 +39,27 @@ const payloadSchema = z
     updateSeries: z.boolean().optional(),
     endDate: z.string().optional(),
   })
-  .superRefine(validateRequest);
+  .superRefine(serverValidateRequest);
 
 type DuplicationType = {
   serviceDayId: string;
   requestDate: Date;
   userId: string;
+  excludeRequestId?: string;
 };
 
 const validateRequestDuplicate = async ({
   serviceDayId,
   requestDate,
   userId,
+  excludeRequestId,
 }: DuplicationType) => {
   const similarRequest = await prisma.pickupRequest.findFirst({
     where: {
       serviceDayId,
       userId,
       requestDate,
+      ...(excludeRequestId ? { id: { not: excludeRequestId } } : {}),
     },
   });
 
@@ -222,6 +225,13 @@ export const POST = async (request: NextRequest) => {
     const isAdmin = session.user.role === UserRole.ADMIN;
     const targetUserId = isAdmin ? userId : session.user.id;
 
+    if (isAdmin && !userId) {
+      return NextResponse.json(
+        { error: "userId is required when creating on behalf of a user" },
+        { status: 400 }
+      );
+    }
+
     // Optimization: Parallel validation queries instead of sequential
     const [serviceDay, address, existingRequest, existingUser] =
       await Promise.all([
@@ -262,7 +272,7 @@ export const POST = async (request: NextRequest) => {
     if (existingRequest) {
       return NextResponse.json(
         { error: "You already have a pickup request for this service" },
-        { status: 404 }
+        { status: 409 }
       );
     }
     // Convert requestDate
@@ -518,10 +528,15 @@ export const PATCH = async (request: NextRequest) => {
         serviceDayId,
         userId: targetUserId as string,
         requestDate: normalizedRequestDate,
+        excludeRequestId: requestId!,
       });
+
       if (isSameRequest) {
         return NextResponse.json(
-          { error: "You already have a pickup request for this service" },
+          {
+            error:
+              "You already have a pickup request for this service occurrence",
+          },
           { status: 404 }
         );
       }
@@ -569,7 +584,7 @@ export const PATCH = async (request: NextRequest) => {
             where: {
               seriesId,
               requestDate: {
-                gte: requestDate,
+                gte: normalizedRequestDate,
               },
             },
             data: {
@@ -582,11 +597,11 @@ export const PATCH = async (request: NextRequest) => {
             },
           });
 
-          // Fetech updated records within the same transaction
+          // Fetch updated records within the same transaction
           return await tx.pickupRequest.findMany({
             where: {
               seriesId,
-              requestDate: { gte: requestDate },
+              requestDate: { gte: normalizedRequestDate },
             },
             include: { serviceDay: true, address: true },
             orderBy: { requestDate: "asc" },
@@ -705,11 +720,11 @@ export const PATCH = async (request: NextRequest) => {
       console.error("Analytics tracking failed:", err)
     );
 
-    return NextResponse.json(allUpdatedRequest, { status: 201 });
+    return NextResponse.json(allUpdatedRequest, { status: 200 });
   } catch (error) {
     if (error instanceof Error && error.message === "DUPLICATE_REQUEST") {
       return NextResponse.json(
-        { error: "You already have a pickup request for this service" },
+        { error: "You already have service matching one in the series" },
         { status: 409 }
       );
     }

@@ -7,7 +7,6 @@ import {
 import { z } from "zod";
 import { differenceInWeeks } from "date-fns/differenceInWeeks";
 import { differenceInMonths } from "date-fns/differenceInMonths";
-import { validateRequestDate } from "@/actions/validRequestDate";
 
 const validateUserData = async (
   data: {
@@ -56,30 +55,6 @@ const validateUserData = async (
         message: "Request date is required when creating pickup request",
         path: ["requestDate"],
       });
-    } else {
-      const result = await validateRequestDate(
-        data.requestDate,
-        data.serviceDayId
-      );
-
-      // Ensure request falls on day of week
-      if (result.error) {
-        ctx.addIssue({
-          code: "custom",
-          message: result.message,
-          path: ["requestDate"],
-        });
-      } else {
-        const { isServiceDayOfWeek, dayOfWeek } = result.validData;
-
-        if (!isServiceDayOfWeek) {
-          ctx.addIssue({
-            code: "custom",
-            message: `Request date for this service should be ${dayOfWeek}`,
-            path: ["requestDate"],
-          });
-        }
-      }
     }
 
     if (!data.isPickUp && !data.isDropOff) {
@@ -151,7 +126,7 @@ const validateUserData = async (
       if (durationPeriodInWeeks < 2) {
         ctx.addIssue({
           code: "custom",
-          message: "Please select the end date that is greater than a week",
+          message: "End date must be at least 2 weeks after the start date",
           path: ["endDate"],
         });
       }
@@ -159,7 +134,7 @@ const validateUserData = async (
       if (durationPeriodInMonths > 3) {
         ctx.addIssue({
           code: "custom",
-          message: "Please select an end date at least 3 months away",
+          message: "Recurring period must not exceed 3 months.",
           path: ["endDate"],
         });
       }

@@ -649,7 +649,6 @@ export const RequestHistory = () => {
                               className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                               onClick={() => {
                                 setSelectedRequest(request);
-                                console.log(request);
                                 setEditDialogOpen(true);
                               }}
                             >
@@ -702,7 +701,7 @@ export const RequestHistory = () => {
                                 ? "Hide Drivers"
                                 : "Show Drivers"
                             }
-                            className="text-green-600 hover:text-green-700 hover:bg-red-50"
+                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
                             onClick={() => {
                               toggleAccordion(request.id);
                             }}

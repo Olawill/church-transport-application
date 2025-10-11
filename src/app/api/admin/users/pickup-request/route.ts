@@ -8,7 +8,7 @@ import { PickupRequest, UserRole } from "@/generated/prisma";
 import { AnalyticsService } from "@/lib/analytics";
 import { prisma } from "@/lib/db";
 import { geocodeAddress } from "@/lib/geocoding";
-import { validateRequest } from "@/types/newRequestSchema";
+import { serverValidateRequest } from "@/types/newRequestSchema";
 import bcrypt from "bcryptjs";
 import { getNextOccurrencesOfWeekdays } from "@/lib/utils";
 import {
@@ -41,7 +41,7 @@ const payloadSchema = z
     isRecurring: z.boolean(),
     endDate: z.string().optional(),
   })
-  .superRefine(validateRequest);
+  .superRefine(serverValidateRequest);
 
 const validatePassword = (isLoginRequired: boolean, password?: string) => {
   if (isLoginRequired && (!password || password.length < 8)) {
@@ -233,7 +233,7 @@ export const POST = async (request: NextRequest) => {
           where: {
             userId: newUser.id,
             serviceDayId,
-            requestDate,
+            requestDate: normalizedRequestDate,
           },
           select: { id: true },
         });

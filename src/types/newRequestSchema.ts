@@ -22,6 +22,118 @@ export const validateRequest = async (
       : data.requestDate;
   const endDate =
     typeof data.endDate === "string" ? new Date(data.endDate) : data.endDate;
+
+  const pickupDropoffMessage =
+    "Please select at least one option: Pickup or Drop-off";
+
+  if (!data.isPickUp && !data.isDropOff) {
+    ctx.addIssue({
+      code: "custom",
+      message: pickupDropoffMessage,
+      path: ["isPickUp"],
+    });
+    ctx.addIssue({
+      code: "custom",
+      message: pickupDropoffMessage,
+      path: ["isDropOff"],
+    });
+  }
+
+  // Group ride logic
+  if (data.isGroupRide) {
+    if (data.numberOfGroup == null) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Please enter number of people in group ride",
+        path: ["numberOfGroup"],
+      });
+    } else if (data.numberOfGroup < 2) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Group ride must include at least 2 people",
+        path: ["numberOfGroup"],
+      });
+    } else if (data.numberOfGroup > 10) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Group ride must include at most 10 people",
+        path: ["numberOfGroup"],
+      });
+    }
+  } else {
+    if (data.numberOfGroup !== null && data.numberOfGroup !== undefined) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Number of people must be empty if not a group ride",
+        path: ["numberOfGroup"],
+      });
+    }
+  }
+
+  // Recurring request logic
+  if (data.isRecurring) {
+    const startDate = requestDate ?? new Date();
+    startDate.setHours(0, 0, 0, 0);
+
+    if (!endDate) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Please select the end date for the recurring request",
+        path: ["endDate"],
+      });
+      return;
+    }
+    endDate.setHours(0, 0, 0, 0);
+
+    const durationPeriodInWeeks = differenceInWeeks(endDate, startDate);
+
+    const durationPeriodInMonths = differenceInMonths(endDate, startDate);
+
+    if (durationPeriodInWeeks < 2) {
+      ctx.addIssue({
+        code: "custom",
+        message: "End date must be at least 2 weeks after the start date",
+        path: ["endDate"],
+      });
+    }
+
+    if (durationPeriodInMonths > 3) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Recurring period must not exceed 3 months.",
+        path: ["endDate"],
+      });
+    }
+  } else {
+    if (data.endDate !== undefined) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Recurring Ride End Date is not required",
+        path: ["endDate"],
+      });
+    }
+  }
+};
+
+export const serverValidateRequest = async (
+  data: {
+    isPickUp: boolean;
+    isDropOff: boolean;
+    isGroupRide: boolean;
+    numberOfGroup: number | null;
+    isRecurring: boolean;
+    endDate?: Date | string;
+    serviceDayId: string;
+    requestDate: Date | string;
+  },
+  ctx: z.RefinementCtx
+) => {
+  const requestDate =
+    typeof data.requestDate === "string"
+      ? new Date(data.requestDate)
+      : data.requestDate;
+  const endDate =
+    typeof data.endDate === "string" ? new Date(data.endDate) : data.endDate;
   const result = await validateRequestDate(requestDate, data.serviceDayId);
 
   const pickupDropoffMessage =
@@ -93,7 +205,7 @@ export const validateRequest = async (
     if (durationPeriodInWeeks < 2) {
       ctx.addIssue({
         code: "custom",
-        message: "Please select the end date that is greater than a week",
+        message: "End date must be at least 2 weeks after the start date",
         path: ["endDate"],
       });
     }
@@ -101,7 +213,7 @@ export const validateRequest = async (
     if (durationPeriodInMonths > 3) {
       ctx.addIssue({
         code: "custom",
-        message: "Please select an end date at least 3 months away",
+        message: "Recurring period must not exceed 3 months.",
         path: ["endDate"],
       });
     }

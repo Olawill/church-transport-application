@@ -89,9 +89,9 @@ export const NewRequestForm = ({
 
   const [SeriesUpdateDialog, confirmSeriesUpdate] = useConfirm(
     "Update Series",
-    "Do you want to update the entire occurence?",
+    "Do you want to update the entire series or occurrence?",
     true,
-    "Update occurence",
+    "Update occurrence",
     "Update series"
   );
 
@@ -419,7 +419,9 @@ export const NewRequestForm = ({
                             <Calendar
                               mode="single"
                               selected={
-                                new Date(formatDate(new Date(field.value)))
+                                field.value
+                                  ? new Date(formatDate(new Date(field.value)))
+                                  : undefined
                               }
                               onSelect={field.onChange}
                               endMonth={maxEndMonth}
@@ -637,14 +639,13 @@ export const NewRequestForm = ({
                                   <Calendar
                                     mode="single"
                                     selected={
-                                      // field.value
-                                      //? // new Date(formatDate(field.value))
-                                      new Date(
-                                        formatDate(
-                                          new Date(field.value as Date)
-                                        )
-                                      )
-                                      // : undefined
+                                      field.value
+                                        ? new Date(
+                                            formatDate(
+                                              new Date(field.value as Date)
+                                            )
+                                          )
+                                        : undefined
                                     }
                                     endMonth={maxEndMonth}
                                     defaultMonth={
