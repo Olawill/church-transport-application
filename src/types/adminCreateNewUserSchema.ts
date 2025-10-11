@@ -5,6 +5,150 @@ import {
   isValidPostalCode,
 } from "@/lib/utils";
 import { z } from "zod";
+import { differenceInWeeks } from "date-fns/differenceInWeeks";
+import { differenceInMonths } from "date-fns/differenceInMonths";
+
+const validateUserData = async (
+  data: {
+    isLoginRequired: boolean;
+    password?: string;
+    createPickUpRequest: boolean;
+    isPickUp: boolean;
+    isDropOff: boolean;
+    isGroupRide: boolean;
+    numberOfGroup: number | null;
+    isRecurring: boolean;
+    endDate?: Date | undefined;
+    serviceDayId?: string | undefined;
+    requestDate?: Date | undefined;
+  },
+  ctx: z.RefinementCtx
+) => {
+  const pickupDropoffMessage =
+    "Please select at least one option: Pickup or Drop-off";
+
+  // Validate password if login is required
+  if (data.isLoginRequired) {
+    if (!data.password || data.password.trim().length === 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Password is required when login is required",
+        path: ["password"],
+      });
+    }
+  }
+
+  // Validate serviceDayId and requestDate if pickup request is created
+  if (data.createPickUpRequest) {
+    if (!data.serviceDayId || data.serviceDayId.trim().length === 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Service selection is required when creating pickup request",
+        path: ["serviceDayId"],
+      });
+      return;
+    }
+
+    if (!data.requestDate) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Request date is required when creating pickup request",
+        path: ["requestDate"],
+      });
+    }
+
+    if (!data.isPickUp && !data.isDropOff) {
+      ctx.addIssue({
+        code: "custom",
+        message: pickupDropoffMessage,
+        path: ["isPickUp"],
+      });
+      ctx.addIssue({
+        code: "custom",
+        message: pickupDropoffMessage,
+        path: ["isDropOff"],
+      });
+    }
+
+    // Group ride logic
+    if (data.isGroupRide) {
+      if (data.numberOfGroup == null) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Please enter number of people in group ride",
+          path: ["numberOfGroup"],
+        });
+      } else if (data.numberOfGroup < 2) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Group ride must include at least 2 people",
+          path: ["numberOfGroup"],
+        });
+      } else if (data.numberOfGroup > 10) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Group ride must include at most 10 people",
+          path: ["numberOfGroup"],
+        });
+      }
+    } else {
+      if (data.numberOfGroup !== null && data.numberOfGroup !== undefined) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Number of people must be empty if not a group ride",
+          path: ["numberOfGroup"],
+        });
+      }
+    }
+
+    // Recurring request logic
+    if (data.isRecurring) {
+      const startDate = data.requestDate ?? new Date();
+      startDate.setHours(0, 0, 0, 0);
+
+      if (!data.endDate) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Please select the end date for the recurring request",
+          path: ["endDate"],
+        });
+        return;
+      }
+      data.endDate.setHours(0, 0, 0, 0);
+
+      const durationPeriodInWeeks = differenceInWeeks(data.endDate, startDate);
+
+      const durationPeriodInMonths = differenceInMonths(
+        data.endDate,
+        startDate
+      );
+
+      if (durationPeriodInWeeks < 2) {
+        ctx.addIssue({
+          code: "custom",
+          message: "End date must be at least 2 weeks after the start date",
+          path: ["endDate"],
+        });
+      }
+
+      if (durationPeriodInMonths > 3) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Recurring period must not exceed 3 months.",
+          path: ["endDate"],
+        });
+      }
+    } else {
+      if (data.endDate !== undefined) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Recurring Ride End Date is not required",
+          path: ["endDate"],
+        });
+      }
+    }
+  }
+};
 
 export const newUserSchema = z
   .object({
@@ -77,81 +221,10 @@ export const newUserSchema = z
     isDropOff: z.boolean(),
     isGroupRide: z.boolean(),
     numberOfGroup: z.number().int().min(2).max(10).nullable(),
+    isRecurring: z.boolean(),
+    endDate: z.date().optional(),
   })
-  .superRefine((data, ctx) => {
-    // Validate password if login is required
-    if (data.isLoginRequired) {
-      if (!data.password || data.password.trim().length === 0) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Password is required when login is required",
-          path: ["password"],
-        });
-      }
-    }
-
-    // Validate serviceDayId and requestDate if pickup request is created
-    if (data.createPickUpRequest) {
-      if (!data.serviceDayId || data.serviceDayId.trim().length === 0) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Service selection is required when creating pickup request",
-          path: ["serviceDayId"],
-        });
-      }
-
-      if (!data.requestDate) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Request date is required when creating pickup request",
-          path: ["requestDate"],
-        });
-      }
-      if (!data.isPickUp && !data.isDropOff) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Please select at least one option: Pickup or Drop-off",
-          path: ["isPickUp"],
-        });
-        ctx.addIssue({
-          code: "custom",
-          message: "Please select at least one option: Pickup or Drop-off",
-          path: ["isDropOff"],
-        });
-      }
-    }
-
-    // Group ride logic
-    if (data.isGroupRide) {
-      if (data.numberOfGroup == null) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Please enter number of people in group ride",
-          path: ["numberOfGroup"],
-        });
-      } else if (data.numberOfGroup < 2) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Group ride must include at least 2 people",
-          path: ["numberOfGroup"],
-        });
-      } else if (data.numberOfGroup > 10) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Group ride must include at most 10 people",
-          path: ["numberOfGroup"],
-        });
-      }
-    } else {
-      if (data.numberOfGroup !== null && data.numberOfGroup !== undefined) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Number of people must be empty if not a group ride",
-          path: ["numberOfGroup"],
-        });
-      }
-    }
-  });
+  .superRefine(validateUserData);
 
 export type NewUserSchema = z.infer<typeof newUserSchema>;
 
