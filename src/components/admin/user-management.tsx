@@ -16,6 +16,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,6 +36,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -44,6 +55,7 @@ import {
 
 import { useConfirm } from "@/hooks/use-confirm";
 import { AnalyticsService } from "@/lib/analytics";
+import { useDebounceFn } from "@/lib/debounced-wrapper";
 import { User } from "@/lib/types";
 import {
   CustomPagination,
@@ -54,6 +66,7 @@ import {
 type UserFilters = {
   roleFilter: string;
   statusFilter: string;
+  nameFilter: string;
 };
 
 export const UserManagement = () => {
@@ -79,15 +92,26 @@ export const UserManagement = () => {
   } = usePaginationWithFilters<UserFilters>(10, {
     roleFilter: "ALL",
     statusFilter: "ALL",
+    nameFilter: "",
   });
+
+  const [nameInput, setNameInput] = useState(filters.nameFilter);
 
   // Filter users based on filters
   const filteredUsers = users.filter((user) => {
+    const userFullName = `${user.firstName} ${user.lastName}`;
+
     const matchesRole =
       filters.roleFilter === "ALL" || user.role === filters.roleFilter;
+
     const matchesStatus =
       filters.statusFilter === "ALL" || user.status === filters.statusFilter;
-    return matchesRole && matchesStatus;
+
+    const matchesName =
+      !filters.nameFilter ||
+      userFullName.toLowerCase().includes(filters.nameFilter.toLowerCase());
+
+    return matchesRole && matchesStatus && matchesName;
   });
 
   // Get paginated users
@@ -212,11 +236,25 @@ export const UserManagement = () => {
     }
   };
 
+  const debouncedUpdateFilter = useDebounceFn((val: string) => {
+    updateFilter("nameFilter", val);
+  }, 300);
+
+  const handleNameFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setNameInput(val); // Immediate input update
+    debouncedUpdateFilter(val); // Delayed filter update
+  };
+
   const pendingUsers = users.filter((u) => u.status === "PENDING").length;
   const approvedUsers = users.filter((u) => u.status === "APPROVED").length;
   const transportationMembers = users.filter(
     (u) => u.role === "TRANSPORTATION_TEAM"
   ).length;
+  const isFiltered =
+    filters.roleFilter !== "ALL" ||
+    filters.statusFilter !== "ALL" ||
+    filters.nameFilter !== "";
 
   return (
     <>
@@ -293,9 +331,14 @@ export const UserManagement = () => {
                   <Filter className="mr-2 size-5" />
                   Filters
                 </span>
-                {(filters.roleFilter !== "ALL" ||
-                  filters.statusFilter !== "ALL") && (
-                  <Button variant="outline" onClick={clearFilters}>
+                {isFiltered && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      clearFilters();
+                      setNameInput("");
+                    }}
+                  >
                     <XCircle className="size-4" />
                     Clear Filters
                   </Button>
@@ -306,7 +349,7 @@ export const UserManagement = () => {
           <CardContent>
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
-                <label className="text-sm font-medium mb-2 block">Role</label>
+                <Label className="text-sm font-medium mb-2 block">Role</Label>
                 <Select
                   value={filters.roleFilter}
                   onValueChange={(value) => updateFilter("roleFilter", value)}
@@ -325,7 +368,7 @@ export const UserManagement = () => {
                 </Select>
               </div>
               <div className="flex-1">
-                <label className="text-sm font-medium mb-2 block">Status</label>
+                <Label className="text-sm font-medium mb-2 block">Status</Label>
                 <Select
                   value={filters.statusFilter}
                   onValueChange={(value) => updateFilter("statusFilter", value)}
@@ -340,6 +383,15 @@ export const UserManagement = () => {
                     <SelectItem value="REJECTED">Rejected</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="flex-1">
+                <Label className="text-sm font-medium mb-2 block">Name</Label>
+                <Input
+                  placeholder="Filter by member's name..."
+                  value={nameInput}
+                  onChange={handleNameFilterChange}
+                />
               </div>
             </div>
           </CardContent>
@@ -493,6 +545,54 @@ export const UserManagement = () => {
                   onItemsPerPageChange={setItemsPerPage}
                   itemName="users"
                 />
+
+                {paginatedUsers.length === 0 && (
+                  <Empty>
+                    <EmptyHeader>
+                      <EmptyMedia>
+                        <div className="*:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:size-12 *:data-[slot=avatar]:ring-2 *:data-[slot=avatar]:grayscale">
+                          <Avatar>
+                            <AvatarImage
+                              src="https://github.com/shadcn.png"
+                              alt="@shadcn"
+                            />
+                            <AvatarFallback>CN</AvatarFallback>
+                          </Avatar>
+                          <Avatar>
+                            <AvatarImage
+                              src="https://github.com/maxleiter.png"
+                              alt="@maxleiter"
+                            />
+                            <AvatarFallback>LR</AvatarFallback>
+                          </Avatar>
+                          <Avatar>
+                            <AvatarImage
+                              src="https://github.com/evilrabbit.png"
+                              alt="@evilrabbit"
+                            />
+                            <AvatarFallback>ER</AvatarFallback>
+                          </Avatar>
+                        </div>
+                      </EmptyMedia>
+                      <EmptyTitle>No Users Found</EmptyTitle>
+                      <EmptyDescription>
+                        No users match your current filters. Try adjusting your
+                        search criteria.
+                      </EmptyDescription>
+                    </EmptyHeader>
+                    <EmptyContent>
+                      <Button size="sm" asChild>
+                        <Link
+                          href="/admin/users/new"
+                          aria-label="Create new user"
+                        >
+                          <UserPlus className="size-4" />
+                          Add Members
+                        </Link>
+                      </Button>
+                    </EmptyContent>
+                  </Empty>
+                )}
               </div>
             )}
           </CardContent>

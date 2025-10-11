@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import {
   Card,
   CardContent,
@@ -506,16 +507,22 @@ export const ServiceManagement = () => {
                           </div>
                         </div>
                         <div className="flex flex-row items-end space-x-1">
-                          <Badge
-                            className={getServiceTypeColor(service.serviceType)}
-                          >
-                            {service.serviceType.toLowerCase()}
-                          </Badge>
-                          <Badge
-                            className={getServiceStatusColor(service.isActive)}
-                          >
-                            {service.isActive ? "active" : "inactive"}
-                          </Badge>
+                          <ButtonGroup>
+                            <Badge
+                              className={getServiceTypeColor(
+                                service.serviceType
+                              )}
+                            >
+                              {service.serviceType.toLowerCase()}
+                            </Badge>
+                            <Badge
+                              className={getServiceStatusColor(
+                                service.isActive
+                              )}
+                            >
+                              {service.isActive ? "active" : "inactive"}
+                            </Badge>
+                          </ButtonGroup>
                         </div>
                       </div>
 

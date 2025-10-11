@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import {
   Card,
   CardContent,
@@ -58,6 +59,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 
+import { getServices } from "@/actions/getOrgInfo";
 import { UserRole } from "@/generated/prisma";
 import { Status, useRequestStore } from "@/lib/store/useRequestStore";
 import { PickupRequest, RequestType, User as UserType } from "@/lib/types";
@@ -68,12 +70,13 @@ import {
   formatFilterDate,
   formatTime,
 } from "@/lib/utils";
+import { useDebounce } from "use-debounce";
 import AdminNewUserRequest from "../admin/admin-new-user-request";
 import { CustomPagination, usePaginationWithStore } from "../custom-pagination";
 import CustomDateCalendar from "../custom-request-calendar";
-import { NewRequestForm } from "./new-request-form";
 import { CarBack } from "../icons/car-back";
-import { ButtonGroup } from "../ui/button-group";
+import { Input } from "../ui/input";
+import { NewRequestForm } from "./new-request-form";
 
 type Type = RequestType | "ALL";
 
@@ -104,6 +107,10 @@ export const RequestHistory = () => {
   const [openAccordions, setOpenAccordions] = useState<Record<string, boolean>>(
     {}
   );
+  const [nameInput, setNameInput] = useState("");
+  const [serviceDay, setServiceDay] = useState("ALL");
+  const [allServices, setAllServices] = useState(["ALL"]);
+  const [debouncedNameInput] = useDebounce(nameInput, 300);
 
   const {
     currentPage,
@@ -111,10 +118,35 @@ export const RequestHistory = () => {
     setCurrentPage,
     setItemsPerPage,
     paginateItems,
-  } = usePaginationWithStore(10, [statusFilter, typeFilter, requestDateFilter]);
+  } = usePaginationWithStore(10, [
+    statusFilter,
+    typeFilter,
+    requestDateFilter,
+    debouncedNameInput,
+    serviceDay,
+  ]);
+
+  // Filter requests based on name input and service
+  const filteredRequests = requests.filter((request) => {
+    const userName = `${request?.user?.firstName} ${request?.user?.lastName}`;
+
+    const matchesRequest =
+      !debouncedNameInput ||
+      userName.toLowerCase().includes(debouncedNameInput.toLowerCase());
+
+    const matchesService =
+      serviceDay === "ALL" || request.serviceDay?.name === serviceDay;
+
+    return matchesRequest && matchesService;
+  });
 
   // Get paginated requests
-  const paginatedRequests = paginateItems(requests);
+  const paginatedRequests = paginateItems(filteredRequests);
+
+  const handleNameFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setNameInput(val); // Immediate input update
+  };
 
   useEffect(() => {
     if (session?.user) {
@@ -126,6 +158,7 @@ export const RequestHistory = () => {
   useEffect(() => {
     if (session?.user?.role === UserRole.ADMIN) {
       fetchDrivers();
+      fetchServices();
     }
   }, [session]);
 
@@ -145,6 +178,27 @@ export const RequestHistory = () => {
     }
   };
 
+  const fetchServices = async () => {
+    try {
+      const { error, success, services } = await getServices();
+
+      if (success) {
+        setAllServices((prev) => {
+          const newNames = services.map((s) => s.name);
+          // Create a Set to remove duplicates
+          const uniqueServices = Array.from(new Set([...prev, ...newNames]));
+          return uniqueServices;
+        });
+      }
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      console.error("Error fetching services:", error);
+      toast.error("Error fetching services");
+    }
+  };
   const handleCancelRequest = async () => {
     if (!selectedRequest || !cancelReason.trim()) {
       toast.error("Please provide a reason for cancellation");
@@ -284,6 +338,12 @@ export const RequestHistory = () => {
 
   const dropOffRequest = requests.filter((r) => r.isDropOff === true).length;
   const pickUpRequest = requests.filter((r) => r.isPickUp === true).length;
+  const isFiltered =
+    statusFilter !== "ALL" ||
+    typeFilter !== "ALL" ||
+    requestDateFilter ||
+    nameInput !== "" ||
+    serviceDay !== "ALL";
 
   return (
     <div className="space-y-6">
@@ -397,10 +457,15 @@ export const RequestHistory = () => {
               </span>
 
               {/* Clear Button */}
-              {(statusFilter !== "ALL" ||
-                typeFilter !== "ALL" ||
-                requestDateFilter) && (
-                <Button variant="outline" onClick={clearFilters}>
+              {isFiltered && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setNameInput("");
+                    setServiceDay("ALL");
+                    clearFilters();
+                  }}
+                >
                   <XCircle className="size-4" />
                   Clear Filters
                 </Button>
@@ -409,57 +474,94 @@ export const RequestHistory = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Status */}
-            <div className="flex-1">
-              <Label className="text-sm font-medium mb-2 block">Status</Label>
-              <Select
-                value={statusFilter}
-                onValueChange={(value) => {
-                  setStatusFilter(value as Status);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All Requests</SelectItem>
-                  <SelectItem value="PENDING">Pending</SelectItem>
-                  <SelectItem value="ACCEPTED">Accepted</SelectItem>
-                  <SelectItem value="COMPLETED">Completed</SelectItem>
-                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="flex flex-col sm:flex-row justify-between gap-24">
+            <div className="flex-1 flex flex-col sm:flex-row justify-between gap-2">
+              {/* Status */}
+              <div className="">
+                <Label className="text-sm font-medium mb-2 block">Status</Label>
+                <Select
+                  value={statusFilter}
+                  onValueChange={(value) => {
+                    setStatusFilter(value as Status);
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="w-full">
+                    <SelectItem value="ALL">All Requests</SelectItem>
+                    <SelectItem value="PENDING">Pending</SelectItem>
+                    <SelectItem value="ACCEPTED">Accepted</SelectItem>
+                    <SelectItem value="COMPLETED">Completed</SelectItem>
+                    <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Type */}
+              <div className="">
+                <Label className="text-sm font-medium mb-2 block">
+                  Request Type
+                </Label>
+                <Select
+                  value={typeFilter as string}
+                  onValueChange={(value) => setTypeFilter(value as Type)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="w-full">
+                    <SelectItem value="ALL">All Requests</SelectItem>
+                    <SelectItem value="PICKUP">PickUp</SelectItem>
+                    <SelectItem value="DROPOFF">DropOff</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Service */}
+              {!isUser && (
+                <div className="flex-1">
+                  <Label className="text-sm font-medium mb-2 block">
+                    Service
+                  </Label>
+                  <Select
+                    value={serviceDay}
+                    onValueChange={(value) => setServiceDay(value)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="w-full">
+                      {allServices.map((service, index) => (
+                        <SelectItem key={index} value={service}>
+                          {service === "ALL" ? "All Services" : service}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {/* Request Date */}
+              <div className="flex-1">
+                <CustomDateCalendar
+                  label="Request Date"
+                  setRequestDateFilter={setRequestDateFilter}
+                  requestDateFilter={requestDateFilter}
+                />
+              </div>
             </div>
 
-            {/* Type */}
-            <div className="flex-1">
-              <Label className="text-sm font-medium mb-2 block">
-                Request Type
-              </Label>
-              <Select
-                value={typeFilter as string}
-                onValueChange={(value) => setTypeFilter(value as Type)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All Requests</SelectItem>
-                  <SelectItem value="PICKUP">PickUp</SelectItem>
-                  <SelectItem value="DROPOFF">DropOff</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Request Date */}
-            <div className="flex-1">
-              <CustomDateCalendar
-                label="Request Date"
-                setRequestDateFilter={setRequestDateFilter}
-                requestDateFilter={requestDateFilter}
-              />
-            </div>
+            {/* Name Filter */}
+            {!isUser && (
+              <div>
+                <Label className="text-sm font-medium mb-2 block">Name</Label>
+                <Input
+                  placeholder="Filter by member's name..."
+                  value={nameInput}
+                  onChange={handleNameFilterChange}
+                />
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -636,85 +738,85 @@ export const RequestHistory = () => {
                     </div>
 
                     <div className="space-x-1">
-                      {/* <ButtonGroup> */}
-                      {/* Action buttons for users */}
-                      {(isUser || isAdmin) &&
-                        canCancelOrEditRequest(request) && (
-                          <>
-                            {/* Edit Button */}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              title="Edit Request"
-                              className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                              onClick={() => {
-                                setSelectedRequest(request);
-                                setEditDialogOpen(true);
-                              }}
-                            >
-                              <Pencil className="size-4" />
-                              <span className="max-sm:hidden">Edit</span>
-                            </Button>
+                      <ButtonGroup>
+                        {/* Action buttons for users */}
+                        {(isUser || isAdmin) &&
+                          canCancelOrEditRequest(request) && (
+                            <>
+                              {/* Edit Button */}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                title="Edit Request"
+                                className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                onClick={() => {
+                                  setSelectedRequest(request);
+                                  setEditDialogOpen(true);
+                                }}
+                              >
+                                <Pencil className="size-4" />
+                                <span className="max-sm:hidden">Edit</span>
+                              </Button>
 
-                            {/* Cancel Button */}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              title="Cancel Request"
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              onClick={() => {
-                                setSelectedRequest(request);
-                                setCancelDialogOpen(true);
-                              }}
-                            >
-                              <X className="size-4" />
-                              <span className="max-sm:hidden">Cancel</span>
-                            </Button>
-                          </>
-                        )}
+                              {/* Cancel Button */}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                title="Cancel Request"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => {
+                                  setSelectedRequest(request);
+                                  setCancelDialogOpen(true);
+                                }}
+                              >
+                                <X className="size-4" />
+                                <span className="max-sm:hidden">Cancel</span>
+                              </Button>
+                            </>
+                          )}
 
-                      {/* Action buttons for drivers */}
-                      {isTransportationMember && canCancelPickup(request) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          title="Cancel Pickup"
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => {
-                            setSelectedRequest(request);
-                            setPickupCancelDialogOpen(true);
-                          }}
-                        >
-                          <X className="size-4" />
-                          <span className="max-sm:hidden">Cancel Pickup</span>
-                        </Button>
-                      )}
-
-                      {(request.status === "PENDING" ||
-                        request.status === "ACCEPTED") &&
-                        isAdmin && (
+                        {/* Action buttons for drivers */}
+                        {isTransportationMember && canCancelPickup(request) && (
                           <Button
                             variant="outline"
                             size="sm"
-                            title={
-                              openAccordions[request.id]
-                                ? "Hide Drivers"
-                                : "Show Drivers"
-                            }
-                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                            title="Cancel Pickup"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             onClick={() => {
-                              toggleAccordion(request.id);
+                              setSelectedRequest(request);
+                              setPickupCancelDialogOpen(true);
                             }}
                           >
-                            <UserSquareIcon className="size-4" />
-                            <span className="max-sm:hidden">
-                              {openAccordions[request.id]
-                                ? "Hide Drivers"
-                                : "Show Drivers"}
-                            </span>
+                            <X className="size-4" />
+                            <span className="max-sm:hidden">Cancel Pickup</span>
                           </Button>
                         )}
-                      {/* </ButtonGroup> */}
+
+                        {(request.status === "PENDING" ||
+                          request.status === "ACCEPTED") &&
+                          isAdmin && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              title={
+                                openAccordions[request.id]
+                                  ? "Hide Drivers"
+                                  : "Show Drivers"
+                              }
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                              onClick={() => {
+                                toggleAccordion(request.id);
+                              }}
+                            >
+                              <UserSquareIcon className="size-4" />
+                              <span className="max-sm:hidden">
+                                {openAccordions[request.id]
+                                  ? "Hide Drivers"
+                                  : "Show Drivers"}
+                              </span>
+                            </Button>
+                          )}
+                      </ButtonGroup>
                     </div>
                   </div>
 
@@ -802,7 +904,7 @@ export const RequestHistory = () => {
               {/* Pagination */}
               <CustomPagination
                 currentPage={currentPage}
-                totalItems={requests.length}
+                totalItems={filteredRequests.length}
                 itemsPerPage={itemsPerPage}
                 onPageChange={setCurrentPage}
                 onItemsPerPageChange={setItemsPerPage}

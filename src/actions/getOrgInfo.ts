@@ -290,3 +290,43 @@ export const deleteBranch = async (addressId: string, orgId?: string) => {
     return { success: false, error: "Failed to delete branch" };
   }
 };
+
+export const getServices = async (orgId?: string) => {
+  const session = await auth();
+
+  if (
+    !session ||
+    (session.user.role !== UserRole.ADMIN &&
+      session.user.role !== UserRole.OWNER)
+  ) {
+    return {
+      error: "You are not authorized",
+    };
+  }
+
+  // TODO: Remove this line and make orgId required
+  // const organizationId = orgId ? orgId : "cmggw9zpx0000it8ref73euxu";
+
+  try {
+    const uniqueServices = await prisma.serviceDay.findMany({
+      select: {
+        name: true,
+      },
+      distinct: ["name"],
+    });
+
+    if (uniqueServices.length === 0) {
+      return {
+        error: "No services found",
+        // organization: null,
+        services: [],
+      };
+    }
+
+    return { success: true, services: uniqueServices };
+  } catch (error) {
+    console.error("Server error:", error);
+    // Return error for failed authentication
+    return { error: "Server error", services: [] };
+  }
+};
