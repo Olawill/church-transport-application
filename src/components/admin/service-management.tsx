@@ -1,8 +1,30 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Plus } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { useForm, UseFormReturn } from "react-hook-form";
+import { toast } from "sonner";
+
+import {
+  Frequency,
+  Ordinal,
+  ServiceCategory,
+  ServiceType,
+} from "@/generated/prisma";
+import { ServiceDay } from "@/lib/types";
+import {
+  frequentMultiDaySchema,
+  FrequentMultiDaySchema,
+  onetimeMultiDaySchema,
+  OnetimeMultiDaySchema,
+  onetimeOneDaySchema,
+  OnetimeOneDaySchema,
+  recurringSchema,
+  RecurringSchema,
+} from "@/types/serviceDaySchema";
+
 import { Button } from "@/components/ui/button";
-import { ButtonGroup } from "@/components/ui/button-group";
 import {
   Card,
   CardContent,
@@ -10,85 +32,191 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { useConfirm } from "@/hooks/use-confirm";
-import { DAYS_OF_WEEK, ServiceDay } from "@/lib/types";
-import { formatTime } from "@/lib/utils";
-import { serviceDaySchema, ServiceDaySchema } from "@/types/serviceDaySchema";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Calendar,
-  CheckCircle,
-  Clock,
-  Edit2,
-  Plus,
-  Trash2,
-} from "lucide-react";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
-import { CustomPagination, usePagination } from "../custom-pagination";
+import { Form } from "@/components/ui/form";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+import { FrequentMultiDayForm } from "./services/frequent-multi-day-form";
+import { OnetimeMultiDayForm } from "./services/one-time-multi-day-form";
+import { OnetimeOneDayForm } from "./services/one-time-one-day-form";
+import { RecurringForm } from "./services/recurring-form";
+import { ServiceList } from "./services/service-list";
+
+type FormSchema =
+  | RecurringSchema
+  | OnetimeOneDaySchema
+  | OnetimeMultiDaySchema
+  | FrequentMultiDaySchema;
 
 export const ServiceManagement = () => {
   const [serviceDays, setServiceDays] = useState<ServiceDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingService, setEditingService] = useState<ServiceDay | null>(null);
-
-  const [DeleteDialog, confirmDelete] = useConfirm(
-    "Delete Service",
-    "Are you sure you want to delete this service? This is irreversible.",
-    true
+  const [activeTab, setActiveTab] = useState<ServiceCategory>(
+    ServiceCategory.RECURRING
   );
 
-  const {
-    currentPage,
-    itemsPerPage,
-    setCurrentPage,
-    setItemsPerPage,
-    paginateItems,
-  } = usePagination(10);
+  // Schema map for each tab
+  const schemaMap = {
+    [ServiceCategory.RECURRING]: recurringSchema,
+    [ServiceCategory.ONETIME_ONEDAY]: onetimeOneDaySchema,
+    [ServiceCategory.ONETIME_MULTIDAY]: onetimeMultiDaySchema,
+    [ServiceCategory.FREQUENT_MULTIDAY]: frequentMultiDaySchema,
+  };
 
-  // Get paginated services
-  const paginatedServices = paginateItems(serviceDays);
+  // Default values map
+  const getDefaultValues = useCallback(
+    (category: ServiceCategory, service?: ServiceDay) => {
+      if (service) {
+        // Extract days of week
+        const dayOfWeek =
+          service.weekdays?.length === 1
+            ? service.weekdays[0].dayOfWeek.toString()
+            : service.weekdays?.map((w) => w.dayOfWeek.toString()) || [];
 
-  const serviceForm = useForm<ServiceDaySchema>({
-    resolver: zodResolver(serviceDaySchema),
-    defaultValues: {
-      name: "",
-      dayOfWeek: "",
-      time: "",
-      serviceType: "REGULAR",
-      isActive: true,
+        const base = {
+          name: service.name,
+          time: service.time,
+          isActive: service.isActive,
+        };
+
+        switch (category) {
+          case ServiceCategory.RECURRING:
+            return {
+              ...base,
+              dayOfWeek: dayOfWeek as string,
+              serviceCategory: ServiceCategory.RECURRING,
+              serviceType: ServiceType.REGULAR,
+              frequency: service.frequency || Frequency.WEEKLY,
+              ordinal: service.ordinal || Ordinal.NEXT,
+              startDate: service.startDate
+                ? new Date(service.startDate)
+                : undefined,
+            };
+          case ServiceCategory.ONETIME_ONEDAY:
+            return {
+              ...base,
+              dayOfWeek: dayOfWeek as string,
+              serviceCategory: ServiceCategory.ONETIME_ONEDAY,
+              serviceType: ServiceType.SPECIAL,
+              startDate: service.startDate
+                ? new Date(service.startDate)
+                : undefined,
+            };
+          case ServiceCategory.ONETIME_MULTIDAY:
+            return {
+              ...base,
+              dayOfWeek: dayOfWeek as string[],
+              serviceCategory: ServiceCategory.ONETIME_MULTIDAY,
+              serviceType: ServiceType.SPECIAL,
+              startDate: service.startDate
+                ? new Date(service.startDate)
+                : undefined,
+              endDate: service.endDate ? new Date(service.endDate) : undefined,
+              cycle: service.cycle?.toString(),
+              frequency: service.frequency || Frequency.WEEKLY,
+            };
+          case ServiceCategory.FREQUENT_MULTIDAY:
+            return {
+              ...base,
+              dayOfWeek: dayOfWeek as string[],
+              serviceCategory: ServiceCategory.FREQUENT_MULTIDAY,
+              serviceType: ServiceType.SPECIAL,
+              startDate: service.startDate
+                ? new Date(service.startDate)
+                : undefined,
+              cycle: service.cycle?.toString(),
+              frequency: service.frequency || Frequency.WEEKLY,
+              ordinal: service.ordinal || Ordinal.NEXT,
+            };
+        }
+      }
+
+      // Default values for new services
+      const base = {
+        name: "",
+        time: "",
+        isActive: true,
+      };
+
+      switch (category) {
+        case ServiceCategory.RECURRING:
+          return {
+            ...base,
+            dayOfWeek: "",
+            serviceCategory: ServiceCategory.RECURRING,
+            serviceType: ServiceType.REGULAR,
+            frequency: Frequency.WEEKLY,
+            ordinal: Ordinal.NEXT,
+            startDate: undefined,
+          };
+        case ServiceCategory.ONETIME_ONEDAY:
+          return {
+            ...base,
+            dayOfWeek: "",
+            serviceCategory: ServiceCategory.ONETIME_ONEDAY,
+            serviceType: ServiceType.SPECIAL,
+            startDate: undefined,
+          };
+        case ServiceCategory.ONETIME_MULTIDAY:
+          return {
+            ...base,
+            dayOfWeek: [],
+            serviceCategory: ServiceCategory.ONETIME_MULTIDAY,
+            serviceType: ServiceType.SPECIAL,
+            startDate: undefined,
+            endDate: undefined,
+            cycle: "",
+            frequency: Frequency.WEEKLY,
+          };
+        case ServiceCategory.FREQUENT_MULTIDAY:
+          return {
+            ...base,
+            dayOfWeek: [],
+            serviceCategory: ServiceCategory.FREQUENT_MULTIDAY,
+            serviceType: ServiceType.SPECIAL,
+            startDate: undefined,
+            cycle: "",
+            frequency: Frequency.WEEKLY,
+            ordinal: Ordinal.NEXT,
+          };
+      }
     },
-    values: {
-      name: editingService?.name || "",
-      dayOfWeek: editingService?.dayOfWeek.toString() || "",
-      time: editingService?.time || "",
-      serviceType: editingService?.serviceType || "REGULAR",
-      isActive: editingService?.isActive ?? true,
-    },
+    []
+  );
+
+  // Single form with dynamic resolver
+  const form = useForm<FormSchema>({
+    resolver: zodResolver(schemaMap[activeTab]),
+    defaultValues: getDefaultValues(activeTab, editingService || undefined),
   });
+
+  // Reset form when tab changes
+  useEffect(() => {
+    const values = getDefaultValues(activeTab, editingService || undefined);
+    form.reset(values);
+  }, [activeTab, editingService, form, getDefaultValues]);
+
+  const handleTabChange = useCallback((value: string) => {
+    setActiveTab(value as ServiceCategory);
+  }, []);
 
   useEffect(() => {
     fetchServiceDays();
   }, []);
+
+  // useEffect(() => {
+  //   const frequency = serviceForm.watch("frequency");
+  //   const ordinal = serviceForm.watch("ordinal");
+
+  //   const isLimited =
+  //     frequency === Frequency.DAILY || frequency === Frequency.WEEKLY;
+
+  //   if (isLimited && ordinal !== Ordinal.NEXT) {
+  //     serviceForm.setValue("ordinal", Ordinal.NEXT);
+  //   }
+  // // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [serviceForm.watch("frequency")]);
 
   const fetchServiceDays = async () => {
     try {
@@ -104,358 +232,218 @@ export const ServiceManagement = () => {
     }
   };
 
-  const handleSubmit = async (values: ServiceDaySchema) => {
-    const validatedFields = serviceDaySchema.safeParse(values);
+  const handleSubmit = useCallback(
+    async (values: FormSchema) => {
+      setLoading(true);
+      try {
+        // Parse dayOfWeek - convert to array if it's a string, or parse strings to ints if array
+        const dayOfWeek = Array.isArray(values.dayOfWeek)
+          ? values.dayOfWeek.map((d) => parseInt(d))
+          : [parseInt(values.dayOfWeek)];
 
-    if (!validatedFields.success) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
+        const response = await fetch("/api/service-days", {
+          method: editingService ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...values,
+            ...(editingService && { id: editingService.id }),
+            dayOfWeek, // Send as array
+            startDate: values.startDate ? values.startDate.toISOString() : null,
+            endDate:
+              "endDate" in values && values.endDate
+                ? values.endDate.toISOString()
+                : null,
+          }),
+        });
 
-    setLoading(true);
-
-    try {
-      const response = await fetch("/api/service-days", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...validatedFields.data,
-          dayOfWeek: parseInt(validatedFields.data.dayOfWeek),
-        }),
-      });
-
-      if (response.ok) {
-        toast.success("Service created successfully");
-        resetForm();
-        fetchServiceDays();
-      } else {
-        toast.error("Failed to create service");
+        if (response.ok) {
+          toast.success(
+            `Service ${editingService ? "updated" : "created"} successfully`
+          );
+          resetForm();
+          fetchServiceDays();
+        } else {
+          toast.error(
+            `Failed to ${editingService ? "update" : "create"} service`
+          );
+        }
+      } catch (error) {
+        console.error("Error submitting service:", error);
+        toast.error("An error occurred");
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Error creating service:", error);
-      toast.error("An error occurred");
-    } finally {
-      setLoading(false);
-    }
-  };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [editingService, fetchServiceDays]
+  );
 
-  const handleUpdate = async (values: ServiceDaySchema) => {
-    const validatedFields = serviceDaySchema.safeParse(values);
+  // const handleUpdate = async (values: ServiceDaySchema) => {
+  //   const validatedFields = serviceDaySchema.safeParse(values);
 
-    if (!validatedFields.success) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
+  //   if (!validatedFields.success) {
+  //     toast.error("Please fill in all required fields");
+  //     return;
+  //   }
 
-    setLoading(true);
+  //   setLoading(true);
 
-    try {
-      const response = await fetch("/api/service-days", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          id: editingService?.id,
-          ...validatedFields.data,
-          dayOfWeek: parseInt(validatedFields.data.dayOfWeek),
-        }),
-      });
+  //   try {
+  //     const response = await fetch("/api/service-days", {
+  //       method: "PUT",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify({
+  //         id: editingService?.id,
+  //         ...validatedFields.data,
+  //         dayOfWeek: parseInt(validatedFields.data.dayOfWeek),
+  //       }),
+  //     });
 
-      if (response.ok) {
-        toast.success("Service updated successfully");
-        resetForm();
-        fetchServiceDays();
-      } else {
-        toast.error("Failed to update service");
-      }
-    } catch (error) {
-      console.error("Error updating service:", error);
-      toast.error("An error occurred");
-    } finally {
-      setLoading(false);
-    }
-  };
+  //     if (response.ok) {
+  //       toast.success("Service updated successfully");
+  //       resetForm();
+  //       fetchServiceDays();
+  //     } else {
+  //       toast.error("Failed to update service");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error updating service:", error);
+  //     toast.error("An error occurred");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
-  const handleEdit = (service: ServiceDay) => {
-    setEditingService(service);
+  const handleEdit = useCallback(
+    (service: ServiceDay) => {
+      setActiveTab(service.serviceCategory);
+      setEditingService(service);
+      setShowForm(true);
 
-    // Immediately reset the form with the service data
-    serviceForm.reset({
-      name: service.name,
-      dayOfWeek: service.dayOfWeek.toString(),
-      time: service.time,
-      serviceType: service.serviceType,
-      isActive: service.isActive,
-    });
+      // Force form reset after state updates
+      setTimeout(() => {
+        form.reset(getDefaultValues(service.serviceCategory, service));
+      }, 0);
+    },
+    [form, getDefaultValues]
+  );
 
-    setShowForm(true);
-  };
-
-  const handleDelete = async (serviceId: string) => {
-    const ok = await confirmDelete();
-
-    if (!ok) return;
-
-    try {
-      const response = await fetch(`/api/service-days?id=${serviceId}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        toast.success("Service deactivated successfully");
-        fetchServiceDays();
-      } else {
-        toast.error("Failed to delete service");
-      }
-    } catch (error) {
-      console.error("Error deleting service:", error);
-      toast.error("An error occurred");
-    }
-  };
-
-  const resetForm = () => {
-    serviceForm.reset();
+  const resetForm = useCallback(() => {
+    form.reset(getDefaultValues(activeTab));
     setEditingService(null);
     setShowForm(false);
-  };
+  }, [form, activeTab, getDefaultValues]);
 
-  const getDayName = (dayOfWeek: number) => {
-    return (
-      DAYS_OF_WEEK.find((day) => day.value === dayOfWeek)?.label || "Unknown"
-    );
-  };
-
-  const getServiceTypeColor = (type: string) => {
-    return type === "REGULAR"
-      ? "bg-blue-100 text-blue-800"
-      : "bg-purple-100 text-purple-800";
-  };
-
-  const getServiceStatusColor = (status: boolean) => {
-    return !status ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800";
-  };
+  console.log(new Date(2025, 10, 1), editingService);
 
   return (
-    <>
-      <DeleteDialog />
-
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold">Service Management</h1>
-            <p className="mt-1">
-              Configure church service days and times for pickup requests
-            </p>
-          </div>
-          <Button
-            onClick={() => setShowForm(true)}
-            disabled={loading || !!editingService}
-          >
-            <Plus className="h-4 w-4" />
-            Add Service
-          </Button>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold">Service Management</h1>
+          <p className="mt-1">
+            Configure church service days and times for pickup requests
+          </p>
         </div>
+        <Button
+          onClick={() => setShowForm(true)}
+          disabled={loading || !!editingService}
+        >
+          <Plus className="h-4 w-4" />
+          Add Service
+        </Button>
+      </div>
 
-        {/* Service Form */}
-        {showForm && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">
-                {editingService ? "Edit Service" : "Add New Service"}
-              </CardTitle>
-              <CardDescription>
-                {editingService
-                  ? "Update service details"
-                  : "Create a new service day for pickup requests"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...serviceForm}>
-                <form
-                  onSubmit={
-                    editingService
-                      ? serviceForm.handleSubmit(handleUpdate)
-                      : serviceForm.handleSubmit(handleSubmit)
-                  }
-                  className="space-y-4"
+      {/* Service Form */}
+      {showForm && (
+        <Card className="flex">
+          <CardHeader>
+            <CardTitle className="text-lg">
+              {editingService ? "Edit Service" : "Add New Service"}
+            </CardTitle>
+            <CardDescription>
+              {editingService
+                ? "Update service details"
+                : "Create a new service day for pickup requests"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs value={activeTab} onValueChange={handleTabChange}>
+              <TabsList>
+                <TabsTrigger
+                  value={ServiceCategory.RECURRING}
+                  disabled={!!editingService}
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Service Name */}
-                    <FormField
-                      control={serviceForm.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem className="space-y-2">
-                          <FormLabel>
-                            Service Name
-                            <span className="text-red-400">*</span>
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              type="text"
-                              name="name"
-                              placeholder="e.g., Sunday Morning Service"
-                              disabled={loading}
-                              onChange={(e) => {
-                                field.onChange(e);
-                              }}
-                              required
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    {/* Day of the Week */}
-                    <FormField
-                      control={serviceForm.control}
-                      name="dayOfWeek"
-                      render={({ field }) => {
-                        return (
-                          <FormItem className="space-y-2">
-                            <FormLabel>
-                              Day of Week
-                              <span className="text-red-400">*</span>
-                            </FormLabel>
-                            <Select
-                              value={field.value}
-                              onValueChange={field.onChange}
-                              disabled={loading}
-                            >
-                              <FormControl>
-                                <SelectTrigger className="max-md:w-full">
-                                  <SelectValue placeholder={"Select Day"} />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {DAYS_OF_WEEK.map((day) => (
-                                  <SelectItem
-                                    key={day.value.toString()}
-                                    value={day.value.toString()}
-                                  >
-                                    {day.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        );
-                      }}
-                    />
-                    {/* Status */}
-                    <div className="space-y-2">
-                      {/* Status Switch */}
-                      {editingService && (
-                        <FormField
-                          control={serviceForm.control}
-                          name="isActive"
-                          render={({ field }) => (
-                            <FormItem className="flex items-center space-x-2">
-                              <FormLabel>
-                                {field.value ? "Active" : "Inactive"}
-                              </FormLabel>
-                              <FormControl>
-                                <Switch
-                                  checked={field.value}
-                                  onCheckedChange={(checked) => {
-                                    field.onChange(checked);
-                                  }}
-                                />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                      )}
-                    </div>
-                  </div>
+                  Regular
+                </TabsTrigger>
+                <TabsTrigger
+                  value={ServiceCategory.ONETIME_ONEDAY}
+                  disabled={!!editingService}
+                >
+                  One Day
+                </TabsTrigger>
+                <TabsTrigger
+                  value={ServiceCategory.ONETIME_MULTIDAY}
+                  disabled={!!editingService}
+                >
+                  Multi-Day
+                </TabsTrigger>
+                <TabsTrigger
+                  value={ServiceCategory.FREQUENT_MULTIDAY}
+                  disabled={!!editingService}
+                >
+                  Recurring Special
+                </TabsTrigger>
+              </TabsList>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Start Time */}
-                    <FormField
-                      control={serviceForm.control}
-                      name="time"
-                      render={({ field }) => (
-                        <FormItem className="space-y-2">
-                          <FormLabel>
-                            Start Time
-                            <span className="text-red-400">*</span>
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              type="time"
-                              step="1"
-                              name="time"
-                              placeholder="Select time"
-                              onChange={(e) => {
-                                field.onChange(e);
-                              }}
-                              disabled={loading}
-                              required
-                              className="bg-background appearance-none relative [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-2 [&::-webkit-calendar-picker-indicator]:top-1/2 [&::-webkit-calendar-picker-indicator]:-translate-y-1/2"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    {/* Service Type */}
-                    <FormField
-                      control={serviceForm.control}
-                      name="serviceType"
-                      render={({ field }) => (
-                        <FormItem className="space-y-2">
-                          <FormLabel>
-                            Service Type
-                            <span className="text-red-400">*</span>
-                          </FormLabel>
-                          <Select
-                            value={field.value}
-                            onValueChange={field.onChange}
-                            disabled={loading}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="max-md:w-full">
-                                <SelectValue placeholder="Select Type" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="REGULAR">
-                                Regular Service
-                              </SelectItem>
-                              <SelectItem value="SPECIAL">
-                                Special Event
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="flex justify-end space-x-2">
-                    <Button type="button" variant="outline" onClick={resetForm}>
-                      Cancel
-                    </Button>
-                    <Button type="submit">
-                      <CheckCircle className="h-4 w-4" />
-                      {editingService ? "Update Service" : "Create Service"}
-                    </Button>
-                  </div>
-                </form>
+              <Form {...form}>
+                <TabsContent value={ServiceCategory.RECURRING}>
+                  <RecurringForm
+                    form={form as UseFormReturn<RecurringSchema>}
+                    onSubmit={handleSubmit}
+                    onCancel={resetForm}
+                    loading={loading}
+                    isEditing={!!editingService}
+                  />
+                </TabsContent>
+                <TabsContent value={ServiceCategory.ONETIME_ONEDAY}>
+                  <OnetimeOneDayForm
+                    form={form as UseFormReturn<OnetimeOneDaySchema>}
+                    onSubmit={handleSubmit}
+                    onCancel={resetForm}
+                    loading={loading}
+                    isEditing={!!editingService}
+                  />
+                </TabsContent>
+                <TabsContent value={ServiceCategory.ONETIME_MULTIDAY}>
+                  <OnetimeMultiDayForm
+                    form={form as UseFormReturn<OnetimeMultiDaySchema>}
+                    onSubmit={handleSubmit}
+                    onCancel={resetForm}
+                    loading={loading}
+                    isEditing={!!editingService}
+                  />
+                </TabsContent>
+                <TabsContent value={ServiceCategory.FREQUENT_MULTIDAY}>
+                  <FrequentMultiDayForm
+                    form={form as UseFormReturn<FrequentMultiDaySchema>}
+                    onSubmit={handleSubmit}
+                    onCancel={resetForm}
+                    loading={loading}
+                    isEditing={!!editingService}
+                  />
+                </TabsContent>
               </Form>
-            </CardContent>
-          </Card>
-        )}
+            </Tabs>
+          </CardContent>
+        </Card>
+      )}
 
-        {/* Services List */}
-        <Card>
+      {/* Services List */}
+      {/* <Card>
           <CardHeader>
             <CardTitle className="text-lg">Service Schedule</CardTitle>
             <CardDescription>
@@ -474,7 +462,7 @@ export const ServiceManagement = () => {
               </div>
             ) : serviceDays.length === 0 ? (
               <div className="text-center py-8">
-                <Calendar className="mx-auto h-12 w-12 text-gray-400" />
+                <CalendarIcon className="mx-auto h-12 w-12 text-gray-400" />
                 <h3 className="mt-2 text-sm font-medium text-gray-900">
                   No services configured
                 </h3>
@@ -500,8 +488,15 @@ export const ServiceManagement = () => {
                         <div>
                           <h3 className="font-semibold">{service.name}</h3>
                           <div className="flex items-center space-x-2 mt-1 text-sm">
-                            <Calendar className="h-4 w-4" />
-                            <span>{getDayName(service.dayOfWeek)}</span>
+                            <CalendarIcon className="h-4 w-4" />
+                            {service.weekdays &&
+                            service.weekdays.length === 1 ? (
+                              <span>
+                                {getDayName(service.weekdays[0].dayOfWeek)}
+                              </span>
+                            ) : (
+                              <span>Multiple Service Days</span>
+                            )}
                             <Clock className="h-4 w-4 ml-2" />
                             <span>{formatTime(service.time)}</span>
                           </div>
@@ -557,8 +552,14 @@ export const ServiceManagement = () => {
               </div>
             )}
           </CardContent>
-        </Card>
-      </div>
-    </>
+        </Card> */}
+      <ServiceList
+        serviceDays={serviceDays}
+        loading={loading}
+        onEdit={handleEdit}
+        onDelete={fetchServiceDays}
+        onShowForm={() => setShowForm(true)}
+      />
+    </div>
   );
 };

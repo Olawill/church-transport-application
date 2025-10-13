@@ -9,7 +9,8 @@ export const GET = async () => {
   try {
     const serviceDays = await prisma.serviceDay.findMany({
       where: { isActive: true },
-      orderBy: [{ dayOfWeek: "asc" }, { time: "asc" }],
+      include: { weekdays: true },
+      orderBy: [{ time: "asc" }],
     });
 
     return NextResponse.json(serviceDays);

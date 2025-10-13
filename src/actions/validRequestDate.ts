@@ -21,15 +21,16 @@ type ValidateRequestDateResult =
     };
 
 export const validateRequestDate = async (
-  requestDate: Date,
+  requestDayOfWeek: number,
   serviceDayId: string
 ): Promise<ValidateRequestDateResult> => {
-  const requestDayOfWeek = requestDate.getDay();
-
   const serviceDayOfWeek = await prisma.serviceDay.findUnique({
     where: { id: serviceDayId },
     select: {
-      dayOfWeek: true,
+      weekdays: {
+        where: { serviceDayId: serviceDayId, dayOfWeek: requestDayOfWeek },
+        select: { dayOfWeek: true },
+      },
     },
   });
 
@@ -42,15 +43,16 @@ export const validateRequestDate = async (
     };
   }
 
-  const isServiceDayOfWeek = requestDayOfWeek === serviceDayOfWeek.dayOfWeek;
-  const dayOfWeek = getDayNameFromNumber(serviceDayOfWeek.dayOfWeek);
+  const dayOfWeek = getDayNameFromNumber(
+    serviceDayOfWeek.weekdays[0].dayOfWeek
+  );
 
   return {
     success: true,
     error: false,
     message: "Validation successful",
     validData: {
-      isServiceDayOfWeek,
+      isServiceDayOfWeek: true,
       dayOfWeek,
     },
   };

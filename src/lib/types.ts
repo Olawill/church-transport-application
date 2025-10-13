@@ -1,5 +1,7 @@
 import {
   RequestStatus,
+  ServiceCategory,
+  ServiceDayWeekday,
   ServiceType,
   UserRole,
   UserStatus,
@@ -51,13 +53,20 @@ export interface Address {
 export interface ServiceDay {
   id: string;
   name: string;
-  dayOfWeek: number;
+  // dayOfWeek: number;
   time: string;
   serviceType: ServiceType;
   isActive: boolean;
+  startDate?: Date;
+  endDate?: Date;
+  serviceCategory: ServiceCategory;
+  ordinal: Ordinal;
+  frequency: Frequency;
+  cycle?: number;
   createdAt: Date;
   updatedAt: Date;
   pickupRequests?: PickupRequest[];
+  weekdays?: ServiceDayWeekday[];
 }
 
 export interface PickupRequest {
@@ -141,6 +150,17 @@ export const frequencyMap: Record<Frequency, number> = {
   YEARLY: 12,
   NONE: 0,
 };
+
+export const frequencyOptions: { value: Frequency; label: string }[] = [
+  { value: "DAILY", label: "Daily" },
+  { value: "WEEKLY", label: "Weekly" },
+  { value: "MONTHLY", label: "Monthly" },
+  { value: "EVERY_2_MONTHS", label: "Every 2 Months" },
+  { value: "QUARTERLY", label: "Quarterly" },
+  { value: "EVERY_4_MONTHS", label: "Every 4 Months" },
+  { value: "EVERY_6_MONTHS", label: "Every 6 Months" },
+  { value: "YEARLY", label: "Yearly" },
+];
 
 export const DISTANCE_OPTIONS: DistanceOption[] = [
   { value: 10, label: "10 km" },

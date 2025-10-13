@@ -474,8 +474,8 @@ export const RequestHistory = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row justify-between gap-24">
-            <div className="flex-1 flex flex-col sm:flex-row justify-between gap-2">
+          <div className="flex flex-col sm:flex-row justify-between gap-8">
+            <div className="flex-[70%] flex flex-col sm:flex-row justify-between gap-2">
               {/* Status */}
               <div className="">
                 <Label className="text-sm font-medium mb-2 block">Status</Label>
@@ -553,7 +553,7 @@ export const RequestHistory = () => {
 
             {/* Name Filter */}
             {!isUser && (
-              <div>
+              <div className="flex-[25%]">
                 <Label className="text-sm font-medium mb-2 block">Name</Label>
                 <Input
                   placeholder="Filter by member's name..."

@@ -33,6 +33,42 @@ enum ServiceType {
   SPECIAL
 }
 
+enum ServiceCategory {
+  ONETIME_ONEDAY
+  ONETIME_MULTIDAY
+  FREQUENT_MULTIDAY
+  RECURRING
+}
+
+enum Frequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  EVERY_2_MONTHS
+  QUARTERLY
+  EVERY_4_MONTHS
+  EVERY_6_MONTHS
+  YEARLY
+  NONE
+}
+
+enum Ordinal {
+  NEXT
+  FIRST
+  SECOND
+  THIRD
+  FOURTH
+  LAST
+}
+
+enum CycleType {
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
 enum BranchType {
   HEADQUARTER
   BRANCH
@@ -158,19 +194,53 @@ model Address {
   @@map("addresses")
 }
 
+// model ServiceDay {
+//   id                  String            @id @default(cuid())
+//   name                String
+//   dayOfWeek           Int               // 0 = Sunday, 1 = Monday, etc.
+//   time                String            // Format: "HH:MM" (24-hour)
+//   serviceType         ServiceType       @default(REGULAR)
+//   isActive            Boolean           @default(true)
+//   createdAt           DateTime          @default(now())
+//   updatedAt           DateTime          @updatedAt
+
+//   pickupRequests      PickupRequest[]
+
+//   @@map("service_days")
+// }
+
 model ServiceDay {
   id                  String            @id @default(cuid())
   name                String
-  dayOfWeek           Int               // 0 = Sunday, 1 = Monday, etc.
+
   time                String            // Format: "HH:MM" (24-hour)
   serviceType         ServiceType       @default(REGULAR)
   isActive            Boolean           @default(true)
+
+  startDate           String?         // For one-time or multi-day services
+  endDate             String?         // For multi-day services
+  serviceCategory     ServiceCategory   @default(RECURRING)
+  ordinal             Ordinal           @default(NEXT)
+  frequency           Frequency         @default(WEEKLY)
+  cycle               Int?
+  cycleType           CycleType?
+
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
   pickupRequests      PickupRequest[]
+  weekdays            ServiceDayWeekday[]
 
   @@map("service_days")
+}
+
+model ServiceDayWeekday {
+  id           String      @id @default(cuid())
+  serviceDay   ServiceDay  @relation(fields: [serviceDayId], references: [id], onDelete: Cascade)
+  serviceDayId String
+  dayOfWeek    Int         // 0 = Sunday, 1 = Monday, etc.
+
+  @@unique([serviceDayId, dayOfWeek])
 }
 
 model PickupRequest {
@@ -180,6 +250,7 @@ model PickupRequest {
   serviceDayId        String
   addressId           String
   requestDate         DateTime          // The date of the service
+  requestDayOfWeek    Int
   status              RequestStatus     @default(PENDING)
   notes               String?
   isPickUp            Boolean           @default(true)
@@ -187,7 +258,8 @@ model PickupRequest {
   isGroupRide         Boolean           @default(false)
   numberOfGroup       Int?
   distance            Float?            // Distance from driver to pickup location
-  seriesId   String?         // FK to PickupSeries
+  seriesId            String?           // FK to PickupSeries
+
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
@@ -197,11 +269,12 @@ model PickupRequest {
   address             Address           @relation(fields: [addressId], references: [id])
 
   cancelledRequests   DriverRequestCancel[]
-  series     PickupSeries?   @relation(fields: [seriesId], references: [id])
+  series              PickupSeries?   @relation(fields: [seriesId], references: [id])
 
   @@index([userId, serviceDayId, requestDate]) // For duplicate checking
   @@index([seriesId, requestDate]) // For series queries
   @@index([status, requestDate]) // For filtering
+  @@index([serviceDayId, requestDayOfWeek])
   @@map("pickup_requests")
 }
 
