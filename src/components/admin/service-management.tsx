@@ -244,38 +244,36 @@ export const ServiceManagement = () => {
   const handleSubmit = useCallback(
     async (values: FormSchema) => {
       setLoading(true);
-      console.log({ values });
-      console.log(values.startDate ? values.startDate.toISOString() : "N/A");
       try {
         // Parse dayOfWeek - convert to array if it's a string, or parse strings to ints if array
-        // const dayOfWeek = Array.isArray(values.dayOfWeek)
-        //   ? values.dayOfWeek.map((d) => parseInt(d))
-        //   : [parseInt(values.dayOfWeek)];
-        // const response = await fetch("/api/service-days", {
-        //   method: editingService ? "PUT" : "POST",
-        //   headers: { "Content-Type": "application/json" },
-        //   body: JSON.stringify({
-        //     ...values,
-        //     ...(editingService && { id: editingService.id }),
-        //     dayOfWeek, // Send as array
-        //     startDate: values.startDate ? values.startDate.toISOString() : null,
-        //     endDate:
-        //       "endDate" in values && values.endDate
-        //         ? values.endDate.toISOString()
-        //         : null,
-        //   }),
-        // });
-        // if (response.ok) {
-        //   toast.success(
-        //     `Service ${editingService ? "updated" : "created"} successfully`
-        //   );
-        //   resetForm();
-        //   fetchServiceDays();
-        // } else {
-        //   toast.error(
-        //     `Failed to ${editingService ? "update" : "create"} service`
-        //   );
-        // }
+        const dayOfWeek = Array.isArray(values.dayOfWeek)
+          ? values.dayOfWeek.map((d) => parseInt(d))
+          : [parseInt(values.dayOfWeek)];
+        const response = await fetch("/api/service-days", {
+          method: editingService ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...values,
+            ...(editingService && { id: editingService.id }),
+            dayOfWeek, // Send as array
+            startDate: values.startDate ? values.startDate.toISOString() : null,
+            endDate:
+              "endDate" in values && values.endDate
+                ? values.endDate.toISOString()
+                : null,
+          }),
+        });
+        if (response.ok) {
+          toast.success(
+            `Service ${editingService ? "updated" : "created"} successfully`
+          );
+          resetForm();
+          fetchServiceDays();
+        } else {
+          toast.error(
+            `Failed to ${editingService ? "update" : "create"} service`
+          );
+        }
       } catch (error) {
         console.error("Error submitting service:", error);
         toast.error("An error occurred");

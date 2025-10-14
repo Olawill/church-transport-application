@@ -319,14 +319,114 @@ export const DELETE = async (request: NextRequest) => {
       );
     }
 
-    await prisma.serviceDay.update({
-      where: { id },
-      data: { isActive: false },
+    const deletedService = await prisma.$transaction(async (tx) => {
+      // Check of service exists
+      const existingService = await tx.serviceDay.findUnique({
+        where: { id },
+      });
+
+      if (!existingService) {
+        throw new Error("Service day not found");
+      }
+
+      // Delete the service
+      return await tx.serviceDay.delete({
+        where: { id },
+      });
     });
 
-    return NextResponse.json({ message: "Service day deactivated" });
+    return NextResponse.json({
+      message: "Service day deleted",
+      deletedService,
+    });
   } catch (error) {
     console.error("Error deleting service day:", error);
+
+    if (error instanceof Error && error.message === "Service day not found") {
+      return NextResponse.json(
+        { error: "Service day not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+};
+
+export const PATCH = async (request: NextRequest) => {
+  try {
+    const session = await auth();
+
+    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json(
+        { error: "Service day ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const updatedService = await prisma.$transaction(async (tx) => {
+      const existingService = await tx.serviceDay.findUnique({
+        where: { id },
+        select: { isActive: true, updatedAt: true },
+      });
+
+      if (!existingService) {
+        throw new Error("Service day not found");
+      }
+
+      // Check if trying to restore (inactive -> active)
+      if (!existingService.isActive) {
+        const now = new Date();
+        const lastUpdated = new Date(existingService.updatedAt);
+        const hoursSinceUpdate =
+          (now.getTime() - lastUpdated.getTime()) / (1000 * 60 * 60);
+
+        if (hoursSinceUpdate < 24) {
+          const hoursRemaining = Math.ceil(24 - hoursSinceUpdate);
+          throw new Error(
+            `Service can only be restored after 24 hours. Please wait ${hoursRemaining} more hour${hoursRemaining > 1 ? "s" : ""}.`
+          );
+        }
+      }
+
+      // Toggle isActive status
+      return await tx.serviceDay.update({
+        where: { id },
+        data: { isActive: !existingService.isActive },
+        include: { weekdays: true }, // Include related data if needed
+      });
+    });
+
+    return NextResponse.json({
+      message: `Service day ${updatedService.isActive ? "restored" : "deactivated"}`,
+      updatedService,
+    });
+  } catch (error) {
+    console.error("Error updating service day status:", error);
+
+    if (error instanceof Error) {
+      if (error.message === "Service day not found") {
+        return NextResponse.json(
+          { error: "Service day not found" },
+          { status: 404 }
+        );
+      }
+
+      if (error.message.startsWith("Service can only be restored")) {
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+    }
+
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

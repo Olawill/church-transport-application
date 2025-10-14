@@ -1,5 +1,7 @@
 // components/admin/service-forms/ServiceList.tsx
 import {
+  Archive,
+  ArchiveRestore,
   CalendarIcon,
   Clock,
   Edit2,
@@ -72,6 +74,19 @@ export const ServiceList = ({
     "Are you sure you want to delete this service? This action cannot be undone.",
     true
   );
+
+  const [ArchiveDialog, confirmArchive] = useConfirm(
+    "Archive Service",
+    "Are you sure you want to archive this service? You can reactivate this service later after 24 hours.",
+    true
+  );
+
+  const [RestoreDialog, confirmRestore] = useConfirm(
+    "Restore Service",
+    "Are you sure you want to restore this service? You can only reactivate this service after 24 hours of been deactivated.",
+    true
+  );
+
   const [servicesStatus, setServicesStatus] = useState("active");
 
   const {
@@ -113,6 +128,34 @@ export const ServiceList = ({
     }
   };
 
+  const handleArchive = async (serviceId: string, currentStatus: boolean) => {
+    const action = currentStatus ? "archive" : "restore";
+
+    const confirmFn = currentStatus ? confirmArchive : confirmRestore;
+
+    const ok = await confirmFn();
+    if (!ok) return;
+
+    try {
+      const response = await fetch(`/api/service-days?id=${serviceId}`, {
+        method: "PATCH",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(data.message || `Service ${action}d successfully`);
+        onDelete();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || `Failed to ${action} service`);
+      }
+    } catch (error) {
+      const act = action.slice(0, -1);
+      console.error(`Error ${act}ing service:`, error);
+      toast.error("An error occurred");
+    }
+  };
+
   const getDayName = (dayOfWeek: number) => {
     return (
       DAYS_OF_WEEK.find((day) => day.value === dayOfWeek)?.label || "Unknown"
@@ -146,9 +189,32 @@ export const ServiceList = ({
     }
   };
 
+  const canRestore = (service: ServiceDay) => {
+    if (service.isActive) return true; // Can always archive
+
+    const now = new Date();
+    const lastUpdated = new Date(service.updatedAt);
+    const hoursSinceUpdate =
+      (now.getTime() - lastUpdated.getTime()) / (1000 * 60 * 60);
+
+    return hoursSinceUpdate >= 24;
+  };
+
+  const getRestoreTime = (service: ServiceDay) => {
+    const now = new Date();
+    const lastUpdated = new Date(service.updatedAt);
+    const hoursSinceUpdate =
+      (now.getTime() - lastUpdated.getTime()) / (1000 * 60 * 60);
+    const hoursRemaining = Math.ceil(24 - hoursSinceUpdate);
+
+    return hoursRemaining;
+  };
+
   return (
     <>
       <DeleteDialog />
+      <ArchiveDialog />
+      <RestoreDialog />
 
       <Card>
         <CardHeader>
@@ -321,6 +387,32 @@ export const ServiceList = ({
                         </TooltipTrigger>
                         <TooltipContent className="bg-background text-foreground">
                           Edit service
+                        </TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              handleArchive(service.id, service.isActive)
+                            }
+                            disabled={!service.isActive && !canRestore(service)}
+                          >
+                            {service.isActive ? (
+                              <Archive className="size-4" />
+                            ) : (
+                              <ArchiveRestore className="size-4" />
+                            )}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent className="bg-background text-foreground">
+                          {service.isActive
+                            ? "Archive service"
+                            : canRestore(service)
+                              ? "Restore service"
+                              : `Can restore in ${getRestoreTime(service)} hour${getRestoreTime(service) > 1 ? "s" : ""}`}
                         </TooltipContent>
                       </Tooltip>
 
