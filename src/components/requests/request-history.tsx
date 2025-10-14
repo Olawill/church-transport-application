@@ -128,6 +128,11 @@ export const RequestHistory = () => {
 
   // Filter requests based on name input and service
   const filteredRequests = requests.filter((request) => {
+    // Skip requests without user data
+    if (debouncedNameInput && !request.user) {
+      return false;
+    }
+
     const userName = `${request?.user?.firstName} ${request?.user?.lastName}`;
 
     const matchesRequest =
@@ -182,7 +187,7 @@ export const RequestHistory = () => {
     try {
       const { error, success, services } = await getServices();
 
-      if (success) {
+      if (success && services) {
         setAllServices((prev) => {
           const newNames = services.map((s) => s.name);
           // Create a Set to remove duplicates
@@ -532,8 +537,8 @@ export const RequestHistory = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="w-full">
-                      {allServices.map((service, index) => (
-                        <SelectItem key={index} value={service}>
+                      {allServices.map((service) => (
+                        <SelectItem key={service} value={service}>
                           {service === "ALL" ? "All Services" : service}
                         </SelectItem>
                       ))}

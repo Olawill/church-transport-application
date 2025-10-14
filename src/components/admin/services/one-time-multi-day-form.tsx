@@ -97,7 +97,7 @@ export const OnetimeMultiDayForm = ({
         <FormField
           control={form.control}
           name="dayOfWeek"
-          render={({}) => (
+          render={({ field }) => (
             <FormItem className="col-span-3">
               <FormLabel>
                 Days of Week<span className="text-red-400">*</span>

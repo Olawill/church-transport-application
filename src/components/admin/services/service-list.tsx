@@ -1,8 +1,24 @@
 // components/admin/service-forms/ServiceList.tsx
 import {
+  CalendarIcon,
+  Clock,
+  Edit2,
+  Filter,
+  Plus,
+  RefreshCcwIcon,
+  Trash2,
+} from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+
+import {
   CustomPagination,
   usePagination,
 } from "@/components/custom-pagination";
+import { useConfirm } from "@/hooks/use-confirm";
+import { DAYS_OF_WEEK, ServiceDay } from "@/lib/types";
+import { formatTime } from "@/lib/utils";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
@@ -14,15 +30,27 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useConfirm } from "@/hooks/use-confirm";
-import { DAYS_OF_WEEK, ServiceDay } from "@/lib/types";
-import { formatTime } from "@/lib/utils";
-import { CalendarIcon, Clock, Edit2, Plus, Trash2 } from "lucide-react";
-import { toast } from "sonner";
+import { FaPrayingHands } from "react-icons/fa";
 
 interface ServiceListProps {
   serviceDays: ServiceDay[];
@@ -44,6 +72,7 @@ export const ServiceList = ({
     "Are you sure you want to delete this service? This action cannot be undone.",
     true
   );
+  const [servicesStatus, setServicesStatus] = useState("active");
 
   const {
     currentPage,
@@ -53,7 +82,15 @@ export const ServiceList = ({
     paginateItems,
   } = usePagination(10);
 
-  const paginatedServices = paginateItems(serviceDays);
+  // Filter the services based on active status
+  const filteredServices = serviceDays.filter((service) => {
+    const activeServices = servicesStatus === "active";
+
+    const matchesService = service.isActive === activeServices;
+    return matchesService;
+  });
+
+  const paginatedServices = paginateItems(filteredServices);
 
   const handleDelete = async (serviceId: string) => {
     const ok = await confirmDelete();
@@ -115,7 +152,24 @@ export const ServiceList = ({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Service Schedule</CardTitle>
+          <CardTitle className="text-lg flex items-center justify-between">
+            <span>Service Schedule</span>
+            <div className="flex items-center space-x-2">
+              <Label>
+                <Filter className="size-4" />
+                Filter:
+              </Label>
+              <Select value={servicesStatus} onValueChange={setServicesStatus}>
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="archived">Archived</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardTitle>
           <CardDescription>
             Current church service times available for pickup requests
           </CardDescription>
@@ -146,6 +200,28 @@ export const ServiceList = ({
                 </Button>
               </div>
             </div>
+          ) : filteredServices.length === 0 ? (
+            <Empty className="from-muted/50 to-background h-full bg-gradient-to-b from-30%">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <FaPrayingHands />
+                </EmptyMedia>
+                <EmptyTitle>No Services</EmptyTitle>
+                <EmptyDescription>
+                  No services found matching your filter.
+                </EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setServicesStatus("active")}
+                >
+                  <RefreshCcwIcon />
+                  Refresh
+                </Button>
+              </EmptyContent>
+            </Empty>
           ) : (
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -269,7 +345,7 @@ export const ServiceList = ({
 
               <CustomPagination
                 currentPage={currentPage}
-                totalItems={serviceDays.length}
+                totalItems={filteredServices.length}
                 itemsPerPage={itemsPerPage}
                 onPageChange={setCurrentPage}
                 onItemsPerPageChange={setItemsPerPage}

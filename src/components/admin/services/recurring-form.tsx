@@ -32,6 +32,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { CalendarIcon, CheckCircle } from "lucide-react";
+import { useEffect } from "react";
 
 interface RecurringFormProps {
   form: UseFormReturn<RecurringSchema>;
@@ -54,6 +55,16 @@ export const RecurringForm = ({
     frequency === Frequency.DAILY || frequency === Frequency.WEEKLY
       ? [Ordinal.NEXT]
       : Object.values(Ordinal);
+
+  useEffect(() => {
+    const currentOrdinal = form.getValues("ordinal");
+    if (
+      (frequency === Frequency.DAILY || frequency === Frequency.WEEKLY) &&
+      currentOrdinal !== Ordinal.NEXT
+    ) {
+      form.setValue("ordinal", Ordinal.NEXT);
+    }
+  }, [form, frequency]);
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">

@@ -43,6 +43,15 @@ export const validateRequestDate = async (
     };
   }
 
+  if (serviceDayOfWeek.weekdays.length === 0) {
+    return {
+      success: false,
+      error: true,
+      message: "Requested day of week is not a service day.",
+      validData: null,
+    };
+  }
+
   const dayOfWeek = getDayNameFromNumber(
     serviceDayOfWeek.weekdays[0].dayOfWeek
   );

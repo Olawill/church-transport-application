@@ -99,7 +99,7 @@ export const UserManagement = () => {
 
   // Filter users based on filters
   const filteredUsers = users.filter((user) => {
-    const userFullName = `${user.firstName} ${user.lastName}`;
+    const userFullName = `${user.firstName || ""} ${user.lastName || ""}`;
 
     const matchesRole =
       filters.roleFilter === "ALL" || user.role === filters.roleFilter;
@@ -546,7 +546,7 @@ export const UserManagement = () => {
                   itemName="users"
                 />
 
-                {paginatedUsers.length === 0 && (
+                {filteredUsers.length === 0 && (
                   <Empty>
                     <EmptyHeader>
                       <EmptyMedia>

@@ -141,6 +141,7 @@ export const FrequentMultiDayForm = ({
                     {DAYS_OF_WEEK.map((day) => (
                       <div
                         key={day.value}
+                        role="button"
                         className={cn(
                           "flex items-center space-x-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent",
                           selectedDays.includes(day.value.toString()) &&
@@ -211,7 +212,7 @@ export const FrequentMultiDayForm = ({
                   value={field.value || ""}
                   onChange={(e) =>
                     field.onChange(
-                      e.target.value ? parseInt(e.target.value) : undefined
+                      e.target.value ? parseInt(e.target.value, 10) : undefined
                     )
                   }
                 />

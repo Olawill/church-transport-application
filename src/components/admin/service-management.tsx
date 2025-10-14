@@ -113,7 +113,7 @@ export const ServiceManagement = () => {
                 ? new Date(service.startDate)
                 : undefined,
               endDate: service.endDate ? new Date(service.endDate) : undefined,
-              cycle: service.cycle?.toString(),
+              cycle: service.cycle ?? undefined,
               frequency: service.frequency || Frequency.WEEKLY,
             };
           case ServiceCategory.FREQUENT_MULTIDAY:
@@ -125,7 +125,7 @@ export const ServiceManagement = () => {
               startDate: service.startDate
                 ? new Date(service.startDate)
                 : undefined,
-              cycle: service.cycle?.toString(),
+              cycle: service.cycle ?? undefined,
               frequency: service.frequency || Frequency.WEEKLY,
               ordinal: service.ordinal || Ordinal.NEXT,
             };
@@ -166,7 +166,7 @@ export const ServiceManagement = () => {
             serviceType: ServiceType.SPECIAL,
             startDate: undefined,
             endDate: undefined,
-            cycle: "",
+            cycle: undefined,
             frequency: Frequency.WEEKLY,
           };
         case ServiceCategory.FREQUENT_MULTIDAY:
@@ -176,7 +176,7 @@ export const ServiceManagement = () => {
             serviceCategory: ServiceCategory.FREQUENT_MULTIDAY,
             serviceType: ServiceType.SPECIAL,
             startDate: undefined,
-            cycle: "",
+            cycle: 1,
             frequency: Frequency.WEEKLY,
             ordinal: Ordinal.NEXT,
           };
@@ -187,38 +187,43 @@ export const ServiceManagement = () => {
 
   // Single form with dynamic resolver
   const form = useForm<FormSchema>({
-    resolver: zodResolver(schemaMap[activeTab]),
+    resolver: async (values, context, options) => {
+      const currentSchema = schemaMap[activeTab];
+      return zodResolver(currentSchema)(values, context, options);
+    },
     defaultValues: getDefaultValues(activeTab, editingService || undefined),
   });
 
+  // Update form resolver and values when tab changes
+  useEffect(() => {
+    if (!editingService) {
+      form.reset(getDefaultValues(activeTab));
+    }
+  }, [activeTab, form, getDefaultValues, editingService]);
+
+  const resetForm = useCallback(() => {
+    form.reset(getDefaultValues(activeTab));
+    setEditingService(null);
+    setShowForm(false);
+  }, [form, activeTab, getDefaultValues]);
+
   // Reset form when tab changes
   useEffect(() => {
-    const values = getDefaultValues(activeTab, editingService || undefined);
-    form.reset(values);
-  }, [activeTab, editingService, form, getDefaultValues]);
+    if (editingService) {
+      // const values = getDefaultValues(activeTab, editingService || undefined);
+      const values = getDefaultValues(
+        editingService.serviceCategory,
+        editingService
+      );
+      form.reset(values);
+    }
+  }, [editingService, form, getDefaultValues]);
 
   const handleTabChange = useCallback((value: string) => {
     setActiveTab(value as ServiceCategory);
   }, []);
 
-  useEffect(() => {
-    fetchServiceDays();
-  }, []);
-
-  // useEffect(() => {
-  //   const frequency = serviceForm.watch("frequency");
-  //   const ordinal = serviceForm.watch("ordinal");
-
-  //   const isLimited =
-  //     frequency === Frequency.DAILY || frequency === Frequency.WEEKLY;
-
-  //   if (isLimited && ordinal !== Ordinal.NEXT) {
-  //     serviceForm.setValue("ordinal", Ordinal.NEXT);
-  //   }
-  // // eslint-disable-next-line react-hooks/exhaustive-deps
-  // }, [serviceForm.watch("frequency")]);
-
-  const fetchServiceDays = async () => {
+  const fetchServiceDays = useCallback(async () => {
     try {
       const response = await fetch("/api/service-days");
       if (response.ok) {
@@ -230,92 +235,56 @@ export const ServiceManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchServiceDays();
+  }, [fetchServiceDays]);
 
   const handleSubmit = useCallback(
     async (values: FormSchema) => {
       setLoading(true);
+      console.log({ values });
+      console.log(values.startDate ? values.startDate.toISOString() : "N/A");
       try {
         // Parse dayOfWeek - convert to array if it's a string, or parse strings to ints if array
-        const dayOfWeek = Array.isArray(values.dayOfWeek)
-          ? values.dayOfWeek.map((d) => parseInt(d))
-          : [parseInt(values.dayOfWeek)];
-
-        const response = await fetch("/api/service-days", {
-          method: editingService ? "PUT" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...values,
-            ...(editingService && { id: editingService.id }),
-            dayOfWeek, // Send as array
-            startDate: values.startDate ? values.startDate.toISOString() : null,
-            endDate:
-              "endDate" in values && values.endDate
-                ? values.endDate.toISOString()
-                : null,
-          }),
-        });
-
-        if (response.ok) {
-          toast.success(
-            `Service ${editingService ? "updated" : "created"} successfully`
-          );
-          resetForm();
-          fetchServiceDays();
-        } else {
-          toast.error(
-            `Failed to ${editingService ? "update" : "create"} service`
-          );
-        }
+        // const dayOfWeek = Array.isArray(values.dayOfWeek)
+        //   ? values.dayOfWeek.map((d) => parseInt(d))
+        //   : [parseInt(values.dayOfWeek)];
+        // const response = await fetch("/api/service-days", {
+        //   method: editingService ? "PUT" : "POST",
+        //   headers: { "Content-Type": "application/json" },
+        //   body: JSON.stringify({
+        //     ...values,
+        //     ...(editingService && { id: editingService.id }),
+        //     dayOfWeek, // Send as array
+        //     startDate: values.startDate ? values.startDate.toISOString() : null,
+        //     endDate:
+        //       "endDate" in values && values.endDate
+        //         ? values.endDate.toISOString()
+        //         : null,
+        //   }),
+        // });
+        // if (response.ok) {
+        //   toast.success(
+        //     `Service ${editingService ? "updated" : "created"} successfully`
+        //   );
+        //   resetForm();
+        //   fetchServiceDays();
+        // } else {
+        //   toast.error(
+        //     `Failed to ${editingService ? "update" : "create"} service`
+        //   );
+        // }
       } catch (error) {
         console.error("Error submitting service:", error);
         toast.error("An error occurred");
       } finally {
         setLoading(false);
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [editingService, fetchServiceDays]
+    [editingService, fetchServiceDays, resetForm]
   );
-
-  // const handleUpdate = async (values: ServiceDaySchema) => {
-  //   const validatedFields = serviceDaySchema.safeParse(values);
-
-  //   if (!validatedFields.success) {
-  //     toast.error("Please fill in all required fields");
-  //     return;
-  //   }
-
-  //   setLoading(true);
-
-  //   try {
-  //     const response = await fetch("/api/service-days", {
-  //       method: "PUT",
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //       },
-  //       body: JSON.stringify({
-  //         id: editingService?.id,
-  //         ...validatedFields.data,
-  //         dayOfWeek: parseInt(validatedFields.data.dayOfWeek),
-  //       }),
-  //     });
-
-  //     if (response.ok) {
-  //       toast.success("Service updated successfully");
-  //       resetForm();
-  //       fetchServiceDays();
-  //     } else {
-  //       toast.error("Failed to update service");
-  //     }
-  //   } catch (error) {
-  //     console.error("Error updating service:", error);
-  //     toast.error("An error occurred");
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
 
   const handleEdit = useCallback(
     (service: ServiceDay) => {
@@ -330,14 +299,6 @@ export const ServiceManagement = () => {
     },
     [form, getDefaultValues]
   );
-
-  const resetForm = useCallback(() => {
-    form.reset(getDefaultValues(activeTab));
-    setEditingService(null);
-    setShowForm(false);
-  }, [form, activeTab, getDefaultValues]);
-
-  console.log(new Date(2025, 10, 1), editingService);
 
   return (
     <div className="space-y-6">
