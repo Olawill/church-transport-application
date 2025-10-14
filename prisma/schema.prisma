@@ -194,21 +194,6 @@ model Address {
   @@map("addresses")
 }
 
-// model ServiceDay {
-//   id                  String            @id @default(cuid())
-//   name                String
-//   dayOfWeek           Int               // 0 = Sunday, 1 = Monday, etc.
-//   time                String            // Format: "HH:MM" (24-hour)
-//   serviceType         ServiceType       @default(REGULAR)
-//   isActive            Boolean           @default(true)
-//   createdAt           DateTime          @default(now())
-//   updatedAt           DateTime          @updatedAt
-
-//   pickupRequests      PickupRequest[]
-
-//   @@map("service_days")
-// }
-
 model ServiceDay {
   id                  String            @id @default(cuid())
   name                String
@@ -217,13 +202,13 @@ model ServiceDay {
   serviceType         ServiceType       @default(REGULAR)
   isActive            Boolean           @default(true)
 
-  startDate           String?         // For one-time or multi-day services
-  endDate             String?         // For multi-day services
+  startDate           DateTime?         // For one-time or multi-day services
+  endDate             DateTime?         // For multi-day services
   serviceCategory     ServiceCategory   @default(RECURRING)
   ordinal             Ordinal           @default(NEXT)
   frequency           Frequency         @default(WEEKLY)
   cycle               Int?
-  cycleType           CycleType?
+  // cycleType           CycleType?
 
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
@@ -250,7 +235,7 @@ model PickupRequest {
   serviceDayId        String
   addressId           String
   requestDate         DateTime          // The date of the service
-  requestDayOfWeek    Int
+  serviceDayOfWeek    Int
   status              RequestStatus     @default(PENDING)
   notes               String?
   isPickUp            Boolean           @default(true)
@@ -274,7 +259,7 @@ model PickupRequest {
   @@index([userId, serviceDayId, requestDate]) // For duplicate checking
   @@index([seriesId, requestDate]) // For series queries
   @@index([status, requestDate]) // For filtering
-  @@index([serviceDayId, requestDayOfWeek])
+  @@index([serviceDayId, serviceDayOfWeek])
   @@map("pickup_requests")
 }
 
