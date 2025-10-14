@@ -52,20 +52,38 @@ export const onetimeMultiDaySchema = multipleDaysSchema
       message: "Start date is required for this service type",
     }),
     endDate: z.date().optional(),
+    // cycle: z
+    //   .string()
+    //   // .min(1)
+    //   .optional()
+    //   .transform((val) => (val === "" ? undefined : val))
+    //   .refine(
+    //     (val) => {
+    //       if (!val) return true;
+    //       const num = Number(val);
+    //       return !isNaN(num) && num > 0;
+    //     },
+    //     { message: "Frequency cycle must be a positive number" }
+    //   ),
     cycle: z
-      .string()
-      .min(1)
-      .optional()
-      .refine(
-        (val) => {
-          if (val === undefined) return true; // allow undefined
-          const num = Number(val);
-          return !isNaN(num) && num > 0;
-        },
-        { message: "Frequency cycle must be a positive number" }
-      ),
+      .number()
+      .int()
+      .positive({ message: "Frequency cycle must be a positive number" })
+      .optional(),
     frequency: z.enum(Frequency),
   })
+  .refine(
+    (data) => {
+      if (data.endDate && data.startDate) {
+        return data.endDate > data.startDate;
+      }
+      return true;
+    },
+    {
+      message: "End date must be after start date",
+      path: ["endDate"],
+    }
+  )
   .refine((data) => data.endDate || data.cycle, {
     message: "Either end date or frequency cycle is required",
     path: ["endDate"],
@@ -78,18 +96,19 @@ export const frequentMultiDaySchema = multipleDaysSchema.extend({
   startDate: z.date({
     message: "Start date is required for this service type",
   }),
-  cycle: z
-    .string()
-    .min(1)
-    .optional()
-    .refine(
-      (val) => {
-        if (val === undefined) return true; // allow undefined
-        const num = Number(val);
-        return !isNaN(num) && num > 0;
-      },
-      { message: "Frequency cycle must be a positive number" }
-    ),
+  // cycle: z
+  //   .string({ message: "Frequency cycle is required" })
+  //   .min(1, "Frequency (min) cycle is required")
+  //   .refine(
+  //     (val) => {
+  //       const num = Number(val);
+  //       return !isNaN(num) && num > 0;
+  //     },
+  //     { message: "Frequency cycle must be a positive number" }
+  //   ),
+  cycle: z.number({ message: "Frequency cycle is required" }).int().positive({
+    message: "Frequency cycle must be a positive number",
+  }),
   frequency: z.enum(Frequency),
   ordinal: z.enum(Ordinal),
 });
