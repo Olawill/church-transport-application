@@ -1,7 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
-import { addDays, addMonths, startOfMonth } from "date-fns";
-import { format } from "date-fns/format";
-import { setDay } from "date-fns/setDay";
+import { addDays, addMonths, format, setDay, startOfMonth } from "date-fns";
 import { twMerge } from "tailwind-merge";
 import {
   Frequency,

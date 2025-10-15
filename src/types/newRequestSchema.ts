@@ -1,6 +1,5 @@
 import { validateRequestDate } from "@/actions/validRequestDate";
-import { differenceInMonths } from "date-fns/differenceInMonths";
-import { differenceInWeeks } from "date-fns/differenceInWeeks";
+import { differenceInMonths, differenceInWeeks } from "date-fns";
 import { z } from "zod";
 
 export const validateRequest = async (

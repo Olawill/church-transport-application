@@ -1,5 +1,5 @@
 import { ServiceDay } from "@/generated/prisma";
-import { differenceInMonths } from "date-fns/differenceInMonths";
+import { differenceInMonths } from "date-fns";
 import { getDayNameFromNumber } from "./utils";
 
 export const validatePickUpRequestTiming = (

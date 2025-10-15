@@ -22,9 +22,31 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useDebounce } from "use-debounce";
 
+import { UserRole } from "@/generated/prisma";
+import { Status, useRequestStore } from "@/lib/store/useRequestStore";
+import { PickupRequest, RequestType, User as UserType } from "@/lib/types";
+import {
+  calculateDistance,
+  capitalize,
+  cn,
+  formatDate,
+  formatFilterDate,
+  formatTime,
+} from "@/lib/utils";
+
+import AdminNewUserRequest from "@/components/admin/admin-new-user-request";
+import {
+  CustomPagination,
+  usePaginationWithStore,
+} from "@/components/custom-pagination";
+import CustomDateCalendar from "@/components/custom-request-calendar";
 import { columns } from "@/components/drivers/column";
 import { DataTable } from "@/components/drivers/data-table";
+import { CarBack } from "@/components/icons/car-back";
+import { NewRequestForm } from "@/components/requests/new-request-form";
+
 import {
   Accordion,
   AccordionContent,
@@ -47,6 +69,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -58,26 +81,6 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-
-import { getServices } from "@/actions/getOrgInfo";
-import { UserRole } from "@/generated/prisma";
-import { Status, useRequestStore } from "@/lib/store/useRequestStore";
-import { PickupRequest, RequestType, User as UserType } from "@/lib/types";
-import {
-  calculateDistance,
-  capitalize,
-  cn,
-  formatDate,
-  formatFilterDate,
-  formatTime,
-} from "@/lib/utils";
-import { useDebounce } from "use-debounce";
-import AdminNewUserRequest from "../admin/admin-new-user-request";
-import { CustomPagination, usePaginationWithStore } from "../custom-pagination";
-import CustomDateCalendar from "../custom-request-calendar";
-import { CarBack } from "../icons/car-back";
-import { Input } from "../ui/input";
-import { NewRequestForm } from "./new-request-form";
 
 type Type = RequestType | "ALL";
 
@@ -186,20 +189,12 @@ export const RequestHistory = () => {
 
   const fetchServices = async () => {
     try {
-      const { error, success, services } = await getServices();
-
-      if (success && services) {
-        setAllServices((prev) => {
-          const newNames = services.map((s) => s.name);
-          // Create a Set to remove duplicates
-          const uniqueServices = Array.from(new Set([...prev, ...newNames]));
-          return uniqueServices;
-        });
-      }
-
-      if (error) {
-        throw error;
-      }
+      const res = await fetch("/api/service-days?status=active");
+      if (!res.ok) throw new Error("Failed to fetch services");
+      const data: Array<{ name: string }> = await res.json();
+      const names = data.map((s) => s.name).filter(Boolean);
+      const unique = Array.from(new Set(["ALL", ...names]));
+      setAllServices(unique);
     } catch (error) {
       console.error("Error fetching services:", error);
       toast.error("Error fetching services");

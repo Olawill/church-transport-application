@@ -113,7 +113,7 @@ export const FrequentMultiDayForm = ({
         <FormField
           control={form.control}
           name="dayOfWeek"
-          render={({}) => (
+          render={() => (
             <FormItem className="col-span-4">
               <FormLabel>
                 Days of Week<span className="text-red-400">*</span>
