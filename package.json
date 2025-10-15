@@ -63,6 +63,7 @@
     "recharts": "2.15.4",
     "sonner": "^2.0.7",
     "three": "^0.180.0",
+    "use-debounce": "^10.0.6",
     "zod": "^4.1.5",
     "zustand": "^5.0.8"
   },
