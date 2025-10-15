@@ -79,6 +79,26 @@ export function isValidRequestTime(
   return now >= minAllowedTime;
 }
 
+export function isWithinRequestBuffer(
+  serviceDate: Date,
+  serviceTime: string,
+  hoursBuffer: number = 2
+): boolean {
+  const [hours, minutes] = serviceTime.split(":").map(Number);
+  const serviceDateTime = new Date(serviceDate);
+  serviceDateTime.setHours(hours, minutes, 0, 0);
+
+  const now = new Date();
+  const minAllowedTime = new Date(
+    serviceDateTime.getTime() - hoursBuffer * 60 * 60 * 1000
+  );
+  // const thirtyMinutesBefore = new Date(
+  //   serviceDateTime.getTime() - 30 * 60 * 1000
+  // );
+
+  return now >= minAllowedTime;
+}
+
 // Get next occurrence of a service day
 export function getNextServiceDate(dayOfWeek: number): Date {
   const today = new Date();
