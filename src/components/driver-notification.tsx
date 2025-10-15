@@ -88,7 +88,7 @@ export const DriverEmailDialog = ({
       form.reset({ body: "", subject: "" });
       setOpenEmailDialog(false);
     } catch (error) {
-      console.log(error);
+      console.error(error);
       toast.error("An error occurred. Please try again.");
     }
   };
@@ -200,7 +200,7 @@ export const DriverWhatsAppDialog = ({
       form.reset();
       setOpenWhatsAppDialog(false);
     } catch (error) {
-      console.log(error);
+      console.error(error);
       toast.error("An error occurred. Please try again.");
     }
   };

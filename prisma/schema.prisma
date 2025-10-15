@@ -61,14 +61,6 @@ enum Ordinal {
   LAST
 }
 
-enum CycleType {
-  DAILY
-  WEEKLY
-  MONTHLY
-  QUARTERLY
-  YEARLY
-}
-
 enum BranchType {
   HEADQUARTER
   BRANCH
@@ -221,21 +213,26 @@ model ServiceDay {
 
 model ServiceDayWeekday {
   id           String      @id @default(cuid())
-  serviceDay   ServiceDay  @relation(fields: [serviceDayId], references: [id], onDelete: Cascade)
   serviceDayId String
   dayOfWeek    Int         // 0 = Sunday, 1 = Monday, etc.
+
+  serviceDay   ServiceDay  @relation(fields: [serviceDayId], references: [id], onDelete: Cascade)
+  rides        PickupRequest[]
 
   @@unique([serviceDayId, dayOfWeek])
 }
 
 model PickupRequest {
   id                  String            @id @default(cuid())
+
   userId              String
   driverId            String?
+
   serviceDayId        String
+  serviceWeekdayId    String
+
   addressId           String
   requestDate         DateTime          // The date of the service
-  serviceDayOfWeek    Int
   status              RequestStatus     @default(PENDING)
   notes               String?
   isPickUp            Boolean           @default(true)
@@ -254,12 +251,13 @@ model PickupRequest {
   address             Address           @relation(fields: [addressId], references: [id])
 
   cancelledRequests   DriverRequestCancel[]
-  series              PickupSeries?   @relation(fields: [seriesId], references: [id])
+  serviceWeekday      ServiceDayWeekday @relation(fields: [serviceWeekdayId], references: [id])
+  series              PickupSeries?     @relation(fields: [seriesId], references: [id])
 
   @@index([userId, serviceDayId, requestDate]) // For duplicate checking
   @@index([seriesId, requestDate]) // For series queries
   @@index([status, requestDate]) // For filtering
-  @@index([serviceDayId, serviceDayOfWeek])
+  @@index([serviceDayId, serviceWeekdayId])
   @@map("pickup_requests")
 }
 

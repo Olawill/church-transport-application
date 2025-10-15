@@ -97,6 +97,10 @@ export const UserManagement = () => {
 
   const [nameInput, setNameInput] = useState(filters.nameFilter);
 
+  useEffect(() => {
+    setNameInput(filters.nameFilter);
+  }, [filters.nameFilter]);
+
   // Filter users based on filters
   const filteredUsers = users.filter((user) => {
     const userFullName = `${user.firstName || ""} ${user.lastName || ""}`;
@@ -536,16 +540,6 @@ export const UserManagement = () => {
                   </div>
                 ))}
 
-                {/* Pagination */}
-                <CustomPagination
-                  currentPage={currentPage}
-                  totalItems={filteredUsers.length}
-                  itemsPerPage={itemsPerPage}
-                  onPageChange={setCurrentPage}
-                  onItemsPerPageChange={setItemsPerPage}
-                  itemName="users"
-                />
-
                 {filteredUsers.length === 0 && (
                   <Empty>
                     <EmptyHeader>
@@ -593,6 +587,16 @@ export const UserManagement = () => {
                     </EmptyContent>
                   </Empty>
                 )}
+
+                {/* Pagination */}
+                <CustomPagination
+                  currentPage={currentPage}
+                  totalItems={filteredUsers.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPage}
+                  onItemsPerPageChange={setItemsPerPage}
+                  itemName="users"
+                />
               </div>
             )}
           </CardContent>

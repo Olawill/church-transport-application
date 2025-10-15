@@ -49,20 +49,23 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { useConfirm } from "@/hooks/use-confirm";
 import { Address, ServiceDay, User } from "@/lib/types";
 import {
   cn,
   formatAddress,
   formatDate,
   formatTime,
+  getDayNameFromNumber,
+  getNextOccurrencesOfWeekdays,
   getNextServiceDate,
+  getServiceDayOptions,
 } from "@/lib/utils";
 import { newRequestSchema, NewRequestSchema } from "@/types/newRequestSchema";
-import { Input } from "../ui/input";
-import { Switch } from "../ui/switch";
-import { PickUpDropOffField } from "./pickup-dropoff-field";
 import { addMonths } from "date-fns/addMonths";
-import { useConfirm } from "@/hooks/use-confirm";
+import { PickUpDropOffField } from "./pickup-dropoff-field";
 
 interface NewRequestFormProps {
   newRequestData?: NewRequestSchema & {
@@ -85,6 +88,12 @@ export const NewRequestForm = ({
   const [selectedService, setSelectedService] = useState<ServiceDay | null>(
     null
   );
+  const [dayOptions, setDayOptions] = useState<
+    Array<{ value: string; label: string; dayOfWeek: number }>
+  >([]);
+  const [selectedDayOfWeek, setSelectedDayOfWeek] = useState<number | null>(
+    null
+  );
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
 
   const [SeriesUpdateDialog, confirmSeriesUpdate] = useConfirm(
@@ -100,13 +109,17 @@ export const NewRequestForm = ({
     defaultValues: {
       serviceDayId: newRequestData?.serviceDayId || "",
       addressId: newRequestData?.addressId || "",
-      requestDate: newRequestData?.requestDate || undefined,
+      requestDate: newRequestData?.requestDate
+        ? new Date(newRequestData.requestDate)
+        : undefined,
       isPickUp: newRequestData?.isPickUp ?? true,
       isDropOff: newRequestData?.isDropOff ?? false,
       isGroupRide: newRequestData?.isGroupRide ?? false,
       numberOfGroup: newRequestData?.numberOfGroup ?? null,
       isRecurring: newRequestData?.isRecurring ?? false,
-      endDate: newRequestData?.endDate ?? undefined,
+      endDate: newRequestData?.endDate
+        ? new Date(newRequestData.endDate)
+        : undefined,
       notes: newRequestData?.notes || "",
     },
   });
@@ -123,14 +136,63 @@ export const NewRequestForm = ({
   });
 
   useEffect(() => {
-    if (!newRequestData && serviceDayId && serviceDays.length > 0) {
+    // if (!newRequestData && serviceDayId && serviceDays.length > 0) {
+    if (serviceDayId && serviceDays.length > 0) {
       const service = serviceDays.find((s) => s.id === serviceDayId);
       setSelectedService(service || null);
 
       if (service) {
-        // Set default request date to next occurrence of this service
-        const nextDate = getNextServiceDate(service.dayOfWeek);
-        form.setValue("requestDate", nextDate);
+        if (
+          service.weekdays?.length === 1 &&
+          service.serviceCategory === "RECURRING"
+        ) {
+          // Single day service - auto select
+          const dayOfWeek = service.weekdays[0].dayOfWeek;
+          setSelectedDayOfWeek(dayOfWeek);
+          setDayOptions([]);
+          // Set default request date to next occurrence of this service
+          const nextDate = getNextServiceDate(dayOfWeek);
+          form.setValue("serviceDayOfWeek", `${dayOfWeek}-${1}`);
+          form.setValue("requestDate", nextDate);
+        } else if (
+          service.weekdays?.length === 1 &&
+          service.serviceCategory === "ONETIME_ONEDAY"
+        ) {
+          // Single day service - auto select
+          const dayOfWeek = service.weekdays[0].dayOfWeek;
+          const serviceStartDateDayOfWeek =
+            service.startDate && new Date(service?.startDate).getDay();
+
+          setDayOptions([]);
+
+          if (serviceStartDateDayOfWeek === dayOfWeek && service.startDate) {
+            setSelectedDayOfWeek(dayOfWeek);
+            const nextDate = getNextOccurrencesOfWeekdays({
+              fromDate: new Date(service?.startDate),
+              allowedWeekdays: [dayOfWeek],
+              count: 1,
+              frequency: service.frequency,
+              ordinal: service.ordinal,
+            })[0];
+
+            form.setValue("serviceDayOfWeek", `${dayOfWeek}-${1}`);
+            form.setValue("requestDate", nextDate);
+          }
+        } else if (
+          service.weekdays &&
+          service.weekdays?.length > 1 &&
+          service.cycle &&
+          service.cycle >= 1
+        ) {
+          const options = getServiceDayOptions(service);
+
+          setDayOptions(options);
+          setSelectedDayOfWeek(null);
+
+          // Reset request date until user selects a day
+          form.setValue("serviceDayOfWeek", undefined);
+          form.resetField("requestDate");
+        }
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -146,7 +208,7 @@ export const NewRequestForm = ({
 
   const fetchServiceDays = async () => {
     try {
-      const response = await fetch("/api/service-days");
+      const response = await fetch("/api/service-days?status=active");
       if (response.ok) {
         const data = await response.json();
         setServiceDays(data);
@@ -353,24 +415,14 @@ export const NewRequestForm = ({
                           ))}
                         </SelectContent>
                       </Select>
-                      {selectedService && (
+                      {selectedService && selectedDayOfWeek != null && (
                         <FormDescription className="mt-2 p-3 bg-blue-50 rounded-lg">
                           <span className="flex items-center space-x-2 text-sm text-blue-700">
                             <Clock className="h-4 w-4" />
                             <span>
                               Service starts at{" "}
                               {formatTime(selectedService.time)} every{" "}
-                              {
-                                [
-                                  "Sunday",
-                                  "Monday",
-                                  "Tuesday",
-                                  "Wednesday",
-                                  "Thursday",
-                                  "Friday",
-                                  "Saturday",
-                                ][selectedService.dayOfWeek]
-                              }
+                              {getDayNameFromNumber(selectedDayOfWeek)}
                             </span>
                           </span>
                         </FormDescription>
@@ -379,6 +431,96 @@ export const NewRequestForm = ({
                     </FormItem>
                   )}
                 />
+
+                {/* Day of Week Selection - Only show for multi-day services */}
+                {dayOptions.length > 0 && (
+                  <FormField
+                    control={form.control}
+                    name="serviceDayOfWeek"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel>
+                          Select Service Day
+                          <span className="text-red-400">*</span>
+                        </FormLabel>
+                        <Select
+                          value={field.value}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            // Extract day of week from the value
+                            const option = dayOptions.find(
+                              (opt) => opt.value === value
+                            );
+
+                            if (
+                              option &&
+                              selectedService &&
+                              selectedService.weekdays
+                            ) {
+                              setSelectedDayOfWeek(option.dayOfWeek);
+
+                              // Calculate next date for this specific day
+                              const daysOfWeek = selectedService?.weekdays.map(
+                                (w) => w.dayOfWeek
+                              );
+                              const cycle = selectedService?.cycle || 1;
+                              const count =
+                                selectedService.frequency === "DAILY"
+                                  ? cycle
+                                  : daysOfWeek.length * cycle;
+
+                              const endDate =
+                                selectedService.endDate ?? undefined;
+
+                              const occurrences = getNextOccurrencesOfWeekdays({
+                                fromDate: new Date(
+                                  selectedService?.startDate || new Date()
+                                ),
+                                allowedWeekdays: daysOfWeek,
+                                count,
+                                endDate,
+                                frequency: selectedService.frequency,
+                                ordinal: selectedService.ordinal,
+                              });
+
+                              const optionIndex = Number(
+                                option.value.split("-")[1]
+                              );
+                              const nextDate = occurrences[optionIndex - 1];
+
+                              form.setValue("requestDate", nextDate);
+                            }
+                          }}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select which day you need pickup" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {dayOptions.map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
+                                <div className="flex items-center space-x-2">
+                                  <CalendarIcon className="h-4 w-4" />
+                                  <span>{option.label}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          {selectedService?.cycle && selectedService.cycle > 1
+                            ? `This service runs for ${selectedService.cycle} ${selectedService.frequency.toLowerCase()} cycles on multiple days`
+                            : "Select the day you need pickup service"}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 {/* Date Selection */}
                 <FormField
@@ -405,6 +547,7 @@ export const NewRequestForm = ({
                               >
                                 {field.value ? (
                                   format(
+                                    // new Date(field.value),
                                     new Date(formatDate(new Date(field.value))),
                                     "PPP"
                                   )

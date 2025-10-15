@@ -52,19 +52,6 @@ export const onetimeMultiDaySchema = multipleDaysSchema
       message: "Start date is required for this service type",
     }),
     endDate: z.date().optional(),
-    // cycle: z
-    //   .string()
-    //   // .min(1)
-    //   .optional()
-    //   .transform((val) => (val === "" ? undefined : val))
-    //   .refine(
-    //     (val) => {
-    //       if (!val) return true;
-    //       const num = Number(val);
-    //       return !isNaN(num) && num > 0;
-    //     },
-    //     { message: "Frequency cycle must be a positive number" }
-    //   ),
     cycle: z
       .number()
       .int()
@@ -96,16 +83,6 @@ export const frequentMultiDaySchema = multipleDaysSchema.extend({
   startDate: z.date({
     message: "Start date is required for this service type",
   }),
-  // cycle: z
-  //   .string({ message: "Frequency cycle is required" })
-  //   .min(1, "Frequency (min) cycle is required")
-  //   .refine(
-  //     (val) => {
-  //       const num = Number(val);
-  //       return !isNaN(num) && num > 0;
-  //     },
-  //     { message: "Frequency cycle must be a positive number" }
-  //   ),
   cycle: z.number({ message: "Frequency cycle is required" }).int().positive({
     message: "Frequency cycle must be a positive number",
   }),

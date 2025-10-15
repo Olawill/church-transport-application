@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -47,6 +47,10 @@ type FormSchema =
   | OnetimeMultiDaySchema
   | FrequentMultiDaySchema;
 
+type PropertyError = {
+  errors: string[];
+};
+
 export const ServiceManagement = () => {
   const [serviceDays, setServiceDays] = useState<ServiceDay[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,12 +61,15 @@ export const ServiceManagement = () => {
   );
 
   // Schema map for each tab
-  const schemaMap = {
-    [ServiceCategory.RECURRING]: recurringSchema,
-    [ServiceCategory.ONETIME_ONEDAY]: onetimeOneDaySchema,
-    [ServiceCategory.ONETIME_MULTIDAY]: onetimeMultiDaySchema,
-    [ServiceCategory.FREQUENT_MULTIDAY]: frequentMultiDaySchema,
-  };
+  const schemaMap = useMemo(
+    () => ({
+      [ServiceCategory.RECURRING]: recurringSchema,
+      [ServiceCategory.ONETIME_ONEDAY]: onetimeOneDaySchema,
+      [ServiceCategory.ONETIME_MULTIDAY]: onetimeMultiDaySchema,
+      [ServiceCategory.FREQUENT_MULTIDAY]: frequentMultiDaySchema,
+    }),
+    []
+  );
 
   // Default values map
   const getDefaultValues = useCallback(
@@ -245,21 +252,34 @@ export const ServiceManagement = () => {
     async (values: FormSchema) => {
       setLoading(true);
       try {
+        const currentSchema = schemaMap[values.serviceCategory];
+
+        const validated = currentSchema.safeParse(values);
+
+        if (!validated.success) {
+          console.error(validated.error);
+          toast.error("Invalid data in form");
+          return;
+        }
+
+        const validatedData = validated.data;
+
         // Parse dayOfWeek - convert to array if it's a string, or parse strings to ints if array
-        const dayOfWeek = Array.isArray(values.dayOfWeek)
-          ? values.dayOfWeek.map((d) => parseInt(d))
-          : [parseInt(values.dayOfWeek)];
+        const dayOfWeek = Array.isArray(validatedData.dayOfWeek)
+          ? validatedData.dayOfWeek
+          : validatedData.dayOfWeek;
+
         const response = await fetch("/api/service-days", {
           method: editingService ? "PUT" : "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            ...values,
+            ...validatedData,
             ...(editingService && { id: editingService.id }),
             dayOfWeek, // Send as array
-            startDate: values.startDate ? values.startDate.toISOString() : null,
+            startDate: validatedData.startDate ? validatedData.startDate : null,
             endDate:
-              "endDate" in values && values.endDate
-                ? values.endDate.toISOString()
+              "endDate" in validatedData && validatedData.endDate
+                ? validatedData.endDate
                 : null,
           }),
         });
@@ -270,6 +290,21 @@ export const ServiceManagement = () => {
           resetForm();
           fetchServiceDays();
         } else {
+          const errorResponse = await response.json();
+
+          if (errorResponse.details?.properties) {
+            for (const [, rawError] of Object.entries(
+              errorResponse.details?.properties ?? {}
+            )) {
+              const errorData = rawError as PropertyError;
+              if (
+                Array.isArray(errorData.errors) &&
+                errorData.errors.length > 0
+              ) {
+                toast.error(errorData.errors[0]);
+              }
+            }
+          }
           toast.error(
             `Failed to ${editingService ? "update" : "create"} service`
           );
@@ -281,7 +316,7 @@ export const ServiceManagement = () => {
         setLoading(false);
       }
     },
-    [editingService, fetchServiceDays, resetForm]
+    [editingService, fetchServiceDays, resetForm, schemaMap]
   );
 
   const handleEdit = useCallback(

@@ -77,8 +77,15 @@ export const POST = async (request: NextRequest) => {
         );
     }
 
+    // Parse ISO strings to Date objects before validation
+    const parsedBody = {
+      ...body,
+      startDate: body.startDate ? new Date(body.startDate) : undefined,
+      endDate: body.endDate ? new Date(body.endDate) : undefined,
+    };
+
     // Validate the request body
-    const validationResult = validationSchema.safeParse(body);
+    const validationResult = validationSchema.safeParse(parsedBody);
 
     if (!validationResult.success) {
       return NextResponse.json(

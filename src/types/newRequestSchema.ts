@@ -1,7 +1,7 @@
-import { differenceInWeeks } from "date-fns/differenceInWeeks";
-import { differenceInMonths } from "date-fns/differenceInMonths";
-import { z } from "zod";
 import { validateRequestDate } from "@/actions/validRequestDate";
+import { differenceInMonths } from "date-fns/differenceInMonths";
+import { differenceInWeeks } from "date-fns/differenceInWeeks";
+import { z } from "zod";
 
 export const validateRequest = async (
   data: {
@@ -124,6 +124,7 @@ export const serverValidateRequest = async (
     isRecurring: boolean;
     endDate?: Date | string;
     serviceDayId: string;
+    serviceDayOfWeek: string;
     requestDate: Date | string;
   },
   ctx: z.RefinementCtx
@@ -134,7 +135,29 @@ export const serverValidateRequest = async (
       : data.requestDate;
   const endDate =
     typeof data.endDate === "string" ? new Date(data.endDate) : data.endDate;
-  const result = await validateRequestDate(requestDate, data.serviceDayId);
+
+  if (!data.serviceDayOfWeek) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Service day of week is required for validation",
+      path: ["serviceDayOfWeek"],
+    });
+    return;
+  }
+
+  const parts = data.serviceDayOfWeek.split("-");
+  const dayOfWeek = Number(parts[0]);
+
+  if (isNaN(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Invalid day of week format",
+      path: ["serviceDayOfWeek"],
+    });
+    return;
+  }
+
+  const result = await validateRequestDate(dayOfWeek, data.serviceDayId);
 
   const pickupDropoffMessage =
     "Please select at least one option: Pickup or Drop-off";
@@ -250,6 +273,7 @@ export const serverValidateRequest = async (
 export const newRequestSchema = z
   .object({
     serviceDayId: z.string().min(1, "Service selection is required"),
+    serviceDayOfWeek: z.string().optional(), // For multi-day services
     requestDate: z.date({ message: "Service date is required" }).refine(
       (date) => {
         const now = new Date();
@@ -277,6 +301,7 @@ export const newAdminRequestSchema = z
   .object({
     userId: z.string().min(1, "User selection is required"),
     serviceDayId: z.string().min(1, "Service selection is required"),
+    serviceDayOfWeek: z.string().optional(), // For multi-day services
     requestDate: z.date({ message: "Service date is required" }).refine(
       (date) => {
         const now = new Date();

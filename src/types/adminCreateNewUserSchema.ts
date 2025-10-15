@@ -4,9 +4,9 @@ import {
   isValidPhoneNumber,
   isValidPostalCode,
 } from "@/lib/utils";
-import { z } from "zod";
-import { differenceInWeeks } from "date-fns/differenceInWeeks";
 import { differenceInMonths } from "date-fns/differenceInMonths";
+import { differenceInWeeks } from "date-fns/differenceInWeeks";
+import { z } from "zod";
 
 const validateUserData = async (
   data: {
@@ -199,6 +199,7 @@ export const newUserSchema = z
       .min(1, "Service selection is required")
       .optional()
       .or(z.literal("")),
+    serviceDayOfWeek: z.string().optional(), // For multi-day services
     requestDate:
       // z
       // .preprocess(

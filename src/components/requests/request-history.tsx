@@ -66,6 +66,7 @@ import { PickupRequest, RequestType, User as UserType } from "@/lib/types";
 import {
   calculateDistance,
   capitalize,
+  cn,
   formatDate,
   formatFilterDate,
   formatTime,
@@ -547,7 +548,7 @@ export const RequestHistory = () => {
                 </div>
               )}
               {/* Request Date */}
-              <div className="flex-1">
+              <div className={cn(!isUser && "flex-1")}>
                 <CustomDateCalendar
                   label="Request Date"
                   setRequestDateFilter={setRequestDateFilter}

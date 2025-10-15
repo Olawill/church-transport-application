@@ -77,13 +77,13 @@ export const ServiceList = ({
 
   const [ArchiveDialog, confirmArchive] = useConfirm(
     "Archive Service",
-    "Are you sure you want to archive this service? You can reactivate this service later after 24 hours.",
+    "Are you sure you want to archive this service? You will only be able to reactivate this service after 24 hours.",
     true
   );
 
   const [RestoreDialog, confirmRestore] = useConfirm(
     "Restore Service",
-    "Are you sure you want to restore this service? You can only reactivate this service after 24 hours of been deactivated.",
+    "Are you sure you want to restore this service? You can only reactivate this service after 24 hours of being deactivated.",
     true
   );
 
@@ -294,7 +294,7 @@ export const ServiceList = ({
                 {paginatedServices.map((service) => (
                   <div
                     key={service.id}
-                    className="border rounded-lg p-4 hover:bg-accent transition-colors"
+                    className="border rounded-lg p-4 hover:bg-accent transition-colors flex flex-col h-full"
                   >
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
@@ -374,7 +374,7 @@ export const ServiceList = ({
                       </div>
                     )}
 
-                    <div className="flex justify-end space-x-2 mt-3 pt-3 border-t">
+                    <div className="flex justify-end space-x-2 mt-auto pt-3 border-t">
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button

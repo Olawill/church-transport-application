@@ -74,6 +74,7 @@ export interface PickupRequest {
   userId: string;
   driverId?: string | null;
   serviceDayId: string;
+  serviceWeekdayId: string;
   addressId: string;
   requestDate: Date;
   status: RequestStatus;
@@ -92,6 +93,7 @@ export interface PickupRequest {
   driver?: User | null;
   serviceDay?: ServiceDay;
   address?: Address;
+  serviceWeekday?: ServiceDayWeekday;
 }
 
 export enum RequestType {

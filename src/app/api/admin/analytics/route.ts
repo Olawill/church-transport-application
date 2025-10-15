@@ -15,8 +15,6 @@ export const GET = async () => {
       );
     }
 
-    // console.log({ user: session.user });
-
     const [registrations, pickupRequests, driverActivity, popularServiceDays] =
       await Promise.all([
         AnalyticsService.getUserRegistrationStats(30),

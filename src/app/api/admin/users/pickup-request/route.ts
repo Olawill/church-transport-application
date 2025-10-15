@@ -8,9 +8,6 @@ import { PickupRequest, UserRole } from "@/generated/prisma";
 import { AnalyticsService } from "@/lib/analytics";
 import { prisma } from "@/lib/db";
 import { geocodeAddress } from "@/lib/geocoding";
-import { serverValidateRequest } from "@/types/newRequestSchema";
-import bcrypt from "bcryptjs";
-import { getNextOccurrencesOfWeekdays } from "@/lib/utils";
 import {
   convertStringDateToDate,
   TRANSACTION_CONFIG,
@@ -18,6 +15,9 @@ import {
   validateEndDateLimit,
   validatePickUpRequestTiming,
 } from "@/lib/pickup-utils";
+import { getNextOccurrencesOfWeekdays } from "@/lib/utils";
+import { serverValidateRequest } from "@/types/newRequestSchema";
+import bcrypt from "bcryptjs";
 
 const payloadSchema = z
   .object({
@@ -32,6 +32,7 @@ const payloadSchema = z
     province: z.string().min(1),
     postalCode: z.string().min(1),
     serviceDayId: z.string().min(1),
+    serviceDayOfWeek: z.string().min(1),
     requestDate: z.string(),
     notes: z.string().optional(),
     isPickUp: z.boolean(),
@@ -83,6 +84,7 @@ export const POST = async (request: NextRequest) => {
       province,
       postalCode,
       serviceDayId,
+      serviceDayOfWeek,
       requestDate,
       notes,
       isPickUp,
@@ -123,6 +125,17 @@ export const POST = async (request: NextRequest) => {
     }
 
     // OPTIMIZATION 3: Parallel validation queries (user + serviceDay)
+    const parts = serviceDayOfWeek.split("-");
+
+    if (parts.length < 2 || isNaN(Number(parts[0]))) {
+      return NextResponse.json(
+        { error: "Invalid service day of week" },
+        { status: 400 }
+      );
+    }
+
+    const dayOfWeek = Number(parts[0]);
+
     const [existingUser, serviceDay] = await Promise.all([
       prisma.user.findUnique({
         where: { email },
@@ -130,6 +143,7 @@ export const POST = async (request: NextRequest) => {
       }),
       prisma.serviceDay.findUnique({
         where: { id: serviceDayId },
+        include: { weekdays: { where: { dayOfWeek } } },
       }),
     ]);
 
@@ -147,7 +161,14 @@ export const POST = async (request: NextRequest) => {
       );
     }
 
-    const dayValidation = validateDayOfWeek(serviceDay, normalizedRequestDate);
+    if (serviceDay.weekdays.length === 0) {
+      return NextResponse.json(
+        { error: "Service day does not support the requested day of week" },
+        { status: 400 }
+      );
+    }
+
+    const dayValidation = validateDayOfWeek(dayOfWeek, normalizedRequestDate);
     if (!dayValidation.valid) {
       return NextResponse.json({ error: dayValidation.error }, { status: 400 });
     }
@@ -187,10 +208,12 @@ export const POST = async (request: NextRequest) => {
 
     // Calculate request dates before transaction
     let allRequestDates: Date[] = [];
+    const serviceWeekdayId = serviceDay.weekdays[0].id;
     if (isRecurring && endDate) {
+      const serviceDayOfWeek = serviceDay.weekdays.map((w) => w.dayOfWeek);
       allRequestDates = getNextOccurrencesOfWeekdays({
         fromDate: normalizedRequestDate,
-        allowedWeekdays: [serviceDay.dayOfWeek],
+        allowedWeekdays: serviceDayOfWeek,
         count: 1,
         endDate: normalizedEndDate,
       });
@@ -253,6 +276,7 @@ export const POST = async (request: NextRequest) => {
               serviceDayId,
               addressId: newAddress.id,
               requestDate: normalizedRequestDate,
+              serviceWeekdayId,
               notes,
               status: "PENDING",
               isPickUp,
@@ -282,6 +306,7 @@ export const POST = async (request: NextRequest) => {
                   serviceDayId,
                   addressId: newAddress.id,
                   requestDate: d,
+                  serviceWeekdayId,
                   isPickUp,
                   isDropOff,
                   notes,
@@ -318,6 +343,7 @@ export const POST = async (request: NextRequest) => {
               adminId: session.user.id,
               seriesId,
               serviceDayId,
+              dayOfWeek,
               addressId: newAddress.id,
             },
           })
@@ -328,6 +354,7 @@ export const POST = async (request: NextRequest) => {
               admin: session.user.id,
               requestId: allRequests[0].id,
               serviceDayId,
+              dayOfWeek,
               addressId: newAddress.id,
             },
           }),
