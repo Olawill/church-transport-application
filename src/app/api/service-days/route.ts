@@ -270,7 +270,7 @@ export const PUT = async (request: NextRequest) => {
       }
 
       // Update the service day
-      return await prisma.serviceDay.update({
+      return await tx.serviceDay.update({
         where: { id },
         // data: updateData,
         data: {

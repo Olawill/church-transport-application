@@ -61,21 +61,22 @@ export function formatDate(date: Date): string {
 // Check if pickup request is valid (2 hours before, 30 minutes cutoff)
 export function isValidRequestTime(
   serviceDate: Date,
-  serviceTime: string
+  serviceTime: string,
+  hoursBuffer: number = 2
 ): boolean {
   const [hours, minutes] = serviceTime.split(":").map(Number);
   const serviceDateTime = new Date(serviceDate);
   serviceDateTime.setHours(hours, minutes, 0, 0);
 
   const now = new Date();
-  const twoHoursBefore = new Date(
-    serviceDateTime.getTime() - 2 * 60 * 60 * 1000
+  const minAllowedTime = new Date(
+    serviceDateTime.getTime() - hoursBuffer * 60 * 60 * 1000
   );
-  const thirtyMinutesBefore = new Date(
-    serviceDateTime.getTime() - 30 * 60 * 1000
-  );
+  // const thirtyMinutesBefore = new Date(
+  //   serviceDateTime.getTime() - 30 * 60 * 1000
+  // );
 
-  return now <= twoHoursBefore && now >= thirtyMinutesBefore;
+  return now >= minAllowedTime;
 }
 
 // Get next occurrence of a service day

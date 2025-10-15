@@ -99,10 +99,15 @@ export const ServiceList = ({
 
   // Filter the services based on active status
   const filteredServices = serviceDays.filter((service) => {
-    const activeServices = servicesStatus === "active";
+    if (servicesStatus === "active") {
+      return service.isActive === true;
+    } else if (servicesStatus === "archived") {
+      return service.isActive === false;
+    } else if (servicesStatus === "all") {
+      return true; // show all services
+    }
 
-    const matchesService = service.isActive === activeServices;
-    return matchesService;
+    return false;
   });
 
   const paginatedServices = paginateItems(filteredServices);
@@ -230,6 +235,7 @@ export const ServiceList = ({
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="archived">Archived</SelectItem>
                 </SelectContent>
