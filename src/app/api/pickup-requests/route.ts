@@ -13,8 +13,6 @@ import {
 } from "@/generated/prisma";
 import { AnalyticsService } from "@/lib/analytics";
 import { prisma } from "@/lib/db";
-import { calculateDistance, getNextOccurrencesOfWeekdays } from "@/lib/utils";
-import { serverValidateRequest } from "@/types/newRequestSchema";
 import {
   convertStringDateToDate,
   TRANSACTION_CONFIG,
@@ -22,6 +20,8 @@ import {
   validateEndDateLimit,
   validatePickUpRequestTiming,
 } from "@/lib/pickup-utils";
+import { calculateDistance, getNextOccurrencesOfWeekdays } from "@/lib/utils";
+import { serverValidateRequest } from "@/types/newRequestSchema";
 
 // Zod schema for request validation
 const payloadSchema = z
@@ -29,6 +29,7 @@ const payloadSchema = z
     userId: z.string().optional(),
     requestId: z.string().optional(),
     serviceDayId: z.string().min(1),
+    serviceDayOfWeek: z.string().min(1),
     addressId: z.string(),
     requestDate: z.string(),
     notes: z.string().optional(),
@@ -138,6 +139,7 @@ export const GET = async (request: NextRequest) => {
         },
         serviceDay: true,
         address: true,
+        serviceWeekday: true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -212,6 +214,7 @@ export const POST = async (request: NextRequest) => {
       serviceDayId,
       addressId,
       requestDate,
+      serviceDayOfWeek,
       isPickUp,
       isDropOff,
       isGroupRide,
@@ -232,9 +235,27 @@ export const POST = async (request: NextRequest) => {
     }
 
     // Optimization: Parallel validation queries instead of sequential
+    const parts = serviceDayOfWeek.split("-");
+
+    if (parts.length < 2 || isNaN(Number(parts[0]))) {
+      return NextResponse.json(
+        { error: "Invalid service day of week" },
+        { status: 400 }
+      );
+    }
+
+    const dayOfWeek = Number(parts[0]);
+
     const [serviceDay, address, existingRequest, existingUser] =
       await Promise.all([
-        prisma.serviceDay.findUnique({ where: { id: serviceDayId } }),
+        prisma.serviceDay.findUnique({
+          where: { id: serviceDayId },
+          include: {
+            weekdays: {
+              where: { dayOfWeek },
+            },
+          },
+        }),
         prisma.address.findFirst({
           where: {
             id: addressId,
@@ -294,7 +315,7 @@ export const POST = async (request: NextRequest) => {
     }
 
     // Validate requestDate has the same day of week
-    const dayValidation = validateDayOfWeek(serviceDay, normalizedRequestDate);
+    const dayValidation = validateDayOfWeek(dayOfWeek, normalizedRequestDate);
     if (!dayValidation.valid) {
       return NextResponse.json({ error: dayValidation.error }, { status: 400 });
     }
@@ -315,6 +336,15 @@ export const POST = async (request: NextRequest) => {
     let allRequests: PickupRequest[] = [];
     let seriesId: string | null = null;
 
+    if (serviceDay.weekdays.length === 0) {
+      return NextResponse.json(
+        { error: "Service does not have any service days" },
+        { status: 400 }
+      );
+    }
+
+    const serviceWeekdayId = serviceDay.weekdays[0].id;
+
     if (!isRecurring) {
       const pickupRequest = await prisma.pickupRequest.create({
         data: {
@@ -322,6 +352,7 @@ export const POST = async (request: NextRequest) => {
           serviceDayId,
           addressId,
           requestDate: normalizedRequestDate,
+          serviceWeekdayId,
           isPickUp,
           isDropOff,
           notes,
@@ -339,7 +370,7 @@ export const POST = async (request: NextRequest) => {
       // Get all request dates
       const allRequestDates = getNextOccurrencesOfWeekdays({
         fromDate: normalizedRequestDate,
-        allowedWeekdays: [serviceDay.dayOfWeek],
+        allowedWeekdays: [dayOfWeek],
         count: 1,
         endDate: normalizedEndDate,
       });
@@ -360,6 +391,7 @@ export const POST = async (request: NextRequest) => {
                 serviceDayId,
                 addressId,
                 requestDate: d,
+                serviceWeekdayId,
                 isPickUp,
                 isDropOff,
                 notes,
@@ -394,6 +426,7 @@ export const POST = async (request: NextRequest) => {
             adminId: session.user.id,
             ...(isRecurring ? { seriesId } : { requestId: allRequests[0].id }),
             serviceDayId,
+            dayOfWeek,
             addressId,
           },
         })
@@ -401,13 +434,14 @@ export const POST = async (request: NextRequest) => {
         ? AnalyticsService.trackEvent({
             eventType: "recurring_pickup_request_created",
             userId: session.user.id,
-            metadata: { seriesId, serviceDayId, addressId },
+            metadata: { seriesId, serviceDayId, dayOfWeek, addressId },
           })
         : AnalyticsService.trackPickupRequest(
             session.user.id,
             allRequests[0].id,
             serviceDayId,
-            addressId
+            addressId,
+            dayOfWeek
           );
 
     // Don't await analytics - let it complete in background
@@ -448,6 +482,7 @@ export const PATCH = async (request: NextRequest) => {
       requestId,
       userId,
       serviceDayId,
+      serviceDayOfWeek,
       addressId,
       requestDate,
       isDropOff,
@@ -463,10 +498,28 @@ export const PATCH = async (request: NextRequest) => {
     const targetUserId = isAdmin ? userId : session.user.id;
 
     // OPTIMIZATION: Parallel validation queries
+    const parts = serviceDayOfWeek.split("-");
+
+    if (parts.length < 2 || isNaN(Number(parts[0]))) {
+      return NextResponse.json(
+        { error: "Invalid service day of week" },
+        { status: 400 }
+      );
+    }
+
+    const dayOfWeek = Number(parts[0]);
+
     const [existingRequest, serviceDay, address, existingUser] =
       await Promise.all([
         prisma.pickupRequest.findUnique({ where: { id: requestId } }),
-        prisma.serviceDay.findUnique({ where: { id: serviceDayId } }),
+        prisma.serviceDay.findUnique({
+          where: { id: serviceDayId },
+          include: {
+            weekdays: {
+              where: { dayOfWeek },
+            },
+          },
+        }),
         prisma.address.findFirst({
           where: { id: addressId, userId: targetUserId },
         }),
@@ -522,8 +575,8 @@ export const PATCH = async (request: NextRequest) => {
       );
     }
 
-    //Verify requestDate's day is the same as serive day
-    const dayValidation = validateDayOfWeek(serviceDay, normalizedRequestDate);
+    //Verify requestDate's day is the same as series day
+    const dayValidation = validateDayOfWeek(dayOfWeek, normalizedRequestDate);
     if (!dayValidation.valid) {
       return NextResponse.json({ error: dayValidation.error }, { status: 400 });
     }
@@ -638,7 +691,7 @@ export const PATCH = async (request: NextRequest) => {
           // Get all dates
           const allDates = getNextOccurrencesOfWeekdays({
             fromDate: normalizedRequestDate,
-            allowedWeekdays: [serviceDay.dayOfWeek],
+            allowedWeekdays: [dayOfWeek],
             count: totalCount,
           });
 
@@ -703,6 +756,7 @@ export const PATCH = async (request: NextRequest) => {
               ? { seriesId: existingRequest.seriesId }
               : { requestId: allUpdatedRequest[0].id }),
             serviceDayId,
+            dayOfWeek,
             addressId,
           },
         })
@@ -713,6 +767,7 @@ export const PATCH = async (request: NextRequest) => {
             metadata: {
               seriesId: existingRequest.seriesId,
               serviceDayId,
+              dayOfWeek,
               addressId,
             },
           })
@@ -722,6 +777,7 @@ export const PATCH = async (request: NextRequest) => {
             metadata: {
               requestId: allUpdatedRequest[0].id,
               serviceDayId,
+              dayOfWeek,
               addressId,
             },
           });

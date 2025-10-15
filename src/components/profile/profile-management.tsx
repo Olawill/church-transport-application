@@ -367,7 +367,6 @@ export const ProfileManagement = () => {
         const error = response.error;
         toast.error(error || "Failed to update branch");
       }
-      console.log("Updating branch");
     } catch (error) {
       console.error("Error updating branch:", error);
       toast.error("Failed to update branch");

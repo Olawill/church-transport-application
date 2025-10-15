@@ -19,7 +19,11 @@ const NewRequestPage = async () => {
   return (
     <>
       {session.user.role === UserRole.ADMIN ? (
-        <AdminNewUserRequest isNewUser={false} />
+        <AdminNewUserRequest
+          isNewUser={false}
+          isGroupRequest={false}
+          isRecurringRequest={false}
+        />
       ) : (
         <NewRequestForm />
       )}

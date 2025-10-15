@@ -21,15 +21,19 @@ type ValidateRequestDateResult =
     };
 
 export const validateRequestDate = async (
-  requestDate: Date,
+  requestServiceDayOfWeek: number,
   serviceDayId: string
 ): Promise<ValidateRequestDateResult> => {
-  const requestDayOfWeek = requestDate.getDay();
-
   const serviceDayOfWeek = await prisma.serviceDay.findUnique({
     where: { id: serviceDayId },
     select: {
-      dayOfWeek: true,
+      weekdays: {
+        where: {
+          serviceDayId: serviceDayId,
+          dayOfWeek: requestServiceDayOfWeek,
+        },
+        select: { dayOfWeek: true },
+      },
     },
   });
 
@@ -42,8 +46,26 @@ export const validateRequestDate = async (
     };
   }
 
-  const isServiceDayOfWeek = requestDayOfWeek === serviceDayOfWeek.dayOfWeek;
-  const dayOfWeek = getDayNameFromNumber(serviceDayOfWeek.dayOfWeek);
+  const serviceDayWeekDayLength = serviceDayOfWeek.weekdays.length;
+  if (serviceDayWeekDayLength === 0) {
+    return {
+      success: false,
+      error: true,
+      message: "Requested day of week is not a service day.",
+      validData: null,
+    };
+  }
+
+  const dayOfWeek =
+    serviceDayWeekDayLength > 1
+      ? "Multiple"
+      : getDayNameFromNumber(serviceDayOfWeek.weekdays[0].dayOfWeek);
+  const isServiceDayOfWeek =
+    serviceDayWeekDayLength > 1
+      ? serviceDayOfWeek.weekdays
+          .map((d) => d.dayOfWeek)
+          .includes(requestServiceDayOfWeek)
+      : serviceDayOfWeek.weekdays[0].dayOfWeek === requestServiceDayOfWeek;
 
   return {
     success: true,

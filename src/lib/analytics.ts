@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { getDayNameFromNumber } from "./utils";
 
 export interface AnalyticsEvent {
   eventType: string;
@@ -63,7 +64,8 @@ export class AnalyticsService {
     userId: string,
     requestId: string,
     serviceDayId: string,
-    addressId: string
+    addressId: string,
+    dayOfWeek: number
   ): Promise<void> {
     await this.trackEvent({
       eventType: "pickup_request",
@@ -71,6 +73,7 @@ export class AnalyticsService {
       metadata: {
         requestId,
         serviceDayId,
+        dayOfWeek,
         addressId,
         timestamp: new Date().toISOString(),
       },
@@ -238,8 +241,6 @@ export class AnalyticsService {
       [] as { date: string; count: number }[]
     );
 
-    // console.log(result);
-
     // return requests.map((item) => ({
     //   date: item.date.toISOString().split("T")[0],
     //   count: item._count.id,
@@ -373,46 +374,135 @@ export class AnalyticsService {
   /**
    * Get popular service days
    */
-  static async getPopularServiceDays() {
-    const serviceDayRequests = await prisma.analytics.findMany({
-      where: {
-        eventType: "pickup_request",
-      },
-    });
+  static async getPopularServiceDays(options?: {
+    startDate?: Date;
+    endDate?: Date;
+    days?: number; // e.g., 7 for past 7 days, 30 for past 30 days
+  }) {
+    try {
+      // Determine the date range
+      const now = new Date();
+      let startDate: Date;
+      const endDate: Date = options?.endDate || now;
 
-    // Group by service day from metadata
-    const serviceDayStats: Record<string, number> = {};
+      if (options?.startDate) {
+        startDate = options.startDate;
+      } else if (options?.days) {
+        startDate = new Date(
+          now.getTime() - options.days * 24 * 60 * 60 * 1000
+        );
+      } else {
+        // Default to past 30 days
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      }
 
-    for (const request of serviceDayRequests) {
-      if (request.metadata) {
+      // Get all pickup request analytics events
+      const serviceDayRequests = await prisma.analytics.findMany({
+        where: {
+          eventType: "pickup_request",
+          createdAt: {
+            gte: startDate,
+            lte: endDate,
+          },
+        },
+        select: {
+          metadata: true,
+        },
+      });
+
+      // Group by service day from metadata
+      const serviceDayStats: Record<string, number> = {};
+      const serviceDayWeekdays: Record<string, Record<number, number>> = {};
+
+      for (const request of serviceDayRequests) {
+        if (!request.metadata) continue;
+
         try {
           const metadata = JSON.parse(request.metadata);
-          const serviceDayId = metadata.serviceDayId;
-          if (serviceDayId) {
+          const serviceDayId = metadata?.serviceDayId;
+          const dayOfWeek = metadata?.dayOfWeek;
+
+          if (typeof serviceDayId === "string") {
             serviceDayStats[serviceDayId] =
               (serviceDayStats[serviceDayId] || 0) + 1;
+
+            // Track which weekdays are most popular for this service
+            if (typeof dayOfWeek === "number") {
+              if (!serviceDayWeekdays[serviceDayId]) {
+                serviceDayWeekdays[serviceDayId] = {};
+              }
+              serviceDayWeekdays[serviceDayId][dayOfWeek] =
+                (serviceDayWeekdays[serviceDayId][dayOfWeek] || 0) + 1;
+            }
           }
-        } catch (error) {
-          // Skip invalid metadata
-          console.error("Invalid metadata:", error);
+        } catch (err) {
+          console.error("Failed to parse metadata for analytics row:", err);
         }
       }
+
+      const serviceDayIds = Object.keys(serviceDayStats);
+      if (serviceDayIds.length === 0) return [];
+
+      // Step 3: Get matching ServiceDay records
+      const serviceDays = await prisma.serviceDay.findMany({
+        where: { id: { in: serviceDayIds }, isActive: true },
+        include: {
+          weekdays: {
+            orderBy: {
+              dayOfWeek: "asc",
+            },
+          },
+        },
+      });
+
+      return serviceDays
+        .map((serviceDay) => {
+          // Get the most popular weekday for this service from metadata
+          const weekdayStats = serviceDayWeekdays[serviceDay.id] || {};
+          const mostPopularDayOfWeek = Object.entries(weekdayStats)
+            .sort(
+              ([, countA], [, countB]) =>
+                (countB as number) - (countA as number)
+            )
+            .map(([day]) => Number(day))[0];
+
+          // Format all weekdays as a comma-separated string
+          const weekdayNames = serviceDay.weekdays
+            .map((w) => getDayNameFromNumber(w.dayOfWeek))
+            .join(", ");
+
+          return {
+            id: serviceDay.id,
+            name: serviceDay.name,
+            time: serviceDay.time,
+            serviceType: serviceDay.serviceType,
+            serviceCategory: serviceDay.serviceCategory,
+            frequency: serviceDay.frequency,
+            // All weekdays with their request counts
+            weekdays: serviceDay.weekdays.map((w) => ({
+              id: w.id,
+              dayOfWeek: w.dayOfWeek,
+              dayName: getDayNameFromNumber(w.dayOfWeek),
+              requestCount: weekdayStats[w.dayOfWeek] || 0,
+            })),
+            // Formatted string of all available days
+            daysOfWeek: weekdayNames,
+            // Most popular weekday name based on actual requests
+            dayOfWeek:
+              mostPopularDayOfWeek !== undefined
+                ? getDayNameFromNumber(mostPopularDayOfWeek)
+                : serviceDay.weekdays[0]
+                  ? getDayNameFromNumber(serviceDay.weekdays[0].dayOfWeek)
+                  : null,
+            requestCount: serviceDayStats[serviceDay.id] || 0,
+          };
+        })
+        .sort((a, b) => b.requestCount - a.requestCount)
+        .slice(0, 5); // Return top 5
+    } catch (error) {
+      console.error("Error fetching popular service days:", error);
+      return [];
     }
-
-    // Get service day details
-    const serviceDays = await prisma.serviceDay.findMany({
-      where: { id: { in: Object.keys(serviceDayStats) } },
-    });
-
-    return serviceDays
-      .map((serviceDay) => ({
-        id: serviceDay.id,
-        name: serviceDay.name,
-        dayOfWeek: serviceDay.dayOfWeek,
-        time: serviceDay.time,
-        requestCount: serviceDayStats[serviceDay.id] || 0,
-      }))
-      .sort((a, b) => b.requestCount - a.requestCount);
 
     // try {
     //   const requests = await prisma.analytics.findMany({

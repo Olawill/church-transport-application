@@ -1,9 +1,13 @@
 import { clsx, type ClassValue } from "clsx";
+import { addDays, addMonths, format, setDay, startOfMonth } from "date-fns";
 import { twMerge } from "tailwind-merge";
-import { Frequency, frequencyMap, Ordinal, ordinalMap } from "./types";
-import { format } from "date-fns/format";
-import { setDay } from "date-fns/setDay";
-import { addDays, addMonths, startOfMonth } from "date-fns";
+import {
+  Frequency,
+  frequencyMap,
+  Ordinal,
+  ordinalMap,
+  ServiceDay,
+} from "./types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -57,21 +61,39 @@ export function formatDate(date: Date): string {
 // Check if pickup request is valid (2 hours before, 30 minutes cutoff)
 export function isValidRequestTime(
   serviceDate: Date,
-  serviceTime: string
+  serviceTime: string,
+  hoursBuffer: number = 2
 ): boolean {
   const [hours, minutes] = serviceTime.split(":").map(Number);
   const serviceDateTime = new Date(serviceDate);
   serviceDateTime.setHours(hours, minutes, 0, 0);
 
   const now = new Date();
-  const twoHoursBefore = new Date(
-    serviceDateTime.getTime() - 2 * 60 * 60 * 1000
+  const minAllowedTime = new Date(
+    serviceDateTime.getTime() - hoursBuffer * 60 * 60 * 1000
   );
-  const thirtyMinutesBefore = new Date(
-    serviceDateTime.getTime() - 30 * 60 * 1000
+  // const thirtyMinutesBefore = new Date(
+  //   serviceDateTime.getTime() - 30 * 60 * 1000
+  // );
+
+  return now >= minAllowedTime;
+}
+
+export function isWithinRequestBuffer(
+  serviceDate: Date,
+  serviceTime: string,
+  hoursBuffer: number = 2
+): boolean {
+  const [hours, minutes] = serviceTime.split(":").map(Number);
+  const serviceDateTime = new Date(serviceDate);
+  serviceDateTime.setHours(hours, minutes, 0, 0);
+
+  const now = new Date();
+  const minAllowedTime = new Date(
+    serviceDateTime.getTime() - hoursBuffer * 60 * 60 * 1000
   );
 
-  return now <= twoHoursBefore && now >= thirtyMinutesBefore;
+  return now >= minAllowedTime;
 }
 
 // Get next occurrence of a service day
@@ -88,6 +110,35 @@ export function getNextServiceDate(dayOfWeek: number): Date {
   nextDate.setDate(today.getDate() + daysToAdd);
   nextDate.setHours(0, 0, 0, 0);
   return nextDate;
+}
+
+export function getNextServiceDateMod({
+  fromDate,
+  allowedWeekdays,
+  endDate,
+  frequency = "WEEKLY",
+  ordinal = "NEXT",
+}: {
+  fromDate: Date;
+  allowedWeekdays: number[];
+  endDate?: Date;
+  frequency?: Frequency;
+  ordinal?: Ordinal;
+}): Date | null {
+  // Start from tomorrow to skip today
+  const tomorrow = new Date(fromDate);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const nextOccurrences = getNextOccurrencesOfWeekdays({
+    fromDate: tomorrow,
+    allowedWeekdays,
+    count: 1,
+    endDate,
+    frequency,
+    ordinal,
+  });
+
+  return nextOccurrences.length > 0 ? nextOccurrences[0] : null;
 }
 
 export function getNextOccurrencesOfWeekdays({
@@ -349,4 +400,73 @@ export const getDayNameFromNumber = (dayNumber: number) => {
   // `setDay` sets the day of week on a given base date
   const date = setDay(new Date(), dayNumber);
   return format(date, "EEEE"); // EEEE = full weekday name
+};
+
+export const getServiceDayOptions = (service: ServiceDay) => {
+  if (service.weekdays && service.weekdays.length > 1) {
+    // Multi-day service with cycles - generate options
+    const options: Array<{ value: string; label: string; dayOfWeek: number }> =
+      [];
+
+    if (service.cycle && service.cycle >= 1 && !service.endDate) {
+      if (service.frequency !== "DAILY") {
+        for (let cycleDay = 1; cycleDay <= service.cycle; cycleDay++) {
+          service.weekdays.forEach((weekday) => {
+            options.push({
+              value: `${weekday.dayOfWeek}-${options.length + 1}`,
+              label: `Day ${options.length + 1}`,
+              dayOfWeek: weekday.dayOfWeek,
+            });
+          });
+        }
+        return options;
+      } else {
+        while (options.length < service.cycle) {
+          for (const weekday of service.weekdays) {
+            if (options.length >= service.cycle) break;
+
+            options.push({
+              value: `${weekday.dayOfWeek}-${options.length + 1}`,
+              label: `Day ${options.length + 1}`,
+              dayOfWeek: weekday.dayOfWeek,
+            });
+          }
+        }
+        return options;
+      }
+    }
+
+    if (
+      (service.cycle && service.endDate) ||
+      (!service.cycle && service.endDate)
+    ) {
+      const fromDate = service.startDate || new Date();
+      const allowedWeekdays = service.weekdays.map(
+        (weekday) => weekday.dayOfWeek
+      );
+
+      const occurrences = getNextOccurrencesOfWeekdays({
+        fromDate,
+        allowedWeekdays,
+        count: 1,
+        endDate: service.endDate,
+        frequency: service.frequency,
+        ordinal: service.ordinal,
+      });
+
+      // Generate options using actual occurrence dates
+      const options = occurrences.map((date, index) => {
+        const dayOfWeek = date.getDay(); // 0 - Sunday, 4 - Thursday, etc.
+
+        return {
+          value: `${dayOfWeek}-${index + 1}`,
+          label: `Day ${index + 1}`,
+          dayOfWeek,
+        };
+      });
+
+      return options;
+    }
+  }
+  return [];
 };

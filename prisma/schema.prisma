@@ -33,6 +33,34 @@ enum ServiceType {
   SPECIAL
 }
 
+enum ServiceCategory {
+  ONETIME_ONEDAY
+  ONETIME_MULTIDAY
+  FREQUENT_MULTIDAY
+  RECURRING
+}
+
+enum Frequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  EVERY_2_MONTHS
+  QUARTERLY
+  EVERY_4_MONTHS
+  EVERY_6_MONTHS
+  YEARLY
+  NONE
+}
+
+enum Ordinal {
+  NEXT
+  FIRST
+  SECOND
+  THIRD
+  FOURTH
+  LAST
+}
+
 enum BranchType {
   HEADQUARTER
   BRANCH
@@ -161,23 +189,48 @@ model Address {
 model ServiceDay {
   id                  String            @id @default(cuid())
   name                String
-  dayOfWeek           Int               // 0 = Sunday, 1 = Monday, etc.
+
   time                String            // Format: "HH:MM" (24-hour)
   serviceType         ServiceType       @default(REGULAR)
   isActive            Boolean           @default(true)
+
+  startDate           DateTime?         // For one-time or multi-day services
+  endDate             DateTime?         // For multi-day services
+  serviceCategory     ServiceCategory   @default(RECURRING)
+  ordinal             Ordinal           @default(NEXT)
+  frequency           Frequency         @default(WEEKLY)
+  cycle               Int?
+  // cycleType           CycleType?
+
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
   pickupRequests      PickupRequest[]
+  weekdays            ServiceDayWeekday[]
 
   @@map("service_days")
 }
 
+model ServiceDayWeekday {
+  id           String      @id @default(cuid())
+  serviceDayId String
+  dayOfWeek    Int         // 0 = Sunday, 1 = Monday, etc.
+
+  serviceDay   ServiceDay  @relation(fields: [serviceDayId], references: [id], onDelete: Cascade)
+  rides        PickupRequest[]
+
+  @@unique([serviceDayId, dayOfWeek])
+}
+
 model PickupRequest {
   id                  String            @id @default(cuid())
+
   userId              String
   driverId            String?
+
   serviceDayId        String
+  serviceWeekdayId    String
+
   addressId           String
   requestDate         DateTime          // The date of the service
   status              RequestStatus     @default(PENDING)
@@ -187,7 +240,8 @@ model PickupRequest {
   isGroupRide         Boolean           @default(false)
   numberOfGroup       Int?
   distance            Float?            // Distance from driver to pickup location
-  seriesId   String?         // FK to PickupSeries
+  seriesId            String?           // FK to PickupSeries
+
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
@@ -197,11 +251,13 @@ model PickupRequest {
   address             Address           @relation(fields: [addressId], references: [id])
 
   cancelledRequests   DriverRequestCancel[]
-  series     PickupSeries?   @relation(fields: [seriesId], references: [id])
+  serviceWeekday      ServiceDayWeekday @relation(fields: [serviceWeekdayId], references: [id])
+  series              PickupSeries?     @relation(fields: [seriesId], references: [id])
 
   @@index([userId, serviceDayId, requestDate]) // For duplicate checking
   @@index([seriesId, requestDate]) // For series queries
   @@index([status, requestDate]) // For filtering
+  @@index([serviceDayId, serviceWeekdayId])
   @@map("pickup_requests")
 }
 

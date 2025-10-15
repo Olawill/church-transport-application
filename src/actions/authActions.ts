@@ -24,8 +24,6 @@ export const signInAction = async (values: LoginSchema) => {
   //   redirectTo: "/dashboard",
   // });
 
-  // console.log({ result });
-
   // return { result };
   try {
     await signIn("credentials", {

@@ -73,11 +73,14 @@ export const PUT = async (
   }
 };
 
-export const DELETE = async ({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) => {
+export const DELETE = async (
+  req: NextRequest,
+  {
+    params,
+  }: {
+    params: Promise<{ id: string }>;
+  }
+) => {
   try {
     const session = await auth();
 

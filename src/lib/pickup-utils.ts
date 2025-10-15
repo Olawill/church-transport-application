@@ -1,6 +1,6 @@
 import { ServiceDay } from "@/generated/prisma";
+import { differenceInMonths } from "date-fns";
 import { getDayNameFromNumber } from "./utils";
-import { differenceInMonths } from "date-fns/differenceInMonths";
 
 export const validatePickUpRequestTiming = (
   serviceDay: ServiceDay,
@@ -33,14 +33,14 @@ export const validatePickUpRequestTiming = (
 };
 
 export const validateDayOfWeek = (
-  serviceDay: ServiceDay,
+  serviceDayOfWeek: number,
   requestDate: Date
 ) => {
   const serviceDateTime = new Date(requestDate);
   const requestDayOfWeek = serviceDateTime.getDay();
 
-  if (requestDayOfWeek !== serviceDay.dayOfWeek) {
-    const dayOfWeek = getDayNameFromNumber(serviceDay.dayOfWeek);
+  if (requestDayOfWeek !== serviceDayOfWeek) {
+    const dayOfWeek = getDayNameFromNumber(serviceDayOfWeek);
     return {
       valid: false,
       error: `Request date should be a ${dayOfWeek}`,

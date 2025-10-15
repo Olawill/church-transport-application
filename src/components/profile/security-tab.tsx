@@ -143,7 +143,11 @@ export const SecurityTab = ({
               />
 
               {/* Update Button */}
-              <Button type="submit" className="w-full">
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={!securityForm.formState.isDirty}
+              >
                 Update Password
               </Button>
             </form>

@@ -1,5 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 "use client";
+
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -45,13 +46,16 @@ import {
 import Link from "next/link";
 import { toast } from "sonner";
 
+import { useConfirm } from "@/hooks/use-confirm";
 import { Address, ServiceDay, User } from "@/lib/types";
 import {
   cn,
   formatAddress,
   formatDate,
   formatTime,
+  getNextOccurrencesOfWeekdays,
   getNextServiceDate,
+  getServiceDayOptions,
 } from "@/lib/utils";
 import { NewUserSchema } from "@/types/adminCreateNewUserSchema";
 import {
@@ -63,16 +67,17 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm, UseFormReturn, useWatch } from "react-hook-form";
+import { getDayNameFromNumber } from "../../lib/utils";
 import { PickUpDropOffField } from "../requests/pickup-dropoff-field";
 import { Input } from "../ui/input";
 import { Switch } from "../ui/switch";
-import { useConfirm } from "@/hooks/use-confirm";
+import { ServiceDaySelector } from "./services/service-day-selector";
 
 interface AdminNewUserRequestProps {
   isNewUser: boolean;
   isGroupRequest: boolean;
   isRecurringRequest: boolean;
-  formRequestDate: Date | undefined;
+  formRequestDate?: Date | undefined;
   form?: UseFormReturn<NewUserSchema>;
   newRequestData?: NewAdminRequestSchema & {
     requestId: string;
@@ -99,18 +104,23 @@ const AdminNewUserRequest = ({
   const [selectedService, setSelectedService] = useState<ServiceDay | null>(
     null
   );
+  const [dayOptions, setDayOptions] = useState<
+    Array<{ value: string; label: string; dayOfWeek: number }>
+  >([]);
+  const [selectedDayOfWeek, setSelectedDayOfWeek] = useState<number | null>(
+    null
+  );
+
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   const [SeriesUpdateDialog, confirmSeriesUpdate] = useConfirm(
     "Update Series",
-    "Do you want to update the entire occurence?",
+    "Do you want to update the entire occurrence?",
     true,
-    "Update occurence",
+    "Update occurrence",
     "Update series"
   );
-
-  console.log({ newRequestData });
 
   const newRequestForm = useForm<NewAdminRequestSchema>({
     resolver: zodResolver(newAdminRequestSchema),
@@ -118,13 +128,17 @@ const AdminNewUserRequest = ({
       userId: newRequestData?.userId || "",
       serviceDayId: newRequestData?.serviceDayId || "",
       addressId: newRequestData?.addressId || "",
-      requestDate: newRequestData?.requestDate || undefined,
+      requestDate: newRequestData?.requestDate
+        ? new Date(newRequestData.requestDate)
+        : undefined,
       isPickUp: newRequestData?.isPickUp ?? true,
       isDropOff: newRequestData?.isDropOff ?? false,
       isGroupRide: newRequestData?.isGroupRide ?? false,
       numberOfGroup: newRequestData?.numberOfGroup ?? null,
       isRecurring: newRequestData?.isRecurring ?? false,
-      endDate: newRequestData?.endDate ?? undefined,
+      endDate: newRequestData?.endDate
+        ? new Date(newRequestData.endDate)
+        : undefined,
       notes: newRequestData?.notes || "",
     },
   });
@@ -142,12 +156,61 @@ const AdminNewUserRequest = ({
       setSelectedService(service || null);
 
       if (service) {
-        // Set default request date to next occurrence of this service
-        const nextDate = getNextServiceDate(service.dayOfWeek);
-        // form.setValue("requestDate", nextDate.toISOString().split("T")[0]);
-        form?.setValue("requestDate", nextDate);
+        if (
+          service.weekdays?.length === 1 &&
+          service.serviceCategory === "RECURRING"
+        ) {
+          // Single day service - auto select
+          const dayOfWeek = service.weekdays[0].dayOfWeek;
+          setSelectedDayOfWeek(dayOfWeek);
+          setDayOptions([]);
+          // Set default request date to next occurrence of this service
+          const nextDate = getNextServiceDate(dayOfWeek);
+          form?.setValue("serviceDayOfWeek", `${dayOfWeek}-${1}`);
+          form?.setValue("requestDate", nextDate);
+        } else if (
+          service.weekdays?.length === 1 &&
+          service.serviceCategory === "ONETIME_ONEDAY"
+        ) {
+          // Single day service - auto select
+          const dayOfWeek = service.weekdays[0].dayOfWeek;
+          const serviceStartDateDayOfWeek =
+            service.startDate && new Date(service?.startDate).getDay();
+
+          setDayOptions([]);
+
+          if (serviceStartDateDayOfWeek === dayOfWeek && service.startDate) {
+            setSelectedDayOfWeek(dayOfWeek);
+            const occurrences = getNextOccurrencesOfWeekdays({
+              fromDate: new Date(service?.startDate),
+              allowedWeekdays: [dayOfWeek],
+              count: 1,
+              frequency: service.frequency,
+              ordinal: service.ordinal,
+            });
+
+            if (occurrences.length > 0) {
+              const nextDate = occurrences[0];
+              form?.setValue("serviceDayOfWeek", `${dayOfWeek}-${1}`);
+              form?.setValue("requestDate", nextDate);
+            }
+          }
+        } else if (
+          service.weekdays &&
+          service.weekdays?.length > 1 &&
+          service.cycle &&
+          service.cycle >= 1
+        ) {
+          const options = getServiceDayOptions(service);
+
+          setDayOptions(options);
+          setSelectedDayOfWeek(null);
+
+          // Reset request date until user selects a day
+          form?.setValue("serviceDayOfWeek", undefined);
+          form?.resetField("requestDate");
+        }
       }
-      // }
     }
   }, [serviceDayId, serviceDays]);
 
@@ -157,17 +220,63 @@ const AdminNewUserRequest = ({
   });
 
   useEffect(() => {
-    if (!newRequestData && newServiceDayId && serviceDays.length > 0) {
+    if (newServiceDayId && serviceDays.length > 0) {
       const service = serviceDays.find((s) => s.id === newServiceDayId);
       setSelectedService(service || null);
 
       if (service) {
-        // Set default request date to next occurrence of this service
-        const nextDate = getNextServiceDate(service.dayOfWeek);
-        // form.setValue("requestDate", nextDate.toISOString().split("T")[0]);
-        newRequestForm.setValue("requestDate", nextDate);
+        if (
+          service.weekdays?.length === 1 &&
+          service.serviceCategory === "RECURRING"
+        ) {
+          // Single day service - auto select
+          const dayOfWeek = service.weekdays[0].dayOfWeek;
+          setSelectedDayOfWeek(dayOfWeek);
+          setDayOptions([]);
+          // Set default request date to next occurrence of this service
+          const nextDate = getNextServiceDate(dayOfWeek);
+          newRequestForm.setValue("serviceDayOfWeek", `${dayOfWeek}-${1}`);
+          newRequestForm.setValue("requestDate", nextDate);
+        } else if (
+          service.weekdays?.length === 1 &&
+          service.serviceCategory === "ONETIME_ONEDAY"
+        ) {
+          // Single day service - auto select
+          const dayOfWeek = service.weekdays[0].dayOfWeek;
+          const serviceStartDateDayOfWeek =
+            service.startDate && new Date(service?.startDate).getDay();
+
+          setDayOptions([]);
+
+          if (serviceStartDateDayOfWeek === dayOfWeek && service.startDate) {
+            setSelectedDayOfWeek(dayOfWeek);
+            const nextDate = getNextOccurrencesOfWeekdays({
+              fromDate: new Date(service?.startDate),
+              allowedWeekdays: [dayOfWeek],
+              count: 1,
+              frequency: service.frequency,
+              ordinal: service.ordinal,
+            })[0];
+
+            newRequestForm.setValue("serviceDayOfWeek", `${dayOfWeek}-${1}`);
+            newRequestForm.setValue("requestDate", nextDate);
+          }
+        } else if (
+          service.weekdays &&
+          service.weekdays?.length > 1 &&
+          service.cycle &&
+          service.cycle >= 1
+        ) {
+          const options = getServiceDayOptions(service);
+
+          setDayOptions(options);
+          setSelectedDayOfWeek(null);
+
+          // Reset request date until user selects a day
+          newRequestForm.setValue("serviceDayOfWeek", undefined);
+          newRequestForm.resetField("requestDate");
+        }
       }
-      // }
     }
   }, [newServiceDayId, serviceDays]);
 
@@ -189,7 +298,7 @@ const AdminNewUserRequest = ({
 
   const fetchServiceDays = async () => {
     try {
-      const response = await fetch("/api/service-days");
+      const response = await fetch("/api/service-days?status=active");
       if (response.ok) {
         const data = await response.json();
         setServiceDays(data);
@@ -299,9 +408,6 @@ const AdminNewUserRequest = ({
       toast.error("Please fill in all required fields");
       return;
     }
-
-    console.log(validatedFields.data);
-
     setLoading(true);
 
     try {
@@ -380,11 +486,11 @@ const AdminNewUserRequest = ({
   return (
     <>
       <SeriesUpdateDialog />
-      {isNewUser ? (
+      {isNewUser && form ? (
         <>
           {/* Service Selection */}
           <FormField
-            control={form?.control}
+            control={form.control}
             name="serviceDayId"
             render={({ field }) => {
               return (
@@ -412,24 +518,13 @@ const AdminNewUserRequest = ({
                       ))}
                     </SelectContent>
                   </Select>
-                  {selectedService && (
+                  {selectedService && selectedDayOfWeek != null && (
                     <FormDescription className="mt-2 p-3 bg-blue-50 rounded-lg">
                       <span className="flex items-center space-x-2 text-sm text-blue-700">
                         <Clock className="h-4 w-4" />
                         <span>
                           Service starts at {formatTime(selectedService.time)}{" "}
-                          every{" "}
-                          {
-                            [
-                              "Sunday",
-                              "Monday",
-                              "Tuesday",
-                              "Wednesday",
-                              "Thursday",
-                              "Friday",
-                              "Saturday",
-                            ][selectedService.dayOfWeek]
-                          }
+                          every {getDayNameFromNumber(selectedDayOfWeek)}
                         </span>
                       </span>
                     </FormDescription>
@@ -440,9 +535,19 @@ const AdminNewUserRequest = ({
             }}
           />
 
+          {/* Day of Week Selection - Only show for multi-day services */}
+          {dayOptions.length > 0 && (
+            <ServiceDaySelector
+              form={form}
+              selectedService={selectedService}
+              dayOptions={dayOptions}
+              setSelectedDayOfWeek={setSelectedDayOfWeek}
+            />
+          )}
+
           {/* Date Selection */}
           <FormField
-            control={form?.control}
+            control={form.control}
             name="requestDate"
             render={({ field }) => {
               const today = new Date();
@@ -488,7 +593,7 @@ const AdminNewUserRequest = ({
                     </PopoverContent>
                   </Popover>
                   <FormDescription className="text-xs text-gray-500">
-                    Requests must be made at least 1 hour before the service
+                    Requests must be made at least 2 hour before the service
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -504,7 +609,7 @@ const AdminNewUserRequest = ({
           {/* Group Ride */}
           <div className="flex flex-col justify-between rounded-lg border p-3 shadow-sm mt-4">
             <FormField
-              control={form?.control}
+              control={form.control}
               name="isGroupRide"
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between pb-3">
@@ -529,7 +634,7 @@ const AdminNewUserRequest = ({
 
             {isGroupRequest && (
               <FormField
-                control={form?.control}
+                control={form.control}
                 name="numberOfGroup"
                 render={({ field }) => (
                   <FormItem>
@@ -559,7 +664,7 @@ const AdminNewUserRequest = ({
           {/* Recurring Request */}
           <div className="flex flex-col justify-between rounded-lg border p-3 shadow-sm">
             <FormField
-              control={form?.control}
+              control={form.control}
               name="isRecurring"
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between pb-3">
@@ -592,7 +697,7 @@ const AdminNewUserRequest = ({
 
             {isRecurringRequest && (
               <FormField
-                control={form?.control}
+                control={form.control}
                 name="endDate"
                 render={({ field }) => {
                   const today = new Date();
@@ -791,24 +896,14 @@ const AdminNewUserRequest = ({
                             ))}
                           </SelectContent>
                         </Select>
-                        {selectedService && (
+                        {selectedService && selectedDayOfWeek != null && (
                           <FormDescription className="mt-2 p-3 bg-blue-50 rounded-lg">
                             <span className="flex items-center space-x-2 text-sm text-blue-700">
                               <Clock className="h-4 w-4" />
                               <span>
                                 Service starts at{" "}
                                 {formatTime(selectedService.time)} every{" "}
-                                {
-                                  [
-                                    "Sunday",
-                                    "Monday",
-                                    "Tuesday",
-                                    "Wednesday",
-                                    "Thursday",
-                                    "Friday",
-                                    "Saturday",
-                                  ][selectedService.dayOfWeek]
-                                }
+                                {getDayNameFromNumber(selectedDayOfWeek)}
                               </span>
                             </span>
                           </FormDescription>
@@ -818,6 +913,16 @@ const AdminNewUserRequest = ({
                     )}
                   />
 
+                  {/* Day of Week Selection - Only show for multi-day services */}
+                  {dayOptions.length > 0 && (
+                    <ServiceDaySelector
+                      form={newRequestForm}
+                      selectedService={selectedService}
+                      dayOptions={dayOptions}
+                      setSelectedDayOfWeek={setSelectedDayOfWeek}
+                    />
+                  )}
+
                   {/* Date Selection */}
                   <FormField
                     control={newRequestForm.control}
@@ -825,8 +930,6 @@ const AdminNewUserRequest = ({
                     render={({ field }) => {
                       const today = new Date();
                       today.setHours(0, 0, 0, 0);
-
-                      console.log({ field });
 
                       return (
                         <FormItem className="space-y-2">
@@ -871,7 +974,7 @@ const AdminNewUserRequest = ({
                             </PopoverContent>
                           </Popover>
                           <FormDescription className="text-xs text-gray-500">
-                            Requests must be made at least 1 hour before the
+                            Requests must be made at least 2 hour before the
                             service
                           </FormDescription>
                           <FormMessage />
@@ -1144,7 +1247,7 @@ const AdminNewUserRequest = ({
                     </h4>
                     <ul className="text-sm text-yellow-700 space-y-1">
                       <li>
-                        • Pickup requests must be submitted latest 1 hour before
+                        • Pickup requests must be submitted latest 2 hour before
                         the service
                       </li>
                       <li>
