@@ -92,9 +92,6 @@ export function isWithinRequestBuffer(
   const minAllowedTime = new Date(
     serviceDateTime.getTime() - hoursBuffer * 60 * 60 * 1000
   );
-  // const thirtyMinutesBefore = new Date(
-  //   serviceDateTime.getTime() - 30 * 60 * 1000
-  // );
 
   return now >= minAllowedTime;
 }

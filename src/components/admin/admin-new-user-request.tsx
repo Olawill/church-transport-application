@@ -220,8 +220,8 @@ const AdminNewUserRequest = ({
   });
 
   useEffect(() => {
-    if (serviceDayId && serviceDays.length > 0) {
-      const service = serviceDays.find((s) => s.id === serviceDayId);
+    if (newServiceDayId && serviceDays.length > 0) {
+      const service = serviceDays.find((s) => s.id === newServiceDayId);
       setSelectedService(service || null);
 
       if (service) {
