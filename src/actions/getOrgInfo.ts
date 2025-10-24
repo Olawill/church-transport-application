@@ -1,15 +1,15 @@
 "use server";
 
-import { auth } from "@/auth";
 import { UserRole } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
-import { ChurchBranchContactInfoUpdateSchema } from "@/types/adminCreateNewUserSchema";
+import { getAuthSession } from "@/lib/session/server-session";
+import { ChurchBranchContactInfoUpdateSchema } from "@/schemas/adminCreateNewUserSchema";
 
 // import { revalidatePath } from "next/cache";
 // import { redirect } from "next/navigation";
 
 export const getOrgInfo = async (orgId?: string) => {
-  const session = await auth();
+  const session = await getAuthSession();
 
   if (
     !session ||
@@ -51,7 +51,7 @@ export const getOrgInfo = async (orgId?: string) => {
 };
 
 export const setHeadquarter = async (addressId: string, orgId?: string) => {
-  const session = await auth();
+  const session = await getAuthSession();
 
   if (
     !session ||
@@ -127,7 +127,7 @@ export const addBranch = async (
   values: ChurchBranchContactInfoUpdateSchema,
   orgId?: string
 ) => {
-  const session = await auth();
+  const session = await getAuthSession();
 
   // TODO: Check authentication and if user is admin or owner
   if (
@@ -179,7 +179,7 @@ export const updateBranch = async (
   values: ChurchBranchContactInfoUpdateSchema,
   orgId?: string
 ) => {
-  const session = await auth();
+  const session = await getAuthSession();
 
   // TODO: Check if user is admin or owner
   if (
@@ -235,7 +235,7 @@ export const updateBranch = async (
 
 // Delete branch
 export const deleteBranch = async (addressId: string, orgId?: string) => {
-  const session = await auth();
+  const session = await getAuthSession();
 
   if (
     !session ||
@@ -292,7 +292,7 @@ export const deleteBranch = async (addressId: string, orgId?: string) => {
 };
 
 export const getServices = async (orgId?: string) => {
-  const session = await auth();
+  const session = await getAuthSession();
 
   if (
     !session ||

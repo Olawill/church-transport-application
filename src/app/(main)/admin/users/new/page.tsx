@@ -1,10 +1,12 @@
-import { auth } from "@/auth";
-import NewUserCreationForm from "@/components/admin/new-user-creation";
 import { UserRole } from "@/generated/prisma";
 import { redirect } from "next/navigation";
 
+import NewUserCreationForm from "@/features/admin/components/new-user-creation";
+import { getAuthSession } from "@/lib/session/server-session";
+
 const NewUserPage = async () => {
-  const session = await auth();
+  const session = await getAuthSession();
+
   if (!session?.user || session?.user.role !== UserRole.ADMIN) {
     redirect("/dashboard");
   }

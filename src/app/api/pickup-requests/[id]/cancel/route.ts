@@ -111,13 +111,13 @@ export const PUT = async (
 
     // Notify the driver if request was accepted
     if (pickupRequest.driver && pickupRequest.status === "ACCEPTED") {
-      const text = `Hello ${pickupRequest.driver.firstName}! The pickup request you accepted for ${pickupRequest.serviceDay?.name} has been cancelled by the ${session.user.role === "USER" ? "user" : "admin"}. Reason: ${reason.trim()}`;
+      const text = `Hello ${pickupRequest.driver.name}! The pickup request you accepted for ${pickupRequest.serviceDay?.name} has been cancelled by the ${session.user.role === "USER" ? "user" : "admin"}. Reason: ${reason.trim()}`;
       await NotificationService.scheduleWhatsAppNotification(
         pickupRequest.driver.id,
         {
           to:
             pickupRequest.driver.whatsappNumber ||
-            pickupRequest.driver.phone ||
+            pickupRequest.driver.phoneNumber ||
             "",
           type: "text",
           text,

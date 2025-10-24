@@ -1,3 +1,6 @@
+import { cn } from "@/lib/utils";
+import { ReactNode, useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -7,22 +10,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
-import { ReactNode, useState } from "react";
+
+type ConfirmResult = "cancel" | "primary" | "secondary" | "confirm";
 
 export const useConfirm = (
   title: string,
   message: string,
   update?: boolean,
-  cancelText?: string,
-  confirmText?: string
-): [() => ReactNode, () => Promise<unknown>] => {
+  primaryText?: string,
+  secondaryText?: string
+): [() => ReactNode, () => Promise<ConfirmResult>] => {
   const [promise, setPromise] = useState<{
-    resolve: (value: boolean) => void;
+    resolve: (value: ConfirmResult) => void;
   } | null>(null);
 
   const confirm = () => {
-    return new Promise((resolve) => setPromise({ resolve }));
+    return new Promise<ConfirmResult>((resolve) => setPromise({ resolve }));
   };
 
   const handleClose = () => {
@@ -30,14 +33,27 @@ export const useConfirm = (
   };
 
   const handleCancel = () => {
-    promise?.resolve(false);
+    promise?.resolve("cancel");
+    handleClose();
+  };
+
+  const handlePrimary = () => {
+    promise?.resolve("primary");
+    handleClose();
+  };
+
+  const handleSecondary = () => {
+    promise?.resolve("secondary");
     handleClose();
   };
 
   const handleConfirm = () => {
-    promise?.resolve(true);
+    promise?.resolve("confirm");
     handleClose();
   };
+
+  // Check if we're using the three-button mode
+  const isThreeButtonMode = !!(primaryText && secondaryText);
 
   const ConfirmDialog = () => (
     <Dialog open={promise !== null} onOpenChange={handleCancel}>
@@ -48,17 +64,41 @@ export const useConfirm = (
         </DialogHeader>
         <DialogFooter className="pt-2">
           <Button variant="outline" onClick={handleCancel}>
-            {cancelText || "Cancel"}
+            Cancel
           </Button>
-          <Button
-            variant={update ? "default" : "destructive"}
-            onClick={handleConfirm}
-            className={cn(
-              update && "bg-[#007A5A] hover:bg-[#007A5A]/80 text-white"
-            )}
-          >
-            {confirmText ? confirmText : "Confirm"}
-          </Button>
+
+          {isThreeButtonMode ? (
+            // Three-button mode: Cancel, Primary, Secondary
+            <>
+              <Button
+                variant="outline"
+                onClick={handlePrimary}
+                className="border-blue-500 text-blue-600 hover:bg-blue-50"
+              >
+                {primaryText}
+              </Button>
+              <Button
+                variant={update ? "default" : "destructive"}
+                onClick={handleSecondary}
+                className={cn(
+                  update && "bg-[#007A5A] hover:bg-[#007A5A]/80 text-white"
+                )}
+              >
+                {secondaryText}
+              </Button>
+            </>
+          ) : (
+            // Two-button mode: Cancel, Confirm (original behavior)
+            <Button
+              variant={update ? "default" : "destructive"}
+              onClick={handleConfirm}
+              className={cn(
+                update && "bg-[#007A5A] hover:bg-[#007A5A]/80 text-white"
+              )}
+            >
+              {secondaryText || primaryText || "Confirm"}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

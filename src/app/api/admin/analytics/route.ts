@@ -1,12 +1,12 @@
+import { UserRole } from "@/generated/prisma";
 import { NextResponse } from "next/server";
 
-import { auth } from "@/auth";
-import { UserRole } from "@/generated/prisma";
 import { AnalyticsService } from "@/lib/analytics";
+import { getAuthSession } from "@/lib/session/server-session";
 
 export const GET = async () => {
   try {
-    const session = await auth();
+    const session = await getAuthSession();
 
     if (!session?.user?.role || session.user.role !== UserRole.ADMIN) {
       return NextResponse.json(

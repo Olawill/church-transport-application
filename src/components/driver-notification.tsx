@@ -121,7 +121,9 @@ export const DriverEmailDialog = ({
                   <FormDescription>
                     NOTE: The subject field is optional
                   </FormDescription>
-                  <FormMessage />
+                  <div className="min-h-[1.25rem]">
+                    <FormMessage />
+                  </div>
                 </FormItem>
               )}
             />
@@ -140,7 +142,9 @@ export const DriverEmailDialog = ({
                       className="resize-none"
                     />
                   </FormControl>
-                  <FormMessage />
+                  <div className="min-h-[1.25rem]">
+                    <FormMessage />
+                  </div>
                 </FormItem>
               )}
             />
@@ -232,7 +236,9 @@ export const DriverWhatsAppDialog = ({
                       disabled={form.formState.isSubmitting}
                     />
                   </FormControl>
-                  <FormMessage />
+                  <div className="min-h-[1.25rem]">
+                    <FormMessage />
+                  </div>
                 </FormItem>
               )}
             />

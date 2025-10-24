@@ -1,15 +1,7 @@
-// import { auth } from "@/auth";
-// import { redirect } from "next/navigation";
 import { Header } from "@/components/navigation/header";
 import { LayoutBackground } from "./layout-background";
 
 const MainLayout = async ({ children }: { children: React.ReactNode }) => {
-  // const session = await auth();
-
-  // if (!session?.user) {
-  //   redirect("/login");
-  // }
-
   return (
     <LayoutBackground>
       <div className="min-h-screen">

@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "@/lib/utils";
 import {
   Bell,
   Calendar,
@@ -11,13 +12,14 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
-import { redirect, usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { ModeToggle } from "@/components/mode-toggle";
+import { signOut, useSession } from "@/lib/auth-client";
+
+import { ModeToggle } from "@/components/theming/mode-toggle";
+
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -57,21 +59,26 @@ const navigationItems = [
 ];
 
 export const Header = () => {
-  const { data: session, status } = useSession();
+  const { data: session, isPending } = useSession();
   const router = useRouter();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleSignOut = async () => {
-    await signOut({ redirect: false });
-    redirect("/login");
+    await signOut({
+      fetchOptions: {
+        onSuccess: () => {
+          router.push("/login");
+        },
+      },
+    });
   };
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
 
-  if (status === "loading") {
+  if (isPending) {
     return (
       <header className="bg-secondary shadow-sm border-b sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -155,7 +162,7 @@ export const Header = () => {
                     </div>
                     <div className="text-sm">
                       <p className="text-gray-900 dark:text-gray-200 font-medium">
-                        {session.user.firstName} {session.user.lastName}
+                        {session.user.name}
                       </p>
                       <p className="text-gray-500 dark:text-gray-400 capitalize">
                         {session.user.role?.toLowerCase().replace("_", " ")}
@@ -171,7 +178,7 @@ export const Header = () => {
                       </div>
                       <div className="text-sm">
                         <p className="text-gray-900 dark:text-gray-200 font-medium">
-                          {session.user.firstName} {session.user.lastName}
+                          {session.user.name}
                         </p>
                         <p className="text-gray-500 dark:text-gray-400 capitalize">
                           {session.user.role?.toLowerCase().replace("_", " ")}
@@ -259,7 +266,7 @@ export const Header = () => {
                     </div>
                     <div className="text-sm">
                       <p className="text-gray-900 dark:text-gray-200 font-medium">
-                        {session.user.firstName} {session.user.lastName}
+                        {session.user.name}
                       </p>
                       <p className="text-gray-500 dark:text-gray-300 capitalize">
                         {session.user.role?.toLowerCase().replace("_", " ")}

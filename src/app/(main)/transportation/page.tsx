@@ -1,10 +1,11 @@
-import { auth } from "@/auth";
-import { TransportationDashboard } from "@/components/dashboard/transportation-dashboard";
 import { UserRole } from "@/generated/prisma";
 import { redirect } from "next/navigation";
 
+import { TransportationDashboard } from "@/components/dashboard/transportation-dashboard";
+import { getAuthSession } from "@/lib/session/server-session";
+
 const TransportationPage = async () => {
-  const session = await auth();
+  const session = await getAuthSession();
 
   if (!session?.user || session.user.role !== UserRole.TRANSPORTATION_TEAM) {
     redirect("/dashboard");

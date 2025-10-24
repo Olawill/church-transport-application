@@ -16,7 +16,7 @@ import {
   validatePickUpRequestTiming,
 } from "@/lib/pickup-utils";
 import { getNextOccurrencesOfWeekdays } from "@/lib/utils";
-import { serverValidateRequest } from "@/types/newRequestSchema";
+import { serverValidateRequest } from "@/schemas/newRequestSchema";
 import bcrypt from "bcryptjs";
 
 const payloadSchema = z
@@ -225,10 +225,9 @@ export const POST = async (request: NextRequest) => {
         // Create user
         const newUser = await tx.user.create({
           data: {
-            firstName,
-            lastName,
+            name: `${firstName} ${lastName}`,
             email,
-            phone: phone,
+            phoneNumber: phone,
             password: hashedPassword,
             role: "USER",
             status: "APPROVED",
@@ -370,8 +369,7 @@ export const POST = async (request: NextRequest) => {
         user: {
           id: newUser.id,
           email: newUser.email,
-          firstName: newUser.firstName,
-          lastName: newUser.lastName,
+          name: newUser.name,
         },
         address: {
           id: newAddress.id,

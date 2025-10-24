@@ -1,7 +1,7 @@
 import { AnalyticsService } from "@/lib/analytics";
 import { prisma } from "@/lib/db";
 import { geocodeAddress } from "@/lib/geocoding";
-import { signupSchema } from "@/types/authSchemas";
+import { signupSchema } from "@/schemas/authSchemas";
 import bcrypt from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -24,7 +24,7 @@ export const POST = async (request: NextRequest) => {
       lastName,
       email,
       password,
-      phone,
+      phoneNumber,
       street,
       city,
       province,
@@ -66,11 +66,10 @@ export const POST = async (request: NextRequest) => {
     // Create user
     const user = await prisma.user.create({
       data: {
-        firstName,
-        lastName,
+        name: `${firstName} ${lastName}`,
         email,
         password: hashedPassword,
-        phone: phone || null,
+        phoneNumber: phoneNumber || null,
         role: "USER",
         status: "PENDING", // Requires admin approval
       },
@@ -101,8 +100,7 @@ export const POST = async (request: NextRequest) => {
         user: {
           id: user.id,
           email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
+          name: user.name,
           status: user.status,
         },
       },

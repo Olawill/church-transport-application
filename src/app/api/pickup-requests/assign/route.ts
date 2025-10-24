@@ -75,17 +75,15 @@ export const PUT = async (request: NextRequest) => {
         user: {
           select: {
             id: true,
-            firstName: true,
-            lastName: true,
-            phone: true,
+            name: true,
+            phoneNumber: true,
           },
         },
         driver: {
           select: {
             id: true,
-            firstName: true,
-            lastName: true,
-            phone: true,
+            name: true,
+            phoneNumber: true,
           },
         },
         serviceDay: true,

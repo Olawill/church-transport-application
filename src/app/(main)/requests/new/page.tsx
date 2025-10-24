@@ -1,18 +1,18 @@
-import { auth } from "@/auth";
-import AdminNewUserRequest from "@/components/admin/admin-new-user-request";
-import { NewRequestForm } from "@/components/requests/new-request-form";
 import { UserRole } from "@/generated/prisma";
 import { redirect } from "next/navigation";
 
+import { NewRequestForm } from "@/components/requests/new-request-form";
+import AdminNewUserRequest from "@/features/admin/components/admin-new-user-request";
+import { getAuthSession } from "@/lib/session/server-session";
+
 const NewRequestPage = async () => {
-  const session = await auth();
+  const session = await getAuthSession();
 
   if (
     !session?.user ||
     (session.user.role !== UserRole.USER &&
       session.user.role !== UserRole.ADMIN)
   ) {
-    // if (!session) {
     redirect("/dashboard");
   }
 

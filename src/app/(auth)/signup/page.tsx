@@ -1,15 +1,32 @@
-import { auth } from "@/auth";
-import { SignupForm } from "@/components/auth/signup-form";
-import { redirect } from "next/navigation";
+import { requireNoAuth } from "@/lib/session/server-session";
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
+import { Suspense } from "react";
+import { ErrorBoundary } from "react-error-boundary";
+
+import { getQueryClient, trpc } from "@/trpc/server";
+
+import { ErrorState } from "@/components/screen-states/error-state";
+import {
+  SignupForm,
+  SignupFormSkeleton,
+} from "@/features/auth/components/signup-form";
 
 const SignupPage = async () => {
-  const session = await auth();
+  await requireNoAuth();
 
-  if (session?.user) {
-    redirect("/dashboard");
-  }
+  const queryClient = getQueryClient();
 
-  return <SignupForm />;
+  void queryClient.prefetchQuery(trpc.places.countries.queryOptions());
+
+  return (
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <ErrorBoundary fallback={<ErrorState title="" description="" />}>
+        <Suspense fallback={<SignupFormSkeleton />}>
+          <SignupForm />
+        </Suspense>
+      </ErrorBoundary>
+    </HydrationBoundary>
+  );
 };
 
 export default SignupPage;

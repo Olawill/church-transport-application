@@ -5,10 +5,9 @@ import { AnalyticsService } from "@/lib/analytics";
 import { prisma } from "@/lib/db";
 
 interface UpdatedDataType {
-  firstName: string;
-  lastName: string;
+  name: string;
   username: string | null;
-  phone: string | null;
+  phoneNumber: string | null;
   whatsappNumber: string | null;
   image?: string | undefined;
 }
@@ -25,10 +24,9 @@ export const GET = async () => {
       where: { id: session.user.id },
       select: {
         id: true,
-        firstName: true,
-        lastName: true,
+        name: true,
         email: true,
-        phone: true,
+        phoneNumber: true,
         username: true,
         image: true,
         whatsappNumber: true,
@@ -37,7 +35,7 @@ export const GET = async () => {
         whatsAppNotifications: true,
         smsNotifications: true,
         emailVerified: true,
-        phoneVerified: true,
+        phoneNumberVerified: true,
         role: true,
         status: true,
         createdAt: true,
@@ -88,10 +86,9 @@ export const PUT = async (request: NextRequest) => {
     }
 
     const updateData: UpdatedDataType = {
-      firstName,
-      lastName,
+      name: `${firstName} ${lastName}`,
       username: userName || null,
-      phone: phone || null,
+      phoneNumber: phone || null,
       whatsappNumber: whatsappNumber || null,
     };
 
@@ -107,16 +104,15 @@ export const PUT = async (request: NextRequest) => {
       data: updateData,
       select: {
         id: true,
-        firstName: true,
-        lastName: true,
+        name: true,
         email: true,
-        phone: true,
+        phoneNumber: true,
         username: true,
         image: true,
         whatsappNumber: true,
         twoFactorEnabled: true,
         emailVerified: true,
-        phoneVerified: true,
+        phoneNumberVerified: true,
         role: true,
         status: true,
       },

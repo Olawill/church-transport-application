@@ -135,9 +135,11 @@ export const PUT = async (
       updatedRequest.userId,
       {
         to:
-          updatedRequest.user.whatsappNumber || updatedRequest.user.phone || "",
+          updatedRequest.user.whatsappNumber ||
+          updatedRequest.user.phoneNumber ||
+          "",
         type: "text",
-        text: `Hello ${updatedRequest.user.firstName}! The pickup request for ${pickupRequest.serviceDay?.name} has been cancelled by the driver. Reason: ${reason.trim()}. Another driver will be assigned shortly.`,
+        text: `Hello ${updatedRequest.user.name}! The pickup request for ${pickupRequest.serviceDay?.name} has been cancelled by the driver. Reason: ${reason.trim()}. Another driver will be assigned shortly.`,
       }
     );
 

@@ -11,7 +11,7 @@ import {
   onetimeMultiDaySchema,
   onetimeOneDaySchema,
   recurringSchema,
-} from "@/types/serviceDaySchema";
+} from "@/schemas/serviceDaySchema";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 

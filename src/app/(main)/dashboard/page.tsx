@@ -1,14 +1,14 @@
-import { auth } from "@/auth";
-
 import { AdminDashboard } from "@/components/dashboard/admin-dashboard";
 import { TransportationTeamDashboard } from "@/components/dashboard/transportation-dashboard";
 import { UserDashboard } from "@/components/dashboard/user-dashboard";
+
 import { UserRole } from "@/generated/prisma";
+import { getAuthSession } from "@/lib/session/server-session";
 
 export const dynamic = "force-dynamic";
 
 const DashboardPage = async () => {
-  const session = await auth();
+  const session = await getAuthSession();
 
   if (!session?.user) return null;
 

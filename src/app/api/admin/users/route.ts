@@ -1,16 +1,16 @@
 //api/admin/users/route.ts
 import { NextRequest, NextResponse } from "next/server";
 
-import { auth } from "@/auth";
 import { UserRole } from "@/generated/prisma";
 import { AnalyticsService } from "@/lib/analytics";
 import { prisma } from "@/lib/db";
 import { geocodeAddress } from "@/lib/geocoding";
+import { getAuthSession } from "@/lib/session/server-session";
 import bcrypt from "bcryptjs";
 
 export const GET = async () => {
   try {
-    const session = await auth();
+    const session = await getAuthSession();
 
     if (!session?.user?.role || session.user.role !== UserRole.ADMIN) {
       return NextResponse.json(
@@ -22,8 +22,7 @@ export const GET = async () => {
     const users = await prisma.user.findMany({
       select: {
         id: true,
-        firstName: true,
-        lastName: true,
+        name: true,
         email: true,
         role: true,
         status: true,
@@ -50,7 +49,7 @@ export const GET = async () => {
 
 export const POST = async (request: NextRequest) => {
   try {
-    const session = await auth();
+    const session = await getAuthSession();
 
     if (!session?.user || session.user.role !== UserRole.ADMIN) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
@@ -113,10 +112,9 @@ export const POST = async (request: NextRequest) => {
 
     const newUser = await prisma.user.create({
       data: {
-        firstName,
-        lastName,
+        name: `${firstName} ${lastName}`,
         email,
-        phone: phone || null,
+        phoneNumber: phone || null,
         password: hashedPassword,
         role: "USER",
         status: "APPROVED",
@@ -151,8 +149,7 @@ export const POST = async (request: NextRequest) => {
       user: {
         id: newUser.id,
         email: newUser.email,
-        firstName: newUser.firstName,
-        lastName: newUser.lastName,
+        name: newUser.name,
         status: newUser.status,
       },
     });

@@ -21,7 +21,7 @@ import {
   validatePickUpRequestTiming,
 } from "@/lib/pickup-utils";
 import { calculateDistance, getNextOccurrencesOfWeekdays } from "@/lib/utils";
-import { serverValidateRequest } from "@/types/newRequestSchema";
+import { serverValidateRequest } from "@/schemas/newRequestSchema";
 
 // Zod schema for request validation
 const payloadSchema = z
@@ -124,17 +124,15 @@ export const GET = async (request: NextRequest) => {
         user: {
           select: {
             id: true,
-            firstName: true,
-            lastName: true,
-            phone: true,
+            name: true,
+            phoneNumber: true,
           },
         },
         driver: {
           select: {
             id: true,
-            firstName: true,
-            lastName: true,
-            phone: true,
+            name: true,
+            phoneNumber: true,
           },
         },
         serviceDay: true,
@@ -891,17 +889,15 @@ export const PUT = async (request: NextRequest) => {
         user: {
           select: {
             id: true,
-            firstName: true,
-            lastName: true,
-            phone: true,
+            name: true,
+            phoneNumber: true,
           },
         },
         driver: {
           select: {
             id: true,
-            firstName: true,
-            lastName: true,
-            phone: true,
+            name: true,
+            phoneNumber: true,
           },
         },
         serviceDay: true,

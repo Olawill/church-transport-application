@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
 
-import { auth } from "@/auth";
 import { ProfileManagement } from "@/components/profile/profile-management";
+import { getAuthSession } from "@/lib/session/server-session";
 
 const ProfilePage = async () => {
-  const session = await auth();
+  const session = await getAuthSession();
 
   if (!session) {
     redirect("/login");
