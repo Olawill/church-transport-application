@@ -61,47 +61,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useSession } from "@/lib/auth-client";
-
-// import { DashboardStats } from "@/lib/types";
-
-interface DashboardStats {
-  totalUsers: number;
-  activeUsers: number;
-  pendingUsers: number;
-  bannedUsers: number;
-  totalRequests: number;
-  completedRequests: number;
-  pendingRequests: number;
-  cancelledRequests: number;
-  totalDrivers: number;
-  activeDrivers: number;
-  completionRate: string;
-}
-
-interface User {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  role: string;
-  status: string;
-  createdAt: string;
-  bannedAt?: string;
-  banReason?: string;
-}
-
-interface AnalyticsData {
-  registrations: Array<{ date: string; count: number }>;
-  pickupRequests: Array<{ date: string; count: number }>;
-  driverActivity: Array<{
-    driverId: string;
-    driverName: string;
-    acceptances: number;
-    completions: number;
-    cancellations: number;
-  }>;
-  popularServiceDays: Array<{ id: string; name: string; requestCount: number }>;
-}
+import { useTRPC } from "@/trpc/client";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { adminGetUsers } from "@/features/admin/types";
 
 const generateChartConfig = (tooltipLabel: string, chartLabel: string) => {
   return {
@@ -121,16 +83,13 @@ type UserFilters = {
 
 export const AdminDashboard = () => {
   const { data: session } = useSession();
+  const trpc = useTRPC();
   const router = useRouter();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
-  const [loading, setLoading] = useState(true);
 
   const [currentTab, setCurrentTab] = useState("overview");
 
   const [banDialogOpen, setBanDialogOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<adminGetUsers | null>(null);
   const [banReason, setBanReason] = useState("");
 
   const {
@@ -146,47 +105,17 @@ export const AdminDashboard = () => {
     searchQuery: "",
   });
 
-  useEffect(() => {
-    Promise.all([fetchStats(), fetchUsers(), fetchAnalytics()]).finally(() =>
-      setLoading(false)
-    );
-  }, []);
+  const { data: stats } = useSuspenseQuery(
+    trpc.adminStats.getStats.queryOptions()
+  );
 
-  const fetchStats = async () => {
-    try {
-      const response = await fetch("/api/admin/dashboard/stats");
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
-      }
-    } catch (error) {
-      console.error("Error fetching stats:", error);
-    }
-  };
+  const { data: users } = useSuspenseQuery(
+    trpc.adminUsers.getUsers.queryOptions()
+  );
 
-  const fetchUsers = async () => {
-    try {
-      const response = await fetch("/api/admin/users");
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data);
-      }
-    } catch (error) {
-      console.error("Error fetching users:", error);
-    }
-  };
-
-  const fetchAnalytics = async () => {
-    try {
-      const response = await fetch("/api/admin/analytics");
-      if (response.ok) {
-        const data = await response.json();
-        setAnalytics(data);
-      }
-    } catch (error) {
-      console.error("Error fetching analytics:", error);
-    }
-  };
+  const { data: analytics } = useSuspenseQuery(
+    trpc.adminAnalytics.getAnalytics.queryOptions()
+  );
 
   const handleApproveUser = async (userId: string) => {
     try {
@@ -195,8 +124,8 @@ export const AdminDashboard = () => {
       });
 
       if (response.ok) {
-        await fetchUsers();
-        await fetchStats();
+        // await fetchUsers();
+        // await fetchStats();
         toast.success("User approved successfully");
       } else {
         toast.error("Failed to approve user");
@@ -221,8 +150,8 @@ export const AdminDashboard = () => {
       });
 
       if (response.ok) {
-        await fetchUsers();
-        await fetchStats();
+        // await fetchUsers();
+        // await fetchStats();
         setBanDialogOpen(false);
         setBanReason("");
         setSelectedUser(null);
@@ -243,8 +172,8 @@ export const AdminDashboard = () => {
       });
 
       if (response.ok) {
-        await fetchUsers();
-        await fetchStats();
+        // await fetchUsers();
+        // await fetchStats();
         toast.success("User unbanned successfully");
       } else {
         toast.error("Failed to unban user");
@@ -257,12 +186,7 @@ export const AdminDashboard = () => {
 
   const filteredUsers = users.filter(
     (user) =>
-      (user.firstName
-        .toLowerCase()
-        .includes(filters.searchQuery.toLowerCase()) ||
-        user.lastName
-          .toLowerCase()
-          .includes(filters.searchQuery.toLowerCase()) ||
+      (user.name.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
         user.email.toLowerCase().includes(filters.searchQuery.toLowerCase())) &&
       user.id !== session?.user.id
   );
@@ -299,24 +223,6 @@ export const AdminDashboard = () => {
     [analytics?.pickupRequests, analytics?.registrations]
   );
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-6">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   const statCards = [
     {
       title: "Total Members",
@@ -347,32 +253,6 @@ export const AdminDashboard = () => {
       color: "text-purple-600",
     },
   ];
-
-  // const registrationChartData = {
-  //   labels: analytics?.registrations.map((item) => item.date) || [],
-  //   datasets: [
-  //     {
-  //       label: "New Registrations",
-  //       data: analytics?.registrations.map((item) => item.count) || [],
-  //       borderColor: "rgb(59, 130, 246)",
-  //       backgroundColor: "rgba(59, 130, 246, 0.1)",
-  //       tension: 0.4,
-  //     },
-  //   ],
-  // };
-
-  // const requestsChartData = {
-  //   labels: analytics?.pickupRequests.map((item) => item.date) || [],
-  //   datasets: [
-  //     {
-  //       label: "Pickup Requests",
-  //       data: analytics?.pickupRequests.map((item) => item.count) || [],
-  //       borderColor: "rgb(34, 197, 94)",
-  //       backgroundColor: "rgba(34, 197, 94, 0.1)",
-  //       tension: 0.4,
-  //     },
-  //   ],
-  // };
 
   return (
     <div className="space-y-6">
@@ -881,9 +761,7 @@ export const AdminDashboard = () => {
                 <TableBody>
                   {paginatedUsers.map((user) => (
                     <TableRow key={user.id}>
-                      <TableCell className="font-medium">
-                        {user.firstName} {user.lastName}
-                      </TableCell>
+                      <TableCell className="font-medium">{user.name}</TableCell>
                       <TableCell>{user.email}</TableCell>
                       <TableCell>
                         <Badge
@@ -1040,8 +918,7 @@ export const AdminDashboard = () => {
             <div>
               <Label>User</Label>
               <p className="text-sm">
-                {selectedUser?.firstName}
-                {selectedUser?.lastName}({selectedUser?.email})
+                {selectedUser?.name}({selectedUser?.email})
               </p>
             </div>
             <div>

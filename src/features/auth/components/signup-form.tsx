@@ -59,18 +59,9 @@ import { Switch } from "@/components/ui/switch";
 import { CustomFormLabel } from "@/components/custom-form-label";
 import CustomPhoneInput from "@/components/custom-phone-input";
 
-import { signUp } from "@/lib/auth-client";
-import { comparePassword } from "@/lib/compare-password";
-// import {
-//   countriesByContinent,
-//   getCitiesForState,
-//   getStatesForCountry,
-// } from "@/lib/countries";
-import { geocodeAddress } from "@/lib/geocoding";
-
 import { signupSchema, SignupSchema } from "@/schemas/authSchemas";
 import { useTRPC } from "@/trpc/client";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useDebounce } from "use-debounce";
 import { passwordStrength } from "../lib/utils";
 import { PasswordStrength } from "./password-strength";
@@ -96,8 +87,7 @@ export type PasswordScore = {
 
 export const SignupForm = () => {
   const router = useRouter();
-
-  const [loading, setLoading] = useState(false);
+  const trpc = useTRPC();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [strength, setStrength] = useState<PasswordScore>({
@@ -105,6 +95,22 @@ export const SignupForm = () => {
     strength: "weak",
     errors: [],
   });
+
+  const register = useMutation(
+    trpc.auth.register.mutationOptions({
+      onSuccess: async () => {
+        toast.success(
+          "Registration successful! Please wait for admin approval to access your account."
+        );
+        router.push("/login");
+      },
+      onError: (error) => {
+        toast.error(
+          error.message || "Registration failed. Please try again later."
+        );
+      },
+    })
+  );
 
   const form = useForm<SignupSchema>({
     resolver: zodResolver(signupSchema),
@@ -127,8 +133,6 @@ export const SignupForm = () => {
   const phoneNumber = form.watch("phoneNumber");
 
   const onSubmit = async (values: SignupSchema) => {
-    setLoading(true);
-
     // Validate the form data
     const validatedFields = signupSchema.safeParse(values);
 
@@ -137,74 +141,16 @@ export const SignupForm = () => {
       return;
     }
 
-    const {
-      firstName,
-      lastName,
-      street,
-      city,
-      province,
-      postalCode,
-      country,
-      confirmPassword,
-      ...otherFields
-    } = validatedFields.data;
-
-    const samePassword = await comparePassword(
-      otherFields.password,
-      confirmPassword
-    );
-
-    if (!samePassword) {
-      toast.error("Your passwords do not match");
-      return;
-    }
-    const name = `${firstName} ${lastName}`;
-
     try {
-      // Get coordinates for address
-      const coordinates = await geocodeAddress({
-        street,
-        city,
-        province,
-        postalCode,
-        country,
-      });
-
-      if (coordinates == null) {
-        toast.error("Invalid address information");
-        return;
-      }
-
-      await signUp.email(
-        {
-          name,
-          ...otherFields,
-          callbackURL: "/login",
-        },
-        {
-          onSuccess: () => {
-            setLoading(false);
-            toast.success(
-              "Registration successful! Please wait for admin approval."
-            );
-            router.push("/login");
-          },
-          onError: (error) => {
-            console.log(error);
-            setLoading(false);
-            toast.error("Registration failed. Please try again later.");
-          },
-        }
-      );
+      register.mutate(validatedFields.data);
     } catch {
       toast.error("An error occurred during registration");
-    } finally {
-      setLoading(false);
     }
   };
 
   const [currentPassword] = useDebounce(form.watch("password"), 300);
   const currentConfirmPassword = form.watch("confirmPassword");
+  const loading = register.isPending;
 
   useEffect(() => {
     const { strength, errors } = passwordStrength(currentPassword);
@@ -433,7 +379,7 @@ export const SignupForm = () => {
                           {...field}
                           id="confirmPassword"
                           name="confirmPassword"
-                          type={showPassword ? "text" : "password"}
+                          type={showConfirmPassword ? "text" : "password"}
                           placeholder="**************"
                           disabled={loading}
                         />

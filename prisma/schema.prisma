@@ -140,7 +140,6 @@ model User {
   phoneNumberVerified Boolean      @default(false)
   
   username            String?      @unique
-  password            String?
   
   image               String?
   role                UserRole     @default(USER)

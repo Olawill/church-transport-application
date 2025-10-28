@@ -324,3 +324,47 @@ export const newAdminRequestSchema = z
   .superRefine(validateRequest);
 
 export type NewAdminRequestSchema = z.infer<typeof newAdminRequestSchema>;
+
+export const adminPayloadSchema = z
+  .object({
+    firstName: z.string().min(1),
+    lastName: z.string().min(1),
+    email: z.email(),
+    phone: z.string().optional().nullable(),
+    isLoginRequired: z.boolean(),
+    password: z.string().optional(),
+    street: z.string().min(1),
+    city: z.string().min(1),
+    province: z.string().min(1),
+    postalCode: z.string().min(1),
+    serviceDayId: z.string().min(1),
+    serviceDayOfWeek: z.string().min(1),
+    requestDate: z.string(),
+    notes: z.string().optional(),
+    isPickUp: z.boolean(),
+    isDropOff: z.boolean(),
+    isGroupRide: z.boolean(),
+    numberOfGroup: z.number().int().min(2).max(10).nullable(),
+    isRecurring: z.boolean(),
+    endDate: z.string().optional(),
+  })
+  .superRefine(serverValidateRequest);
+
+export const userPayloadSchema = z
+  .object({
+    userId: z.string().optional(),
+    requestId: z.string().optional(),
+    serviceDayId: z.string().min(1),
+    serviceDayOfWeek: z.string().min(1),
+    addressId: z.string(),
+    requestDate: z.string(),
+    notes: z.string().optional(),
+    isPickUp: z.boolean(),
+    isDropOff: z.boolean(),
+    isGroupRide: z.boolean(),
+    numberOfGroup: z.number().int().min(2).max(10).nullable(),
+    isRecurring: z.boolean(),
+    updateSeries: z.boolean().optional(),
+    endDate: z.string().optional(),
+  })
+  .superRefine(serverValidateRequest);

@@ -8,7 +8,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import { Alert, AlertTitle } from "@/components/ui/alert";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -29,13 +29,31 @@ import { Input } from "@/components/ui/input";
 
 import { signIn } from "@/lib/auth-client";
 import { loginSchema, LoginSchema } from "@/schemas/authSchemas";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTRPC } from "@/trpc/client";
 
 export const LoginForm = () => {
+  const queryClient = useQueryClient();
+  const trpc = useTRPC();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+
+  const login = useMutation(
+    trpc.auth.login.mutationOptions({
+      onSuccess: async () => {
+        // await queryClient.invalidateQueries(trpc.auth.session.queryOptions());
+        toast.success("Logged in successfully");
+        router.push("/dashboard");
+      },
+      onError: (error) => {
+        setError(error.message);
+        toast.error("An error occurred during login");
+      },
+    })
+  );
 
   const form = useForm<LoginSchema>({
     resolver: zodResolver(loginSchema),
@@ -46,7 +64,6 @@ export const LoginForm = () => {
   });
 
   const onSubmit = async (values: LoginSchema) => {
-    setLoading(true);
     setError(null);
 
     const validatedFields = loginSchema.safeParse(values);
@@ -58,25 +75,7 @@ export const LoginForm = () => {
 
     const { email, password } = validatedFields.data;
 
-    await signIn.email(
-      {
-        email,
-        password,
-        callbackURL: "/dashboard",
-      },
-      {
-        onSuccess: () => {
-          setLoading(false);
-          toast.success("Logged in successfully");
-          router.push("/dashboard");
-        },
-        onError: ({ error }) => {
-          setError(error.message);
-          setLoading(false);
-          toast.error("An error occurred during login");
-        },
-      }
-    );
+    login.mutate({ email, password });
   };
 
   const handleOAuthSignIn = async (provider: "google" | "facebook") => {
@@ -187,7 +186,7 @@ export const LoginForm = () => {
         {!!error && (
           <Alert className="bg-destructive/10 border-none">
             <OctagonAlertIcon className="size-4 !text-destructive" />
-            <AlertTitle>{error}</AlertTitle>
+            <p className="text-xs break-words !whitespace-normal">{error}</p>
           </Alert>
         )}
 
@@ -207,7 +206,7 @@ export const LoginForm = () => {
                       name="email"
                       type="email"
                       placeholder="Enter your email"
-                      disabled={loading}
+                      disabled={login.isPending}
                     />
                   </FormControl>
                   <div className="min-h-[1.25rem]">
@@ -231,7 +230,7 @@ export const LoginForm = () => {
                         name="password"
                         type={showPassword ? "text" : "password"}
                         placeholder="Enter your password"
-                        disabled={loading}
+                        disabled={login.isPending}
                       />
 
                       <Button
@@ -240,7 +239,7 @@ export const LoginForm = () => {
                         size="sm"
                         className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-gray-600"
                         onClick={() => setShowPassword(!showPassword)}
-                        disabled={loading || !form.watch("password")}
+                        disabled={login.isPending || !form.watch("password")}
                       >
                         {showPassword ? (
                           <Eye className="h-4 w-4" />
@@ -257,8 +256,12 @@ export const LoginForm = () => {
               )}
             />
 
-            <Button type="submit" className="w-full mt-6" disabled={loading}>
-              {loading ? (
+            <Button
+              type="submit"
+              className="w-full mt-6"
+              disabled={login.isPending}
+            >
+              {login.isPending ? (
                 <>
                   <Loader className="h-4 w-4" />
                   Signing in...

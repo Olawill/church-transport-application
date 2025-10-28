@@ -38,9 +38,16 @@ export const signupSchema = z
       .string()
       .min(1, "Password is required")
       .min(PASSWORD_LENGTH, "Password must be at least 8 characters")
-      .refine((val) => passwordStrength(val).strength === "weak", {
-        message: "Password is too weak",
-      }),
+      .refine(
+        (val) => {
+          const level = passwordStrength(val).strength;
+          console.log(level);
+          return level !== "weak";
+        },
+        {
+          message: "Password is too weak",
+        }
+      ),
     confirmPassword: z.string().min(1, "Confirm password is required"),
 
     phoneNumber: z

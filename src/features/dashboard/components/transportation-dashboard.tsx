@@ -34,6 +34,8 @@ import {
 import { useRequestStore } from "@/lib/store/useRequestStore";
 import { DISTANCE_OPTIONS } from "@/lib/types";
 import { formatDate, formatTime } from "@/lib/utils";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTRPC } from "@/trpc/client";
 
 // Detailed operational dashboard for the dedicated /transportation route
 export const TransportationDashboard = () => {
@@ -349,31 +351,36 @@ export const TransportationDashboard = () => {
 
 // Simplified dashboard component for transportation team members' general dashboard
 export function TransportationTeamDashboard() {
-  const [stats, setStats] = useState({
-    myActiveRequests: 0,
-    availableRequests: 0,
-    completedToday: 0,
-    totalCompleted: 0,
-  });
-  const [loading, setLoading] = useState(true);
+  const trpc = useTRPC();
+  // const [stats, setStats] = useState({
+  //   myActiveRequests: 0,
+  //   availableRequests: 0,
+  //   completedToday: 0,
+  //   totalCompleted: 0,
+  // });
+  // const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchStats();
-  }, []);
+  const { data: stats, isLoading: loading } = useSuspenseQuery(
+    trpc.driverRequests.getRequestStats.queryOptions()
+  );
 
-  const fetchStats = async () => {
-    try {
-      const response = await fetch("/api/pickup-requests/stats");
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
-      }
-    } catch (error) {
-      console.error("Error fetching stats:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // useEffect(() => {
+  //   fetchStats();
+  // }, []);
+
+  // const fetchStats = async () => {
+  //   try {
+  //     const response = await fetch("/api/pickup-requests/stats");
+  //     if (response.ok) {
+  //       const data = await response.json();
+  //       setStats(data);
+  //     }
+  //   } catch (error) {
+  //     console.error("Error fetching stats:", error);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   return (
     <div className="space-y-6">

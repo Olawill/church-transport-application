@@ -6,7 +6,7 @@ async function main() {
   console.log("🌱 Starting database seed...");
 
   // Create default admin user
-  const adminPassword = await bcrypt.hash("admin123", 10);
+  const adminPassword = await bcrypt.hash("Admin123!", 10);
   const admin = await prisma.user.upsert({
     where: { email: "admin@church.com" },
     update: {},
@@ -72,7 +72,7 @@ async function main() {
   console.log("✅ Default service days created");
 
   // Create sample transportation team member
-  const driverPassword = await bcrypt.hash("driver123", 10);
+  const driverPassword = await bcrypt.hash("Driver123!", 10);
   const driver = await prisma.user.upsert({
     where: { email: "driver@church.com" },
     update: {},
@@ -107,7 +107,7 @@ async function main() {
   });
 
   // Create sample regular user
-  const userPassword = await bcrypt.hash("user123", 10);
+  const userPassword = await bcrypt.hash("User123!", 10);
   const user = await prisma.user.upsert({
     where: { email: "user@church.com" },
     update: {},

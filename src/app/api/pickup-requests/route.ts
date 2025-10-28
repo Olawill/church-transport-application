@@ -24,24 +24,6 @@ import { calculateDistance, getNextOccurrencesOfWeekdays } from "@/lib/utils";
 import { serverValidateRequest } from "@/schemas/newRequestSchema";
 
 // Zod schema for request validation
-const payloadSchema = z
-  .object({
-    userId: z.string().optional(),
-    requestId: z.string().optional(),
-    serviceDayId: z.string().min(1),
-    serviceDayOfWeek: z.string().min(1),
-    addressId: z.string(),
-    requestDate: z.string(),
-    notes: z.string().optional(),
-    isPickUp: z.boolean(),
-    isDropOff: z.boolean(),
-    isGroupRide: z.boolean(),
-    numberOfGroup: z.number().int().min(2).max(10).nullable(),
-    isRecurring: z.boolean(),
-    updateSeries: z.boolean().optional(),
-    endDate: z.string().optional(),
-  })
-  .superRefine(serverValidateRequest);
 
 type DuplicationType = {
   serviceDayId: string;
@@ -740,7 +722,6 @@ export const PATCH = async (request: NextRequest) => {
       }
     }
 
-    // Fire and forget analytics
     // Track pickup request creation
     const trackingPromise = isAdmin
       ? AnalyticsService.trackEvent({

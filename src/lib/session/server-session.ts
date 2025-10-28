@@ -18,6 +18,8 @@ export const requireAuth = async () => {
   if (!session) {
     redirect("/login");
   }
+
+  return session;
 };
 
 export const requireNoAuth = async () => {

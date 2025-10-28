@@ -5,7 +5,6 @@ const MainLayout = async ({ children }: { children: React.ReactNode }) => {
   return (
     <LayoutBackground>
       <div className="min-h-screen">
-        {/* <Header key={`${session.user.id}-${session.user.role}`} /> */}
         <Header />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {children}
