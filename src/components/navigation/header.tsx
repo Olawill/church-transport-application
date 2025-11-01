@@ -18,6 +18,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { UserRole } from "@/generated/prisma";
+import { ExtendedSession } from "@/lib/auth";
 import { signOut, useSession } from "@/lib/auth-client";
 
 import { ModeToggle } from "@/components/theming/mode-toggle";
@@ -31,7 +33,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
-import { UserRole } from "@/generated/prisma";
 
 const navigationItems = [
   {
@@ -61,8 +62,14 @@ const navigationItems = [
   },
 ];
 
-export const Header = () => {
-  const { data: session, isPending } = useSession();
+export const Header = ({
+  initialSession,
+}: {
+  initialSession: ExtendedSession;
+}) => {
+  const { data: clientSession, isPending } = useSession();
+
+  const session = (clientSession as ExtendedSession) || initialSession;
   const router = useRouter();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -81,7 +88,7 @@ export const Header = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
 
-  if (isPending) {
+  if (isPending && !session) {
     return (
       <header className="bg-secondary shadow-sm border-b sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -202,7 +209,7 @@ export const Header = () => {
                     <>
                       <DropdownMenuItem
                         className="cursor-pointer"
-                        onClick={() => router.push("/")}
+                        onClick={() => router.push("/credentials")}
                       >
                         <KeyIcon className="size-4" />
                         Credentials
@@ -217,13 +224,6 @@ export const Header = () => {
                     <LogOut className="size-4" />
                     Sign out
                   </DropdownMenuItem>
-                  {/* <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleSignOut}
-                    className="text-gray-600 hover:text-gray-900"
-                  >
-                  </Button> */}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -305,6 +305,16 @@ export const Header = () => {
                     <User className="size-5" />
                     Profile
                   </Button>
+                  {(session.user.role === UserRole.ADMIN ||
+                    session.user.role === UserRole.OWNER) && (
+                    <Button
+                      className="cursor-pointer"
+                      onClick={() => router.push("/credentials")}
+                    >
+                      <KeyIcon className="size-4" />
+                      Credentials
+                    </Button>
+                  )}
                   <Separator className="my-2" />
                   <Button
                     variant="ghost"

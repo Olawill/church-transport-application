@@ -1,11 +1,16 @@
-import React, { useState } from "react";
 import { parseDate } from "chrono-node";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { CalendarIcon } from "lucide-react";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { Calendar } from "./ui/calendar";
+import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 const formatDate = (date: Date | undefined) => {
   if (!date) {
@@ -45,20 +50,12 @@ const CustomDateCalendar = ({
 }: CustomDateCalendarProp) => {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("In 2 days");
-  // const [date, setDate] = useState<Date | undefined>(
-  //   parseDate(value) || undefined
-  // );
+
   const [month, setMonth] = useState<Date | undefined>(requestDateFilter);
 
   const handleParseDate = () => {
     setRequestDateFilter(safeParseDate(value) || undefined);
   };
-
-  // useEffect(() => {
-  //   if (!requestDateFilter) {
-  //     setDate(undefined);
-  //   }
-  // }, [requestDateFilter]);
 
   return (
     <div className="flex flex-col gap-3">
