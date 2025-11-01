@@ -1,19 +1,20 @@
 "use client";
 
-import { PickupRequest, User } from "@/lib/types";
-import { formatAddress } from "@/lib/utils";
-
 import { ColumnDef } from "@tanstack/react-table";
 import { Phone } from "lucide-react";
 import Link from "next/link";
 
+import { User } from "@/lib/types";
+import { formatAddress } from "@/lib/utils";
+
+import { GetUserRequestsType } from "@/features/requests/server/types";
 import { DataTableAction } from "./data-table-action";
 import { DataTableColumnHeader } from "./data-table-column-header";
 
 export type DriverAssignmentType = User & {
   name: string;
   requestDistance: number | null;
-  request: PickupRequest;
+  request: GetUserRequestsType;
 };
 
 export const columns: ColumnDef<DriverAssignmentType>[] = [
@@ -33,17 +34,17 @@ export const columns: ColumnDef<DriverAssignmentType>[] = [
             rel="noopener noreferrer"
             className="font-medium hover:text-blue-400 hover:underline text-balance"
           >
-            {user.firstName} {user.lastName}
+            {user.name}
           </Link>
         </div>
       );
     },
   },
   {
-    accessorKey: "phone",
+    accessorKey: "phoneNumber",
     header: () => <div className="text-left">Phone</div>,
     cell: ({ row }) => {
-      const phoneNumber = row.original.phone;
+      const phoneNumber = row.original.phoneNumber;
       return phoneNumber ? (
         <Link
           href={`tel:${phoneNumber.replace(/\D/g, "")}`}

@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 
 import CustomPhoneInput from "@/components/custom-phone-input";
-import { UserProfile } from "@/components/profile/profile-management";
+import { GetUserProfile } from "@/features/user/types";
 import { ProfileUpdateSchema } from "@/schemas/adminCreateNewUserSchema";
 
 interface ProfileTabProps {
@@ -24,7 +24,7 @@ interface ProfileTabProps {
   setIsProfileEditing: (val: boolean) => void;
   profileForm: UseFormReturn<ProfileUpdateSchema>;
   handleProfileUpdate: (val: ProfileUpdateSchema) => Promise<void>;
-  profile: UserProfile | null;
+  profile: GetUserProfile | null;
   imagePreview: string;
   handleImageChange: (e: ChangeEvent<HTMLInputElement>) => void;
 }
@@ -62,12 +62,12 @@ export const ProfileTab = ({
             <div className="flex items-center space-x-4">
               <Avatar className="w-24 h-24">
                 <AvatarImage
-                  src={imagePreview || profile?.image}
-                  alt={`${profile?.firstName} ${profile?.lastName}`}
+                  src={imagePreview ?? profile?.image ?? undefined}
+                  alt={`${profile?.name}`}
                 />
                 <AvatarFallback className="text-xl">
-                  {profile?.firstName?.[0]}
-                  {profile?.lastName?.[0]}
+                  {profile?.name.split(" ")[0][0]}
+                  {profile?.name.split(" ")[1]?.[0]}
                 </AvatarFallback>
               </Avatar>
               {isProfileEditing && (
@@ -98,38 +98,15 @@ export const ProfileTab = ({
               {/* First name */}
               <FormField
                 control={profileForm.control}
-                name="firstName"
+                name="name"
                 render={({ field }) => (
                   <FormItem className="space-y-2">
-                    <FormLabel>First Name</FormLabel>
+                    <FormLabel>Name</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         type="text"
-                        name="firstName"
-                        onChange={(e) => field.onChange(e)}
-                        disabled={!isProfileEditing}
-                      />
-                    </FormControl>
-                    <div className="min-h-[1.25rem]">
-                      <FormMessage />
-                    </div>
-                  </FormItem>
-                )}
-              />
-
-              {/* Last Name */}
-              <FormField
-                control={profileForm.control}
-                name="lastName"
-                render={({ field }) => (
-                  <FormItem className="space-y-2">
-                    <FormLabel>Last Name</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="text"
-                        name="lastName"
+                        name="Name"
                         onChange={(e) => field.onChange(e)}
                         disabled={!isProfileEditing}
                       />
@@ -192,7 +169,7 @@ export const ProfileTab = ({
               {/* Phone Number */}
               <FormField
                 control={profileForm.control}
-                name="phone"
+                name="phoneNumber"
                 render={({ field, fieldState }) => (
                   <FormItem className="space-y-2">
                     <FormLabel>Phone Number</FormLabel>

@@ -1,16 +1,54 @@
 import { UserRole } from "@/generated/prisma";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
+import { ErrorBoundary } from "react-error-boundary";
 
-import NewUserCreationForm from "@/features/admin/components/new-user-creation";
-import { getAuthSession } from "@/lib/session/server-session";
+import { ErrorState } from "@/components/screen-states/error-state";
+import { LoadingState } from "@/components/screen-states/loading-state";
+import { NewUserCreationForm } from "@/features/admin/components/new-user-creation";
+import { requireAuth } from "@/lib/session/server-session";
+import { HydrateClient, prefetch, trpc } from "@/trpc/server";
 
 const NewUserPage = async () => {
-  const session = await getAuthSession();
+  const session = await requireAuth();
 
   if (!session?.user || session?.user.role !== UserRole.ADMIN) {
     redirect("/dashboard");
   }
-  return <NewUserCreationForm />;
+
+  prefetch(trpc.places.countries.queryOptions());
+
+  prefetch(
+    trpc.services.getServices.queryOptions({
+      status: "active",
+    })
+  );
+
+  prefetch(trpc.users.getUsers.queryOptions({}));
+
+  return (
+    <HydrateClient>
+      <ErrorBoundary
+        fallback={
+          <ErrorState
+            title="New User Form Failed to Load"
+            description="An error occurred while loading new users form. Please try again or contact support if the issue continues."
+          />
+        }
+      >
+        <Suspense
+          fallback={
+            <LoadingState
+              title="New User Form Loading..."
+              description="Please wait while we load your form."
+            />
+          }
+        >
+          <NewUserCreationForm />
+        </Suspense>
+      </ErrorBoundary>
+    </HydrateClient>
+  );
 };
 
 export default NewUserPage;

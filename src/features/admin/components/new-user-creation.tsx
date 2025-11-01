@@ -25,28 +25,20 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 
 import CustomPhoneInput from "@/components/custom-phone-input";
 import AdminNewUserRequest from "@/features/admin/components/admin-new-user-request";
-import { PROVINCES } from "@/lib/types";
+import { AddressFields } from "@/features/auth/components/signup-form";
 import { generateTempPassword } from "@/lib/utils";
 import {
   newUserSchema,
   NewUserSchema,
 } from "@/schemas/adminCreateNewUserSchema";
 
-const NewUserCreationForm = () => {
+export const NewUserCreationForm = () => {
   const router = useRouter();
+
   const [loading, setLoading] = useState(false);
 
   const form = useForm<NewUserSchema>({
@@ -62,6 +54,7 @@ const NewUserCreationForm = () => {
       city: "",
       province: "",
       postalCode: "",
+      country: "",
       password: "",
       serviceDayId: "",
       isDropOff: false,
@@ -157,12 +150,12 @@ const NewUserCreationForm = () => {
           <div className="flex items-center space-x-3 mb-2">
             <Link href="/admin/users">
               <Button variant="ghost" size="sm">
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft className="size-4" />
               </Button>
             </Link>
             <h1 className="text-2xl font-bold">New User</h1>
           </div>
-          <p className="text-primary">
+          <p className="text-primary mb-4">
             Create a new user{" "}
             {createPickUpRequest &&
               "and request transportation to church services"}
@@ -180,6 +173,7 @@ const NewUserCreationForm = () => {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              {/* Name */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -226,6 +220,7 @@ const NewUserCreationForm = () => {
                 />
               </div>
 
+              {/* Email & Phone number */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -277,6 +272,7 @@ const NewUserCreationForm = () => {
                 />
               </div>
 
+              {/* Login */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -337,116 +333,8 @@ const NewUserCreationForm = () => {
                 )}
               </div>
 
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Address Information</h3>
-
-                <FormField
-                  control={form.control}
-                  name="street"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Street Address</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          id="street"
-                          name="street"
-                          placeholder="123 Main Street"
-                          disabled={loading}
-                        />
-                      </FormControl>
-                      <div className="min-h-[1.25rem]">
-                        <FormMessage />
-                      </div>
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="city"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>City</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            id="city"
-                            name="city"
-                            placeholder="Calgary"
-                            disabled={loading}
-                          />
-                        </FormControl>
-                        <div className="min-h-[1.25rem]">
-                          <FormMessage />
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="province"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Province</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger
-                              disabled={loading}
-                              className="w-full"
-                            >
-                              <SelectValue placeholder="Select province" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectGroup>
-                              <SelectLabel>Canada</SelectLabel>
-                              {PROVINCES.map((province) => (
-                                <SelectItem value={province} key={province}>
-                                  {province}
-                                </SelectItem>
-                              ))}
-                            </SelectGroup>
-                          </SelectContent>
-                        </Select>
-                        <div className="min-h-[1.25rem]">
-                          <FormMessage />
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="postalCode"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Postal Code</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            id="postalCode"
-                            name="postalCode"
-                            placeholder="T1A 0A6"
-                            disabled={loading}
-                            onChange={(e) =>
-                              field.onChange(e.target.value.toUpperCase())
-                            }
-                          />
-                        </FormControl>
-                        <div className="min-h-[1.25rem]">
-                          <FormMessage />
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
+              {/* Address */}
+              <AddressFields loading={loading} form={form} />
 
               {/* New Request */}
               <div>
@@ -527,5 +415,3 @@ const NewUserCreationForm = () => {
     </div>
   );
 };
-
-export default NewUserCreationForm;

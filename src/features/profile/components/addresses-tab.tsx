@@ -1,7 +1,6 @@
 import { Edit, MapPin, Plus, Star, Trash2 } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
 
-import { Address } from "@/components/profile/profile-management";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,38 +17,44 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 
-import { PROVINCES } from "@/lib/types";
+import { CustomFormLabel } from "@/components/custom-form-label";
+import {
+  CustomPagination,
+  usePagination,
+} from "@/components/custom-pagination";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { AddressFields } from "@/features/auth/components/signup-form";
+import { GetUserAddress } from "@/features/user/types";
 import { AddressUpdateSchema } from "@/schemas/adminCreateNewUserSchema";
-import { CustomPagination, usePagination } from "../custom-pagination";
 
 interface AddressesTabProps {
   isAddressEditing: boolean;
   addressDialogOpen: boolean;
   setAddressDialogOpen: (val: boolean) => void;
-  editingAddress: Address | null;
-  setEditingAddress: (val: Address | null) => void;
+  editingAddress: GetUserAddress | null;
+  setEditingAddress: (val: GetUserAddress | null) => void;
   setIsAddressEditing: (val: boolean) => void;
   addressForm: UseFormReturn<AddressUpdateSchema>;
   handleUpdateAddress: (values: AddressUpdateSchema) => Promise<void>;
   handleAddAddress: (values: AddressUpdateSchema) => Promise<void>;
-  handleAddressEdit: (address: Address) => void;
+  handleAddressEdit: (address: GetUserAddress) => void;
   handleDeleteAddress: (addressId: string) => Promise<void>;
   handleSetDefaultAddress: (addressId: string) => Promise<void>;
-  addresses: Address[];
+  addresses: GetUserAddress[];
   loading: boolean;
 }
 
@@ -104,7 +109,7 @@ export const AddressesTab = ({
                     ? "Edit Address"
                     : "Add New Address"}
                 </DialogTitle>
-                <DialogDescription className="sr-only">
+                <DialogDescription>
                   {isAddressEditing && editingAddress
                     ? "Edit the details of your address"
                     : "Fill in the details for your new address"}
@@ -125,7 +130,7 @@ export const AddressesTab = ({
                     name="name"
                     render={({ field }) => (
                       <FormItem className="space-y-2">
-                        <FormLabel>Address Name</FormLabel>
+                        <CustomFormLabel title="Address Name" />
                         <Select
                           onValueChange={field.onChange}
                           defaultValue={field.value}
@@ -147,138 +152,9 @@ export const AddressesTab = ({
                       </FormItem>
                     )}
                   />
-                  {/* Street Address */}
-                  <FormField
-                    control={addressForm.control}
-                    name="street"
-                    render={({ field }) => (
-                      <FormItem className="space-y-2">
-                        <FormLabel>Street Address</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            type="text"
-                            name="street"
-                            onChange={(e) => field.onChange(e)}
-                            placeholder="123 Main Street"
-                          />
-                        </FormControl>
-                        <div className="min-h-[1.25rem]">
-                          <FormMessage />
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-                  {/* City & Province */}
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* City */}
-                    <FormField
-                      control={addressForm.control}
-                      name="city"
-                      render={({ field }) => (
-                        <FormItem className="space-y-2">
-                          <FormLabel>City</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              type="text"
-                              name="city"
-                              onChange={(e) => field.onChange(e)}
-                              placeholder="Toronto"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    {/* Province */}
-                    <FormField
-                      control={addressForm.control}
-                      name="province"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Province</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger
-                                disabled={loading}
-                                className="w-full"
-                              >
-                                <SelectValue placeholder="Select province" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectGroup>
-                                <SelectLabel>Canada</SelectLabel>
-                                {PROVINCES.map((province) => (
-                                  <SelectItem value={province} key={province}>
-                                    {province}
-                                  </SelectItem>
-                                ))}
-                              </SelectGroup>
-                            </SelectContent>
-                          </Select>
-                          <div className="min-h-[1.25rem]">
-                            <FormMessage />
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  {/* Postal code  & Country */}
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Postal Code */}
-                    <FormField
-                      control={addressForm.control}
-                      name="postalCode"
-                      render={({ field }) => (
-                        <FormItem className="space-y-2">
-                          <FormLabel>Postal Code</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              type="text"
-                              name="postalCode"
-                              placeholder="M5H 2N2"
-                              disabled={loading}
-                              onChange={(e) =>
-                                field.onChange(e.target.value.toUpperCase())
-                              }
-                            />
-                          </FormControl>
-                          <div className="min-h-[1.25rem]">
-                            <FormMessage />
-                          </div>
-                        </FormItem>
-                      )}
-                    />
+                  {/* Address */}
+                  <AddressFields form={addressForm} loading={loading} />
 
-                    {/* Country */}
-                    <FormField
-                      control={addressForm.control}
-                      name="country"
-                      render={({ field }) => (
-                        <FormItem className="space-y-2">
-                          <FormLabel>Country</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              type="text"
-                              name="country"
-                              placeholder="Canada"
-                              disabled={loading}
-                              onChange={(e) => field.onChange(e)}
-                            />
-                          </FormControl>
-                          <div className="min-h-[1.25rem]">
-                            <FormMessage />
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
                   <Button type="submit" className="w-full">
                     {editingAddress ? "Update Address" : "Add Address"}
                   </Button>
@@ -313,31 +189,54 @@ export const AddressesTab = ({
                 </div>
                 <div className="flex items-center space-x-2">
                   {!address.isDefault && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleSetDefaultAddress(address.id)}
-                    >
-                      Set Default
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSetDefaultAddress(address.id)}
+                        >
+                          Set Default
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent className="bg-background text-foreground">
+                        Set Address as Default
+                      </TooltipContent>
+                    </Tooltip>
                   )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      handleAddressEdit(address);
-                    }}
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDeleteAddress(address.id)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          handleAddressEdit(address);
+                        }}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="bg-background text-foreground">
+                      Edit Address
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteAddress(address.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="bg-background text-foreground">
+                      Delete Address
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
             </div>

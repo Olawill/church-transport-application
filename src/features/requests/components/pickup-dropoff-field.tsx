@@ -7,6 +7,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { cn } from "@/lib/utils";
 import { Path, UseFormReturn } from "react-hook-form";
 
 type PickUpDropOffFormFields = {
@@ -21,6 +22,9 @@ interface PickUpDropOffFieldProps<T extends PickUpDropOffFormFields> {
 export const PickUpDropOffField = <T extends PickUpDropOffFormFields>({
   form,
 }: PickUpDropOffFieldProps<T>) => {
+  const isDropOff = form.watch("isDropOff" as Path<T>);
+  const isPickup = form.watch("isPickUp" as Path<T>);
+
   return (
     <>
       {/* PickUp Service */}
@@ -41,6 +45,10 @@ export const PickUpDropOffField = <T extends PickUpDropOffFormFields>({
                     }
                     field.onChange(checked);
                   }}
+                  className={cn(
+                    "cursor-pointer",
+                    isPickup && !isDropOff && "cursor-not-allowed"
+                  )}
                   id="isPickUp"
                 />
               </FormControl>
@@ -74,6 +82,10 @@ export const PickUpDropOffField = <T extends PickUpDropOffFormFields>({
                     }
                     field.onChange(checked);
                   }}
+                  className={cn(
+                    "cursor-pointer",
+                    !isPickup && isDropOff && "cursor-not-allowed"
+                  )}
                   id="isDropOff"
                 />
               </FormControl>

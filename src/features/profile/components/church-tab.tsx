@@ -7,26 +7,23 @@ import {
   Star,
   Trash2,
 } from "lucide-react";
+import { useEffect } from "react";
 import { UseFormReturn } from "react-hook-form";
 
-import { PROVINCES } from "@/lib/types";
-import CustomPhoneInput from "../custom-phone-input";
-
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  CustomPagination,
+  usePagination,
+} from "@/components/custom-pagination";
+import CustomPhoneInput from "@/components/custom-phone-input";
+
+import { GetOrganizationData } from "@/features/organization/types";
 import { ChurchBranchContactInfoUpdateSchema } from "@/schemas/adminCreateNewUserSchema";
-import { useEffect } from "react";
-import { CustomPagination, usePagination } from "../custom-pagination";
-import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { BranchAddress } from "./profile-management";
+
+import { CustomFormLabel } from "@/components/custom-form-label";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -34,7 +31,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "../ui/dialog";
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -42,12 +39,24 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "../ui/form";
-import { Input } from "../ui/input";
-import { BranchAddress, OrgInfo } from "./profile-management";
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { AddressFields } from "@/features/auth/components/signup-form";
 
 interface ChurchTabProps {
-  organization: OrgInfo | null;
+  organization: GetOrganizationData | undefined;
   branchAddressDialogOpen: boolean;
   setBranchAddressDialogOpen: (val: boolean) => void;
   selectedBranchAddress: BranchAddress | null;
@@ -124,7 +133,7 @@ export const ChurchTab = ({
                 <>
                   <p className="font-medium">{organization?.churchName}</p>
                   {organization?.churchAcronym && (
-                    <Badge className="text-sm text-gray-600">
+                    <Badge className="text-sm text-gray-300">
                       {organization?.churchAcronym}
                     </Badge>
                   )}
@@ -168,10 +177,10 @@ export const ChurchTab = ({
                 <DialogHeader>
                   <DialogTitle>
                     {isEditingBranchAddress && selectedBranchAddress
-                      ? "Edit Address"
-                      : "Add New Address"}
+                      ? "Edit Church Address"
+                      : "Add New Church Address"}
                   </DialogTitle>
-                  <DialogDescription className="sr-only">
+                  <DialogDescription>
                     {isEditingBranchAddress && selectedBranchAddress
                       ? "Edit the details of your branch address"
                       : "Fill in the address details for your new branch"}
@@ -221,7 +230,7 @@ export const ChurchTab = ({
                         name="branchCategory"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Category</FormLabel>
+                            <CustomFormLabel title="Category" />
                             <Select
                               onValueChange={field.onChange}
                               defaultValue={field.value}
@@ -246,141 +255,11 @@ export const ChurchTab = ({
                       />
                     </div>
 
-                    {/* Street Address */}
-                    <FormField
-                      control={churchContactInfoForm.control}
-                      name="churchAddress"
-                      render={({ field }) => (
-                        <FormItem className="space-y-2">
-                          <FormLabel>Church Address</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              type="text"
-                              name="churchAddress"
-                              onChange={(e) => field.onChange(e)}
-                              placeholder="123 Main Street"
-                            />
-                          </FormControl>
-                          <div className="min-h-[1.25rem]">
-                            <FormMessage />
-                          </div>
-                        </FormItem>
-                      )}
+                    {/* Address Info */}
+                    <AddressFields
+                      form={churchContactInfoForm}
+                      loading={loading}
                     />
-                    {/* City & Province */}
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* City */}
-                      <FormField
-                        control={churchContactInfoForm.control}
-                        name="churchCity"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>City</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                type="text"
-                                name="churchCity"
-                                onChange={(e) => field.onChange(e)}
-                                placeholder="Toronto"
-                              />
-                            </FormControl>
-                            <div className="min-h-[1.25rem]">
-                              <FormMessage />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                      {/* Province */}
-                      <FormField
-                        control={churchContactInfoForm.control}
-                        name="churchProvince"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Province</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger
-                                  disabled={loading}
-                                  className="w-full"
-                                >
-                                  <SelectValue placeholder="Select province" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectGroup>
-                                  <SelectLabel>Canada</SelectLabel>
-                                  {PROVINCES.map((province) => (
-                                    <SelectItem value={province} key={province}>
-                                      {province}
-                                    </SelectItem>
-                                  ))}
-                                </SelectGroup>
-                              </SelectContent>
-                            </Select>
-                            <div className="min-h-[1.25rem]">
-                              <FormMessage />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    {/* Postal code  & Country */}
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* Postal Code */}
-                      <FormField
-                        control={churchContactInfoForm.control}
-                        name="churchPostalCode"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Postal Code</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                type="text"
-                                name="churchPostalCode"
-                                placeholder="M5H 2N2"
-                                disabled={loading}
-                                onChange={(e) =>
-                                  field.onChange(e.target.value.toUpperCase())
-                                }
-                              />
-                            </FormControl>
-                            <div className="min-h-[1.25rem]">
-                              <FormMessage />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Country */}
-                      <FormField
-                        control={churchContactInfoForm.control}
-                        name="churchCountry"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Country</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                type="text"
-                                name="churchCountry"
-                                placeholder="Canada"
-                                onChange={(e) => field.onChange(e)}
-                              />
-                            </FormControl>
-                            <div className="min-h-[1.25rem]">
-                              <FormMessage />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
 
                     <div className="grid grid-cols-3 gap-4">
                       {/* Phone Number */}
@@ -389,7 +268,7 @@ export const ChurchTab = ({
                         name="churchPhone"
                         render={({ field, fieldState }) => (
                           <FormItem className="space-y-2">
-                            <FormLabel>Phone Number</FormLabel>
+                            <CustomFormLabel title="Phone Number" />
                             <FormControl>
                               <CustomPhoneInput
                                 placeholder="(123) 456-7890"
@@ -416,7 +295,7 @@ export const ChurchTab = ({
                         name="requestCutOffInHrs"
                         render={({ field }) => (
                           <FormItem className="space-y-2">
-                            <FormLabel>Cut-off Time (hrs)</FormLabel>
+                            <CustomFormLabel title="Cut-off Time (hrs)" />
                             <FormControl>
                               <Input
                                 {...field}
@@ -440,7 +319,7 @@ export const ChurchTab = ({
                         name="defaultMaxDistance"
                         render={({ field }) => (
                           <FormItem className="space-y-2">
-                            <FormLabel>Max Distance</FormLabel>
+                            <CustomFormLabel title="Max Distance" />
                             <Select
                               onValueChange={field.onChange}
                               defaultValue={field.value}
@@ -534,7 +413,10 @@ export const ChurchTab = ({
                         </span>
                       </Badge>
 
-                      <Badge variant="outline" className="text-sm bg-lime-700">
+                      <Badge
+                        variant="outline"
+                        className="text-sm bg-lime-700 text-white"
+                      >
                         <span className="font-semibold italic">
                           Default Max Distance for Drivers:
                         </span>
@@ -546,39 +428,61 @@ export const ChurchTab = ({
                   </div>
                   <div className="flex flex-wrap gap-2 items-center -ml-2">
                     {address.branchCategory === "BRANCH" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mr-4"
-                        onClick={() => handleSetHeadquarterAddress(address.id)}
-                      >
-                        Set Headquarter
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mr-4"
+                            onClick={() =>
+                              handleSetHeadquarterAddress(address.id)
+                            }
+                          >
+                            Set Headquarter
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent className="bg-background text-foreground">
+                          Make Headquarter
+                        </TooltipContent>
+                      </Tooltip>
                     )}
 
                     <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        title="Edit Branch"
-                        onClick={() => {
-                          handleBranchAddressEdit(address);
-                        }}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        title="Delete Branch"
-                        onClick={() => {
-                          // address.branchCategory === "HEADQUARTER"
-                          handleDeleteBranchAddress(address.id);
-                        }}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              handleBranchAddressEdit(address);
+                            }}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent className="bg-background text-foreground">
+                          Edit Branch Address
+                        </TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              // address.branchCategory === "HEADQUARTER"
+                              handleDeleteBranchAddress(address.id);
+                            }}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent className="bg-background text-foreground">
+                          Delete Branch Address
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                   </div>
                 </div>

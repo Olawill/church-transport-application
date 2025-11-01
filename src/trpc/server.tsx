@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import "server-only";
 
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import {
   createTRPCOptionsProxy,
   TRPCQueryOptions,
@@ -9,18 +10,6 @@ import { cache } from "react";
 import { createTRPCContext } from "./init";
 import { makeQueryClient } from "./query-client";
 import { appRouter } from "./routers/_app";
-import {
-  dehydrate,
-  FetchInfiniteQueryOptions,
-  FetchQueryOptions,
-  HydrationBoundary,
-  QueryKey,
-} from "@tanstack/react-query";
-
-// Proper type for that includes both regular and infinite query options
-type PrefetchOptions =
-  | FetchQueryOptions<unknown, Error, unknown, QueryKey>
-  | FetchInfiniteQueryOptions<unknown, Error, unknown, QueryKey, unknown>;
 
 export const getQueryClient = cache(makeQueryClient);
 // const caller = createCallerFactory(appRouter)(createTRPCContext);

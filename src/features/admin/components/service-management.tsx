@@ -1,6 +1,8 @@
 "use client";
 
+import { useTRPC } from "@/trpc/client";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
@@ -12,7 +14,6 @@ import {
   ServiceCategory,
   ServiceType,
 } from "@/generated/prisma";
-import { ServiceDay } from "@/lib/types";
 import {
   frequentMultiDaySchema,
   FrequentMultiDaySchema,
@@ -35,6 +36,11 @@ import {
 import { Form } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+import {
+  useServiceDayParams,
+  useServiceFormParams,
+} from "../hooks/use-serviceDay-params";
+import { GetServiceType } from "../types";
 import { FrequentMultiDayForm } from "./services/frequent-multi-day-form";
 import { OnetimeMultiDayForm } from "./services/one-time-multi-day-form";
 import { OnetimeOneDayForm } from "./services/one-time-one-day-form";
@@ -52,10 +58,11 @@ type PropertyError = {
 };
 
 export const ServiceManagement = () => {
-  const [serviceDays, setServiceDays] = useState<ServiceDay[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editingService, setEditingService] = useState<ServiceDay | null>(null);
+  const trpc = useTRPC();
+
+  const [editingService, setEditingService] = useState<GetServiceType | null>(
+    null
+  );
   const [activeTab, setActiveTab] = useState<ServiceCategory>(
     ServiceCategory.RECURRING
   );
@@ -71,9 +78,22 @@ export const ServiceManagement = () => {
     []
   );
 
+  const [params] = useServiceDayParams();
+  const [showFormParams, setShowForm] = useServiceFormParams();
+  const { showForm } = showFormParams;
+  const { page, pageSize, status } = params;
+
+  const { data: serviceDaysData, isLoading: loading } = useSuspenseQuery(
+    trpc.services.getPaginatedServices.queryOptions({
+      status,
+      page,
+      pageSize,
+    })
+  );
+
   // Default values map
   const getDefaultValues = useCallback(
-    (category: ServiceCategory, service?: ServiceDay) => {
+    (category: ServiceCategory, service?: GetServiceType) => {
       if (service) {
         // Extract days of week
         const dayOfWeek =
@@ -211,7 +231,7 @@ export const ServiceManagement = () => {
   const resetForm = useCallback(() => {
     form.reset(getDefaultValues(activeTab));
     setEditingService(null);
-    setShowForm(false);
+    setShowForm({ showForm: false });
   }, [form, activeTab, getDefaultValues]);
 
   // Reset form when tab changes
@@ -230,27 +250,8 @@ export const ServiceManagement = () => {
     setActiveTab(value as ServiceCategory);
   }, []);
 
-  const fetchServiceDays = useCallback(async () => {
-    try {
-      const response = await fetch("/api/service-days");
-      if (response.ok) {
-        const data = await response.json();
-        setServiceDays(data);
-      }
-    } catch (error) {
-      console.error("Error fetching service days:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchServiceDays();
-  }, [fetchServiceDays]);
-
   const handleSubmit = useCallback(
     async (values: FormSchema) => {
-      setLoading(true);
       try {
         const currentSchema = schemaMap[values.serviceCategory];
 
@@ -288,7 +289,7 @@ export const ServiceManagement = () => {
             `Service ${editingService ? "updated" : "created"} successfully`
           );
           resetForm();
-          fetchServiceDays();
+          // fetchServiceDays();
         } else {
           const errorResponse = await response.json();
 
@@ -312,18 +313,16 @@ export const ServiceManagement = () => {
       } catch (error) {
         console.error("Error submitting service:", error);
         toast.error("An error occurred");
-      } finally {
-        setLoading(false);
       }
     },
-    [editingService, fetchServiceDays, resetForm, schemaMap]
+    [editingService, resetForm, schemaMap]
   );
 
   const handleEdit = useCallback(
-    (service: ServiceDay) => {
+    (service: GetServiceType) => {
       setActiveTab(service.serviceCategory);
       setEditingService(service);
-      setShowForm(true);
+      setShowForm({ showForm: true });
 
       // Force form reset after state updates
       setTimeout(() => {
@@ -343,7 +342,7 @@ export const ServiceManagement = () => {
           </p>
         </div>
         <Button
-          onClick={() => setShowForm(true)}
+          onClick={() => setShowForm({ showForm: true })}
           disabled={loading || !!editingService}
         >
           <Plus className="h-4 w-4" />
@@ -366,7 +365,7 @@ export const ServiceManagement = () => {
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={handleTabChange}>
-              <TabsList>
+              <TabsList className="[&_button]:data-[state=active]:shadow-none">
                 <TabsTrigger
                   value={ServiceCategory.RECURRING}
                   disabled={!!editingService}
@@ -437,122 +436,12 @@ export const ServiceManagement = () => {
       )}
 
       {/* Services List */}
-      {/* <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Service Schedule</CardTitle>
-            <CardDescription>
-              Current church service times available for pickup requests
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-4">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="animate-pulse p-4 border rounded-lg">
-                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                  </div>
-                ))}
-              </div>
-            ) : serviceDays.length === 0 ? (
-              <div className="text-center py-8">
-                <CalendarIcon className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">
-                  No services configured
-                </h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Get started by adding your first service day.
-                </p>
-                <div className="mt-6">
-                  <Button onClick={() => setShowForm(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add First Service
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {paginatedServices.map((service) => (
-                    <div
-                      key={service.id}
-                      className="border rounded-lg p-4 hover:bg-gray-700"
-                    >
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <h3 className="font-semibold">{service.name}</h3>
-                          <div className="flex items-center space-x-2 mt-1 text-sm">
-                            <CalendarIcon className="h-4 w-4" />
-                            {service.weekdays &&
-                            service.weekdays.length === 1 ? (
-                              <span>
-                                {getDayName(service.weekdays[0].dayOfWeek)}
-                              </span>
-                            ) : (
-                              <span>Multiple Service Days</span>
-                            )}
-                            <Clock className="h-4 w-4 ml-2" />
-                            <span>{formatTime(service.time)}</span>
-                          </div>
-                        </div>
-                        <div className="flex flex-row items-end space-x-1">
-                          <ButtonGroup>
-                            <Badge
-                              className={getServiceTypeColor(
-                                service.serviceType
-                              )}
-                            >
-                              {service.serviceType.toLowerCase()}
-                            </Badge>
-                            <Badge
-                              className={getServiceStatusColor(
-                                service.isActive
-                              )}
-                            >
-                              {service.isActive ? "active" : "inactive"}
-                            </Badge>
-                          </ButtonGroup>
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end space-x-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleEdit(service)}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDelete(service.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <CustomPagination
-                  currentPage={currentPage}
-                  totalItems={serviceDays.length}
-                  itemsPerPage={itemsPerPage}
-                  onPageChange={setCurrentPage}
-                  onItemsPerPageChange={setItemsPerPage}
-                  itemName="services"
-                />
-              </div>
-            )}
-          </CardContent>
-        </Card> */}
       <ServiceList
-        serviceDays={serviceDays}
+        serviceDaysData={serviceDaysData}
         loading={loading}
         onEdit={handleEdit}
-        onDelete={fetchServiceDays}
-        onShowForm={() => setShowForm(true)}
+        // onDelete={fetchServiceDays}
+        onShowForm={() => setShowForm({ showForm: true })}
       />
     </div>
   );

@@ -6,14 +6,15 @@ import { addMonths, format } from "date-fns";
 import {
   ArrowLeft,
   CalendarIcon,
+  Check,
+  ChevronsUpDown,
   Clock,
   MapPin,
   Pencil,
   Send,
-  User2,
+  User,
   UserCheck,
 } from "lucide-react";
-import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -29,6 +30,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
   Form,
   FormControl,
@@ -55,8 +64,9 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
 import { PickUpDropOffField } from "@/features/requests/components/pickup-dropoff-field";
+import { UserType } from "@/features/users/types";
 import { useConfirm } from "@/hooks/use-confirm";
-import { Address, ServiceDay, User } from "@/lib/types";
+import { Address } from "@/lib/types";
 import {
   cn,
   formatAddress,
@@ -72,6 +82,9 @@ import {
   newAdminRequestSchema,
   NewAdminRequestSchema,
 } from "@/schemas/newRequestSchema";
+import { useTRPC } from "@/trpc/client";
+import { skipToken, useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { GetServiceType } from "../types";
 import { ServiceDaySelector } from "./services/service-day-selector";
 
 interface AdminNewUserRequestProps {
@@ -96,13 +109,14 @@ const AdminNewUserRequest = ({
   setShowDialog,
 }: AdminNewUserRequestProps) => {
   const router = useRouter();
-  const { data: session } = useSession();
-  const [loading, setLoading] = useState(false);
-  const [serviceDays, setServiceDays] = useState<ServiceDay[]>([]);
-  const [addresses, setAddresses] = useState<Address[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const trpc = useTRPC();
 
-  const [selectedService, setSelectedService] = useState<ServiceDay | null>(
+  const [loading, setLoading] = useState(false);
+
+  const [usersOpen, setUsersOpen] = useState(false);
+  const [userAddressesOpen, setUserAddressesOpen] = useState(false);
+
+  const [selectedService, setSelectedService] = useState<GetServiceType | null>(
     null
   );
   const [dayOptions, setDayOptions] = useState<
@@ -113,7 +127,7 @@ const AdminNewUserRequest = ({
   );
 
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
 
   const [SeriesUpdateDialog, confirmSeriesUpdate] = useConfirm(
     "Update Series",
@@ -121,6 +135,22 @@ const AdminNewUserRequest = ({
     true,
     "Update occurrence",
     "Update series"
+  );
+
+  const { data: serviceDays, isLoading: servicesLoading } = useSuspenseQuery(
+    trpc.services.getServices.queryOptions({
+      status: "active",
+    })
+  );
+
+  const { data: users, isLoading: usersLoading } = useSuspenseQuery(
+    trpc.users.getUsers.queryOptions({})
+  );
+
+  const { data: addresses = [], isLoading: userAddressesLoading } = useQuery(
+    trpc.adminUser.getUserAddresses.queryOptions(
+      selectedUser ? { id: selectedUser.id } : skipToken
+    )
   );
 
   const newRequestForm = useForm<NewAdminRequestSchema>({
@@ -144,12 +174,7 @@ const AdminNewUserRequest = ({
     },
   });
 
-  useEffect(() => {
-    fetchServiceDays();
-    fetchUsers();
-    fetchAddresses();
-  }, []);
-
+  // New user request form service day
   const serviceDayId = form ? form?.watch("serviceDayId") : "";
   useEffect(() => {
     if (serviceDayId && serviceDays.length > 0) {
@@ -215,6 +240,7 @@ const AdminNewUserRequest = ({
     }
   }, [serviceDayId, serviceDays]);
 
+  // New request form service day
   const newServiceDayId = useWatch({
     control: newRequestForm.control,
     name: "serviceDayId",
@@ -296,111 +322,6 @@ const AdminNewUserRequest = ({
       setSelectedUser(user || null);
     }
   }, [userId, users]);
-
-  const fetchServiceDays = async () => {
-    try {
-      const response = await fetch("/api/service-days?status=active");
-      if (response.ok) {
-        const data = await response.json();
-        setServiceDays(data);
-      }
-    } catch (error) {
-      console.error("Error fetching service days:", error);
-    }
-  };
-
-  const fetchUsers = async () => {
-    try {
-      const response = await fetch(`/api/users`);
-
-      if (response.ok) {
-        const userData: User[] = await response.json();
-        if (userData.length > 0) {
-          setUsers(userData);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching addresses:", error);
-      // For demo purpose, create mock user
-      const mockUser: User = {
-        id: "mock-user",
-        firstName: "mock",
-        lastName: "user",
-        email: "mock.user@church.com",
-        phone: "(123) 456-7890",
-        username: "mocky",
-        role: "USER",
-        status: "APPROVED",
-        isActive: true,
-        maxDistance: 50,
-        emailVerified: null,
-        phoneVerified: null,
-        image: null,
-        whatsappNumber: null,
-        twoFactorEnabled: false,
-        bannedAt: null,
-        bannedBy: null,
-        banReason: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        addresses: [
-          {
-            id: "mock-address",
-            userId: session?.user?.id || "",
-            street: "123 Main Street",
-            city: "Toronto",
-            province: "ON",
-            postalCode: "M1M 1M1",
-            country: "Canada",
-            latitude: 43.6532,
-            longitude: -79.3832,
-            isDefault: true,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-        ],
-      };
-      setUsers([mockUser]);
-    }
-  };
-  const fetchAddresses = async () => {
-    try {
-      // For now, we'll fetch the user's default address
-      // In a full implementation, you might have a user addresses API
-      // This is a simplified version using the user's info
-      if (selectedUser && selectedUser.id) {
-        // const response = await fetch(`/api/users?id=${session.user.id}`);
-        const response = await fetch(`/api/users`);
-        if (response.ok) {
-          const userData: Array<Pick<User, "id" | "addresses">> =
-            await response.json();
-          if (userData.length > 0) {
-            setAddresses(
-              userData.find((d) => d.id === selectedUser.id)?.addresses || []
-            );
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching addresses:", error);
-      // For demo, create a mock address if fetching fails
-      const mockAddress: Address = {
-        id: "mock-address",
-        userId: session?.user?.id || "",
-        street: "123 Main Street",
-        city: "Toronto",
-        province: "ON",
-        postalCode: "M1M 1M1",
-        country: "Canada",
-        latitude: 43.6532,
-        longitude: -79.3832,
-        isDefault: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      setAddresses([mockAddress]);
-    }
-  };
 
   const handleSubmit = async (values: NewAdminRequestSchema) => {
     const validatedFields = await newAdminRequestSchema.safeParseAsync(values);
@@ -683,7 +604,7 @@ const AdminNewUserRequest = ({
           </div>
 
           {/* Recurring Request */}
-          <div className="flex flex-col justify-between rounded-lg border p-3 shadow-sm">
+          <div className="flex flex-col justify-between rounded-lg border p-3 shadow-sm mt-4">
             <FormField
               control={form.control}
               name="isRecurring"
@@ -839,43 +760,86 @@ const AdminNewUserRequest = ({
                     render={({ field }) => (
                       <FormItem className="space-y-2">
                         <FormLabel>On Behalf of</FormLabel>
-                        <Select
-                          defaultValue={field.value}
-                          onValueChange={field.onChange}
-                          disabled={!!newRequestData}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select the user" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {users.map((user) => (
-                              <SelectItem key={user.id} value={user.id}>
-                                <div className="flex items-center space-x-2">
-                                  <User2 className="h-4 w-4" />
-                                  <span>
-                                    {user.firstName} {user.lastName}
-                                  </span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Popover open={usersOpen} onOpenChange={setUsersOpen}>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={usersOpen}
+                                disabled={!!newRequestData || usersLoading}
+                                className={cn(
+                                  "justify-between",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                <span className="flex items-center gap-x-2">
+                                  <UserCheck className="size-4 text-muted-foreground" />
+                                  {field.value
+                                    ? users.find((s) => s.id === field.value)
+                                        ?.name
+                                    : "Select a user"}
+                                </span>
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-full p-0" align="start">
+                            <Command>
+                              <CommandInput placeholder="Search users..." />
+                              <CommandList>
+                                <CommandEmpty>No users found.</CommandEmpty>
+                                <CommandGroup>
+                                  {users.map((user) => (
+                                    <CommandItem
+                                      key={user.id}
+                                      value={user.id}
+                                      onSelect={() => {
+                                        newRequestForm.setValue(
+                                          "userId",
+                                          user.id
+                                        );
+                                        setUsersOpen(false);
+                                      }}
+                                      className={cn(
+                                        field.value === user.id &&
+                                          "font-semibold"
+                                      )}
+                                    >
+                                      {field.value === user.id ? (
+                                        <UserCheck
+                                          className={cn("mr-2 size-4")}
+                                        />
+                                      ) : (
+                                        <User className={cn("mr-2 size-4")} />
+                                      )}
+                                      {user.name}
+                                      <Check
+                                        className={cn(
+                                          "ml-auto size-4",
+                                          field.value === user.id
+                                            ? "opacity-100"
+                                            : "opacity-0"
+                                        )}
+                                      />
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                         {selectedUser && (
                           <FormDescription className="mt-2 p-3 bg-blue-50 rounded-lg">
                             {!newRequestData ? (
                               <>
                                 <span className="flex items-center space-x-2 text-sm text-gray-700">
                                   <UserCheck className="h-4 w-4" />
-                                  <span>
-                                    {selectedUser.firstName}{" "}
-                                    {selectedUser.lastName}
-                                  </span>
+                                  <span>{selectedUser.name}</span>
                                 </span>
                                 <span className="text-xs text-gray-500 mt-1">
-                                  Please ensure this person you want to request
-                                  a ride on behalf of
+                                  Please ensure this is the person you want to
+                                  request a ride on behalf of
                                 </span>
                               </>
                             ) : (
@@ -899,28 +863,80 @@ const AdminNewUserRequest = ({
                     render={({ field }) => (
                       <FormItem className="space-y-2">
                         <FormLabel>Church Service</FormLabel>
-                        <Select
-                          defaultValue={field.value}
-                          onValueChange={field.onChange}
+                        <Popover
+                          open={userAddressesOpen}
+                          onOpenChange={setUserAddressesOpen}
                         >
-                          <FormControl>
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select a service" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {serviceDays.map((service) => (
-                              <SelectItem key={service.id} value={service.id}>
-                                <div className="flex items-center space-x-2">
-                                  <CalendarIcon className="h-4 w-4" />
-                                  <span>
-                                    {service.name} - {formatTime(service.time)}
-                                  </span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={userAddressesOpen}
+                                disabled={!!newRequestData || servicesLoading}
+                                className={cn(
+                                  "justify-between",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                <span className="flex items-center gap-x-2">
+                                  <CalendarIcon className="size-4 text-muted-foreground" />
+                                  {field.value
+                                    ? (() => {
+                                        const service = serviceDays.find(
+                                          (s) => s.id === field.value
+                                        );
+                                        if (!service?.time) {
+                                          return service?.name;
+                                        }
+                                        return `${service?.name} - ${formatTime(service?.time)}`;
+                                      })()
+                                    : "Select a service"}
+                                </span>
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-full p-0" align="start">
+                            <Command>
+                              <CommandInput placeholder="Search services..." />
+                              <CommandList>
+                                <CommandEmpty>No services found.</CommandEmpty>
+                                <CommandGroup>
+                                  {serviceDays.map((service) => (
+                                    <CommandItem
+                                      key={service.id}
+                                      value={service.id}
+                                      onSelect={() => {
+                                        newRequestForm.setValue(
+                                          "serviceDayId",
+                                          service.id
+                                        );
+                                        setUsersOpen(false);
+                                      }}
+                                      className={cn(
+                                        field.value === service.id &&
+                                          "font-semibold"
+                                      )}
+                                    >
+                                      <CalendarIcon className={cn("size-4")} />
+                                      {service.name} -{" "}
+                                      {formatTime(service.time)}
+                                      <Check
+                                        className={cn(
+                                          "ml-auto size-4",
+                                          field.value === service.id
+                                            ? "opacity-100"
+                                            : "opacity-0"
+                                        )}
+                                      />
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                         {selectedService && selectedDayOfWeek != null && (
                           <FormDescription className="mt-2 p-3 bg-blue-50 rounded-lg">
                             <span className="flex items-center space-x-2 text-sm text-blue-700">
@@ -1022,6 +1038,11 @@ const AdminNewUserRequest = ({
                         <Select
                           defaultValue={field.value}
                           onValueChange={field.onChange}
+                          disabled={
+                            !selectedUser ||
+                            usersLoading ||
+                            userAddressesLoading
+                          }
                         >
                           <FormControl>
                             <SelectTrigger className="w-full">

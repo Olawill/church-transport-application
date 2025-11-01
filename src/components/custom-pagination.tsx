@@ -25,6 +25,9 @@ interface CustomPaginationProps {
   onItemsPerPageChange: (itemsPerPage: number) => void;
   itemName?: string; // e.g., "users", "requests", "services"
   className?: string;
+  hasNextPage?: boolean; // Optional prop for tRPC pagination
+  hasPreviousPage?: boolean; // Optional prop for tRPC pagination
+  totalPages?: number;
 }
 
 export const CustomPagination = ({
@@ -35,13 +38,25 @@ export const CustomPagination = ({
   onItemsPerPageChange,
   itemName = "items",
   className,
+  hasNextPage,
+  hasPreviousPage,
+  totalPages: propsTotalPages,
 }: CustomPaginationProps) => {
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  // const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+  // Calculate total pages if not provided
+  const totalPages =
+    propsTotalPages || Math.max(1, Math.ceil(totalItems / itemsPerPage));
+
   const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
-  const canGoPrevious = currentPage > 1;
-  const canGoNext = currentPage < totalPages;
+  // Determine if we can navigate to previous/next pages
+  // Use the provided props if available, otherwise calculate
+  const canGoPrevious =
+    hasPreviousPage !== undefined ? hasPreviousPage : currentPage > 1;
+  const canGoNext =
+    hasNextPage !== undefined ? hasNextPage : currentPage < totalPages;
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -80,7 +95,9 @@ export const CustomPagination = ({
       }
 
       // Always show last page
-      pages.push(totalPages);
+      if (totalPages > 1) {
+        pages.push(totalPages);
+      }
     }
 
     return pages;
@@ -106,8 +123,6 @@ export const CustomPagination = ({
             const newItemsPerPage =
               value === "all" ? totalItems : parseInt(value);
             onItemsPerPageChange(newItemsPerPage);
-            // Reset to page 1 when changing items per page
-            onPageChange(1);
           }}
         >
           <SelectTrigger className="w-[100px]">

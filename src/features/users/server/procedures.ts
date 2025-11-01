@@ -1,14 +1,15 @@
-import { z } from "zod";
 import { Frequency, Ordinal, UserRole, UserStatus } from "@/generated/prisma";
+import { z } from "zod";
 
 import { prisma } from "@/lib/db";
 
+import { PAGINATION } from "@/config/constants";
+import { serviceDaySchema } from "@/schemas/serviceDaySchema";
 import {
   createTRPCRouter,
   protectedProcedure,
   protectedRoleProcedure,
 } from "@/trpc/init";
-import { serviceDaySchema } from "@/schemas/serviceDaySchema";
 import { TRPCError } from "@trpc/server";
 
 const updateServiceSchema = z.object({
@@ -24,7 +25,7 @@ export const usersRouter = createTRPCRouter({
         status: z.enum(UserStatus).optional(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const { role, status } = input;
 
       const where: Record<string, string> = {};
@@ -36,9 +37,15 @@ export const usersRouter = createTRPCRouter({
       if (status) {
         where.status = status;
       }
-
       const users = await prisma.user.findMany({
-        where,
+        where: {
+          ...where,
+          id: {
+            not: {
+              equals: ctx.auth.user.id,
+            },
+          },
+        },
         include: {
           addresses: {
             where: { isDefault: true },
@@ -54,6 +61,95 @@ export const usersRouter = createTRPCRouter({
       });
 
       return users;
+    }),
+
+  getPaginatedUsers: protectedRoleProcedure(UserRole.ADMIN)
+    .input(
+      z.object({
+        role: z.string().optional(),
+        status: z.string().optional(),
+        search: z.string().default(""),
+        page: z.number().min(1).default(PAGINATION.DEFAULT_PAGE),
+        pageSize: z
+          .number()
+          .min(PAGINATION.MIN_PAGE_SIZE)
+          .max(PAGINATION.MAX_PAGE_SIZE)
+          .default(PAGINATION.DEFAULT_PAGE_SIZE),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { role, status, search, page, pageSize } = input;
+
+      const where: Record<string, string | Record<string, string>> = {};
+
+      if (role && role !== "ALL") {
+        where.role = role;
+      }
+
+      if (status && status !== "ALL") {
+        where.status = status;
+      }
+
+      const whereCondition = { ...where };
+
+      if (search && search !== "") {
+        whereCondition.name = {
+          contains: search,
+          mode: "insensitive",
+        };
+      }
+
+      const [users, totalCount] = await Promise.all([
+        prisma.user.findMany({
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+          where: {
+            ...whereCondition,
+            id: {
+              not: {
+                equals: ctx.auth.user.id,
+              },
+            },
+          },
+          include: {
+            addresses: {
+              where: { isDefault: true },
+            },
+            _count: {
+              select: {
+                pickupRequests: true,
+                acceptedRequests: true,
+              },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        }),
+
+        prisma.user.count({
+          where: {
+            ...whereCondition,
+            id: {
+              not: {
+                equals: ctx.auth.user.id,
+              },
+            },
+          },
+        }),
+      ]);
+
+      const totalPages = Math.ceil(totalCount / pageSize);
+      const hasNextPage = page < totalPages;
+      const hasPreviousPage = page > 1;
+
+      return {
+        users,
+        page,
+        pageSize,
+        totalCount,
+        totalPages,
+        hasNextPage,
+        hasPreviousPage,
+      };
     }),
 
   createService: protectedRoleProcedure(UserRole.ADMIN)

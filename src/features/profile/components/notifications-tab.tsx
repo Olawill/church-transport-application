@@ -7,10 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 
-import { UserProfile } from "@/components/profile/profile-management";
+import { GetUserProfile } from "@/features/user/types";
 
 interface NotificationsTab {
-  profile: UserProfile | null;
+  profile: GetUserProfile | null;
   toggleUserSettings: (
     field:
       | "twoFactorEnabled"
@@ -57,6 +57,7 @@ export const NotificationsTab = ({
                   toggleUserSettings("emailNotifications", !checked);
                 }}
                 disabled={!profile?.emailVerified}
+                className="cursor-pointer"
               />
             </div>
           </div>
@@ -85,7 +86,8 @@ export const NotificationsTab = ({
                 onCheckedChange={(checked) => {
                   toggleUserSettings("smsNotifications", !checked);
                 }}
-                disabled={!profile?.phoneVerified}
+                disabled={!profile?.phoneNumberVerified}
+                className="cursor-pointer"
               />
             </div>
           </div>
@@ -116,6 +118,7 @@ export const NotificationsTab = ({
                   toggleUserSettings("whatsAppNotifications", !checked);
                 }}
                 disabled={!profile?.whatsappNumber}
+                className="cursor-pointer"
               />
             </div>
           </div>

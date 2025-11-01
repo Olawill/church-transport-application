@@ -1,6 +1,7 @@
 "use client";
 
 import { useSession } from "@/lib/auth-client";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import {
   CheckCircle,
   Filter,
@@ -13,8 +14,9 @@ import {
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
+import { useDebounce } from "use-debounce";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -53,26 +55,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { PAGINATION } from "@/config/constants";
+import { useUsersParams } from "@/features/users/hooks/use-users-params";
 import { useConfirm } from "@/hooks/use-confirm";
 import { AnalyticsService } from "@/lib/analytics";
-import { useDebounceFn } from "@/lib/debounced-wrapper";
-import { User } from "@/lib/types";
-import {
-  CustomPagination,
-  usePaginationWithFilters,
-} from "../../../components/custom-pagination";
-
-// Define filter types
-type UserFilters = {
-  roleFilter: string;
-  statusFilter: string;
-  nameFilter: string;
-};
+import { useTRPC } from "@/trpc/client";
+import { CustomPagination } from "../../../components/custom-pagination";
 
 export const UserManagement = () => {
   const { data: session } = useSession();
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  const trpc = useTRPC();
+
+  const [params, setParams] = useUsersParams();
+  const { page, pageSize, search, status, role } = params;
+
+  const [nameInput, setNameInput] = useState(search || "");
+  const [debouncedNameInput] = useDebounce(search, 300);
 
   const [UpdateRoleDialog, confirmUpdateRole] = useConfirm(
     "Change role",
@@ -80,76 +78,22 @@ export const UserManagement = () => {
     true
   );
 
-  const {
-    currentPage,
-    itemsPerPage,
-    filters,
-    setCurrentPage,
-    setItemsPerPage,
-    paginateItems,
-    updateFilter,
-    clearFilters,
-  } = usePaginationWithFilters<UserFilters>(10, {
-    roleFilter: "ALL",
-    statusFilter: "ALL",
-    nameFilter: "",
-  });
+  const { data: usersData, isLoading: loading } = useSuspenseQuery(
+    trpc.users.getPaginatedUsers.queryOptions({
+      page,
+      pageSize,
+      search: debouncedNameInput || "",
+      status,
+      role,
+    })
+  );
 
-  const [nameInput, setNameInput] = useState(filters.nameFilter);
-
-  useEffect(() => {
-    setNameInput(filters.nameFilter);
-  }, [filters.nameFilter]);
-
-  // Filter users based on filters
-  const filteredUsers = users.filter((user) => {
-    const userFullName = `${user.firstName || ""} ${user.lastName || ""}`;
-
-    const matchesRole =
-      filters.roleFilter === "ALL" || user.role === filters.roleFilter;
-
-    const matchesStatus =
-      filters.statusFilter === "ALL" || user.status === filters.statusFilter;
-
-    const matchesName =
-      !filters.nameFilter ||
-      userFullName.toLowerCase().includes(filters.nameFilter.toLowerCase());
-
-    return matchesRole && matchesStatus && matchesName;
-  });
-
-  // Get paginated users
-  const paginatedUsers = paginateItems(filteredUsers);
-
-  useEffect(() => {
-    fetchUsers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.roleFilter, filters.statusFilter]);
-
-  const fetchUsers = async () => {
-    const roleFilter = filters.roleFilter;
-    const statusFilter = filters.statusFilter;
-
-    try {
-      const params = new URLSearchParams();
-      if (roleFilter !== "ALL") {
-        params.set("role", roleFilter);
-      }
-      if (statusFilter !== "ALL") {
-        params.set("status", statusFilter);
-      }
-
-      const response = await fetch(`/api/users?${params.toString()}`);
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data);
-      }
-    } catch (error) {
-      console.error("Error fetching users:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Extract data from query result
+  const users = usersData?.users || [];
+  const totalCount = usersData?.totalCount || 0;
+  const totalPages = usersData?.totalPages || 1;
+  const hasNextPage = usersData?.hasNextPage || false;
+  const hasPreviousPage = usersData?.hasPreviousPage || false;
 
   const handleStatusUpdate = async (userId: string, newStatus: string) => {
     try {
@@ -166,7 +110,7 @@ export const UserManagement = () => {
 
       if (response.ok) {
         toast.success(`User ${newStatus.toLowerCase()} successfully`);
-        fetchUsers();
+        // fetchUsers();
 
         if (session?.user) {
           // Track analytics
@@ -204,7 +148,7 @@ export const UserManagement = () => {
 
       if (response.ok) {
         toast.success("User role updated successfully");
-        fetchUsers();
+        // fetchUsers();
       } else {
         toast.error("Failed to update user role");
       }
@@ -240,14 +184,27 @@ export const UserManagement = () => {
     }
   };
 
-  const debouncedUpdateFilter = useDebounceFn((val: string) => {
-    updateFilter("nameFilter", val);
-  }, 300);
-
   const handleNameFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setNameInput(val); // Immediate input update
-    debouncedUpdateFilter(val); // Delayed filter update
+
+    // Update search param after debounce
+    if (val !== search) {
+      setTimeout(() => {
+        setParams({ ...params, search: val, page: 1 });
+      }, 300);
+    }
+  };
+
+  const clearFilters = () => {
+    setParams({
+      status: "ALL",
+      role: "ALL",
+      search: "",
+      page: PAGINATION.DEFAULT_PAGE,
+      pageSize: PAGINATION.DEFAULT_PAGE_SIZE,
+    });
+    setNameInput("");
   };
 
   const pendingUsers = users.filter((u) => u.status === "PENDING").length;
@@ -255,10 +212,8 @@ export const UserManagement = () => {
   const transportationMembers = users.filter(
     (u) => u.role === "TRANSPORTATION_TEAM"
   ).length;
-  const isFiltered =
-    filters.roleFilter !== "ALL" ||
-    filters.statusFilter !== "ALL" ||
-    filters.nameFilter !== "";
+
+  const isFiltered = role !== "ALL" || status !== "ALL" || nameInput !== "";
 
   return (
     <>
@@ -274,7 +229,7 @@ export const UserManagement = () => {
           </div>
 
           <Button asChild>
-            <Link href="/admin/users/new" aria-label="Create new user">
+            <Link prefetch href="/admin/users/new" aria-label="Create new user">
               <UserPlus className="size-4" />
               <span>New User</span>
             </Link>
@@ -335,14 +290,9 @@ export const UserManagement = () => {
                   <Filter className="mr-2 size-5" />
                   Filters
                 </span>
+
                 {isFiltered && (
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      clearFilters();
-                      setNameInput("");
-                    }}
-                  >
+                  <Button variant="outline" onClick={clearFilters}>
                     <XCircle className="size-4" />
                     Clear Filters
                   </Button>
@@ -352,11 +302,14 @@ export const UserManagement = () => {
           </CardHeader>
           <CardContent>
             <div className="flex flex-col sm:flex-row gap-4">
+              {/* Role filter */}
               <div className="flex-1">
                 <Label className="text-sm font-medium mb-2 block">Role</Label>
                 <Select
-                  value={filters.roleFilter}
-                  onValueChange={(value) => updateFilter("roleFilter", value)}
+                  value={role}
+                  onValueChange={(value) =>
+                    setParams({ ...params, role: value, page: 1 })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -371,11 +324,15 @@ export const UserManagement = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Status Filter */}
               <div className="flex-1">
                 <Label className="text-sm font-medium mb-2 block">Status</Label>
                 <Select
-                  value={filters.statusFilter}
-                  onValueChange={(value) => updateFilter("statusFilter", value)}
+                  value={status}
+                  onValueChange={(value) =>
+                    setParams({ ...params, status: value, page: 1 })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -389,6 +346,7 @@ export const UserManagement = () => {
                 </Select>
               </div>
 
+              {/* Name Filter */}
               <div className="flex-1">
                 <Label className="text-sm font-medium mb-2 block">Name</Label>
                 <Input
@@ -406,11 +364,10 @@ export const UserManagement = () => {
           <CardHeader>
             <CardTitle className="text-lg">Users</CardTitle>
             <CardDescription>
-              {filters.statusFilter === "PENDING" && "Users pending approval"}
-              {filters.statusFilter === "APPROVED" &&
-                "Approved and active users"}
-              {filters.statusFilter === "REJECTED" && "Rejected user accounts"}
-              {filters.statusFilter === "ALL" && "All registered users"}
+              {status === "PENDING" && "Users pending approval"}
+              {status === "APPROVED" && "Approved and active users"}
+              {status === "REJECTED" && "Rejected user accounts"}
+              {status === "ALL" && "All registered users"}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -425,31 +382,64 @@ export const UserManagement = () => {
                 ))}
               </div>
             ) : users.length === 0 ? (
-              <div className="text-center py-8">
-                <Users className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium">No users found</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  No users match your current filters.
-                </p>
-              </div>
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia>
+                    <div className="*:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:size-12 *:data-[slot=avatar]:ring-2 *:data-[slot=avatar]:grayscale">
+                      <Avatar>
+                        <AvatarImage
+                          src="https://github.com/shadcn.png"
+                          alt="@shadcn"
+                        />
+                        <AvatarFallback>CN</AvatarFallback>
+                      </Avatar>
+                      <Avatar>
+                        <AvatarImage
+                          src="https://github.com/maxleiter.png"
+                          alt="@maxleiter"
+                        />
+                        <AvatarFallback>LR</AvatarFallback>
+                      </Avatar>
+                      <Avatar>
+                        <AvatarImage
+                          src="https://github.com/evilrabbit.png"
+                          alt="@evilrabbit"
+                        />
+                        <AvatarFallback>ER</AvatarFallback>
+                      </Avatar>
+                    </div>
+                  </EmptyMedia>
+                  <EmptyTitle>No Users Found</EmptyTitle>
+                  <EmptyDescription>
+                    No users match your current filters. Try adjusting your
+                    search criteria.
+                  </EmptyDescription>
+                </EmptyHeader>
+                <EmptyContent>
+                  <Button size="sm" asChild>
+                    <Link href="/admin/users/new" aria-label="Create new user">
+                      <UserPlus className="size-4" />
+                      Add Members
+                    </Link>
+                  </Button>
+                </EmptyContent>
+              </Empty>
             ) : (
               <div className="space-y-4">
-                {paginatedUsers.map((user) => (
+                {users.map((user) => (
                   <div key={user.id} className="border rounded-lg p-6">
                     <div className="flex justify-between items-start mb-4">
                       <div>
-                        <h3 className="text-lg font-semibold">
-                          {user.firstName} {user.lastName}
-                        </h3>
+                        <h3 className="text-lg font-semibold">{user.name}</h3>
                         <div className="flex items-center space-x-4 mt-2 text-sm">
                           <div className="flex items-center space-x-1">
                             <Mail className="h-4 w-4" />
                             <span>{user.email}</span>
                           </div>
-                          {user.phone && (
+                          {user.phoneNumber && (
                             <div className="flex items-center space-x-1">
                               <Phone className="h-4 w-4" />
-                              <span>{user.phone}</span>
+                              <span>{user.phoneNumber}</span>
                             </div>
                           )}
                         </div>
@@ -540,62 +530,21 @@ export const UserManagement = () => {
                   </div>
                 ))}
 
-                {filteredUsers.length === 0 && (
-                  <Empty>
-                    <EmptyHeader>
-                      <EmptyMedia>
-                        <div className="*:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:size-12 *:data-[slot=avatar]:ring-2 *:data-[slot=avatar]:grayscale">
-                          <Avatar>
-                            <AvatarImage
-                              src="https://github.com/shadcn.png"
-                              alt="@shadcn"
-                            />
-                            <AvatarFallback>CN</AvatarFallback>
-                          </Avatar>
-                          <Avatar>
-                            <AvatarImage
-                              src="https://github.com/maxleiter.png"
-                              alt="@maxleiter"
-                            />
-                            <AvatarFallback>LR</AvatarFallback>
-                          </Avatar>
-                          <Avatar>
-                            <AvatarImage
-                              src="https://github.com/evilrabbit.png"
-                              alt="@evilrabbit"
-                            />
-                            <AvatarFallback>ER</AvatarFallback>
-                          </Avatar>
-                        </div>
-                      </EmptyMedia>
-                      <EmptyTitle>No Users Found</EmptyTitle>
-                      <EmptyDescription>
-                        No users match your current filters. Try adjusting your
-                        search criteria.
-                      </EmptyDescription>
-                    </EmptyHeader>
-                    <EmptyContent>
-                      <Button size="sm" asChild>
-                        <Link
-                          href="/admin/users/new"
-                          aria-label="Create new user"
-                        >
-                          <UserPlus className="size-4" />
-                          Add Members
-                        </Link>
-                      </Button>
-                    </EmptyContent>
-                  </Empty>
-                )}
-
                 {/* Pagination */}
                 <CustomPagination
-                  currentPage={currentPage}
-                  totalItems={filteredUsers.length}
-                  itemsPerPage={itemsPerPage}
-                  onPageChange={setCurrentPage}
-                  onItemsPerPageChange={setItemsPerPage}
+                  currentPage={page}
+                  totalItems={totalCount}
+                  itemsPerPage={pageSize}
+                  onPageChange={(newPage) =>
+                    setParams({ ...params, page: newPage })
+                  }
+                  onItemsPerPageChange={(newPageSize) => {
+                    setParams({ ...params, pageSize: newPageSize, page: 1 });
+                  }}
                   itemName="users"
+                  totalPages={totalPages}
+                  hasNextPage={hasNextPage}
+                  hasPreviousPage={hasPreviousPage}
                 />
               </div>
             )}

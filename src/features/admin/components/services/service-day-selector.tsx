@@ -1,7 +1,6 @@
 import { CalendarIcon } from "lucide-react";
 import { FieldValues, Path, PathValue, UseFormReturn } from "react-hook-form";
 
-import { ServiceDay } from "@/lib/types";
 import {
   cn,
   getNextOccurrencesOfWeekdays,
@@ -23,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { GetServiceType } from "../../types";
 
 // Define the common fields that both forms share
 interface ServiceDayFormFields extends FieldValues {
@@ -32,7 +32,7 @@ interface ServiceDayFormFields extends FieldValues {
 
 interface ServiceDaySelectorProps<T extends ServiceDayFormFields> {
   form: UseFormReturn<T>;
-  selectedService: ServiceDay | null;
+  selectedService: GetServiceType | null;
   dayOptions: Array<{ value: string; label: string; dayOfWeek: number }>;
   setSelectedDayOfWeek: (val: number) => void;
 }

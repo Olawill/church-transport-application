@@ -10,15 +10,15 @@ import {
   Pencil,
   Send,
 } from "lucide-react";
-import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 
+import { ServiceDaySelector } from "@/features/admin/components/services/service-day-selector";
 import { useConfirm } from "@/hooks/use-confirm";
-import { Address, ServiceDay, User } from "@/lib/types";
+import { Address } from "@/lib/types";
 import {
   cn,
   formatAddress,
@@ -65,7 +65,9 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { ServiceDaySelector } from "../../features/admin/components/services/service-day-selector";
+import { GetServiceType } from "@/features/admin/types";
+import { useTRPC } from "@/trpc/client";
+import { useSuspenseQuery } from "@tanstack/react-query";
 
 interface NewRequestFormProps {
   newRequestData?: NewRequestSchema & {
@@ -80,12 +82,10 @@ export const NewRequestForm = ({
   setShowDialog,
 }: NewRequestFormProps) => {
   const router = useRouter();
-  const { data: session } = useSession();
+  const trpc = useTRPC();
   const [loading, setLoading] = useState(false);
-  const [serviceDays, setServiceDays] = useState<ServiceDay[]>([]);
-  const [addresses, setAddresses] = useState<Address[]>([]);
 
-  const [selectedService, setSelectedService] = useState<ServiceDay | null>(
+  const [selectedService, setSelectedService] = useState<GetServiceType | null>(
     null
   );
   const [dayOptions, setDayOptions] = useState<
@@ -102,6 +102,16 @@ export const NewRequestForm = ({
     true,
     "Update occurrence",
     "Update series"
+  );
+
+  const { data: serviceDays } = useSuspenseQuery(
+    trpc.services.getServices.queryOptions({
+      status: "active",
+    })
+  );
+
+  const { data: addresses } = useSuspenseQuery(
+    trpc.userAddresses.getUserAddresses.queryOptions()
   );
 
   const form = useForm<NewRequestSchema>({
@@ -124,11 +134,11 @@ export const NewRequestForm = ({
     },
   });
 
-  useEffect(() => {
-    fetchServiceDays();
-    fetchAddresses();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // useEffect(() => {
+  //   fetchServiceDays();
+  //   fetchAddresses();
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, []);
 
   const serviceDayId = useWatch({
     control: form.control,
@@ -206,56 +216,56 @@ export const NewRequestForm = ({
     }
   }, [addressId, addresses]);
 
-  const fetchServiceDays = async () => {
-    try {
-      const response = await fetch("/api/service-days?status=active");
-      if (response.ok) {
-        const data = await response.json();
-        setServiceDays(data);
-      }
-    } catch (error) {
-      console.error("Error fetching service days:", error);
-    }
-  };
+  // const fetchServiceDays = async () => {
+  //   try {
+  //     const response = await fetch("/api/service-days?status=active");
+  //     if (response.ok) {
+  //       const data = await response.json();
+  //       setServiceDays(data);
+  //     }
+  //   } catch (error) {
+  //     console.error("Error fetching service days:", error);
+  //   }
+  // };
 
-  const fetchAddresses = async () => {
-    try {
-      // For now, we'll fetch the user's default address
-      // In a full implementation, you might have a user addresses API
-      // This is a simplified version using the user's info
-      if (session?.user?.id) {
-        // const response = await fetch(`/api/users?id=${session.user.id}`);
-        const response = await fetch(`/api/users`);
-        if (response.ok) {
-          const userData: Array<Pick<User, "id" | "addresses">> =
-            await response.json();
-          if (userData.length > 0) {
-            setAddresses(
-              userData.find((d) => d.id === session.user.id)?.addresses || []
-            );
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching addresses:", error);
-      // For demo, create a mock address if fetching fails
-      const mockAddress: Address = {
-        id: "mock-address",
-        userId: session?.user?.id || "",
-        street: "123 Main Street",
-        city: "Toronto",
-        province: "ON",
-        postalCode: "M1M 1M1",
-        country: "Canada",
-        latitude: 43.6532,
-        longitude: -79.3832,
-        isDefault: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      setAddresses([mockAddress]);
-    }
-  };
+  // const fetchAddresses = async () => {
+  //   try {
+  //     // For now, we'll fetch the user's default address
+  //     // In a full implementation, you might have a user addresses API
+  //     // This is a simplified version using the user's info
+  //     if (session?.user?.id) {
+  //       // const response = await fetch(`/api/users?id=${session.user.id}`);
+  //       const response = await fetch(`/api/users`);
+  //       if (response.ok) {
+  //         const userData: Array<Pick<User, "id" | "addresses">> =
+  //           await response.json();
+  //         if (userData.length > 0) {
+  //           setAddresses(
+  //             userData.find((d) => d.id === session.user.id)?.addresses || []
+  //           );
+  //         }
+  //       }
+  //     }
+  //   } catch (error) {
+  //     console.error("Error fetching addresses:", error);
+  //     // For demo, create a mock address if fetching fails
+  //     const mockAddress: Address = {
+  //       id: "mock-address",
+  //       userId: session?.user?.id || "",
+  //       street: "123 Main Street",
+  //       city: "Toronto",
+  //       province: "ON",
+  //       postalCode: "M1M 1M1",
+  //       country: "Canada",
+  //       latitude: 43.6532,
+  //       longitude: -79.3832,
+  //       isDefault: true,
+  //       createdAt: new Date(),
+  //       updatedAt: new Date(),
+  //     };
+  //     setAddresses([mockAddress]);
+  //   }
+  // };
 
   const handleSubmit = async (values: NewRequestSchema) => {
     const validatedFields = await newRequestSchema.safeParseAsync(values);

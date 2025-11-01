@@ -9,10 +9,11 @@ import {
   Phone,
   TrendingUp,
   User,
+  XCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useDebounce } from "use-debounce";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,22 +32,61 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { useRequestStore } from "@/lib/store/useRequestStore";
+import { CustomPagination } from "@/components/custom-pagination";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { PAGINATION } from "@/config/constants";
+import { useRequestsTransportParams } from "@/features/requests/hooks/use-requests-params";
 import { DISTANCE_OPTIONS } from "@/lib/types";
 import { formatDate, formatTime } from "@/lib/utils";
-import { useSuspenseQuery } from "@tanstack/react-query";
 import { useTRPC } from "@/trpc/client";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
 // Detailed operational dashboard for the dedicated /transportation route
 export const TransportationDashboard = () => {
-  const [maxDistance, setMaxDistance] = useState("10");
-  const [statusFilter, setStatusFilter] = useState("PENDING");
-  const { requests, loading, fetchRequests } = useRequestStore();
+  const trpc = useTRPC();
 
-  useEffect(() => {
-    fetchRequests({ status: statusFilter, maxDistance });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [maxDistance, statusFilter]);
+  const [params, setParams] = useRequestsTransportParams();
+  const {
+    page,
+    pageSize,
+    search,
+    status,
+    type,
+    requestDate,
+    serviceDay,
+    maxDistance,
+  } = params;
+  // const { requests, loading, fetchRequests } = useRequestStore();
+
+  const [nameInput, setNameInput] = useState(search || "");
+  const [debouncedNameInput] = useDebounce(search, 300);
+
+  const { data: requestData, isLoading: loading } = useSuspenseQuery(
+    trpc.userRequests.getUserRequests.queryOptions(
+      {
+        status,
+        type,
+        requestDate: requestDate || "",
+        search: debouncedNameInput || "",
+        page,
+        pageSize,
+        serviceDay: serviceDay || "ALL",
+        maxDistance,
+      },
+      {
+        placeholderData: (previousData) => previousData,
+      }
+    )
+  );
+
+  // Extract data from query result
+  const requests = requestData?.requests || [];
+  const totalCount = requestData?.totalCount || 0;
+  const totalPages = requestData?.totalPages || 1;
+  const hasNextPage = requestData?.hasNextPage || false;
+  const hasPreviousPage = requestData?.hasPreviousPage || false;
 
   const handleAcceptRequest = async (requestId: string) => {
     try {
@@ -63,7 +103,7 @@ export const TransportationDashboard = () => {
 
       if (response.ok) {
         toast.success("Request accepted successfully");
-        fetchRequests();
+        // fetchRequests();
       } else {
         toast.error("Failed to accept request");
       }
@@ -88,7 +128,7 @@ export const TransportationDashboard = () => {
 
       if (response.ok) {
         toast.success("Request marked as completed");
-        fetchRequests();
+        // fetchRequests();
       } else {
         toast.error("Failed to complete request");
       }
@@ -114,8 +154,42 @@ export const TransportationDashboard = () => {
   const myAcceptedRequests = requests.filter((r) => r.status === "ACCEPTED");
   const availableRequests = requests.filter((r) => r.status === "PENDING");
 
+  const handleNameFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setNameInput(val); // Immediate input update
+
+    // Update search param after debounce
+    if (val !== search) {
+      setTimeout(() => {
+        setParams({ ...params, search: val, page: 1 });
+      }, 300);
+    }
+  };
+
+  const clearFilters = () => {
+    setParams({
+      status: "ALL",
+      type: "ALL",
+      requestDate: "",
+      search: "",
+      serviceDay: "ALL",
+      page: PAGINATION.DEFAULT_PAGE,
+      pageSize: PAGINATION.DEFAULT_PAGE_SIZE,
+      maxDistance: "10",
+    });
+    setNameInput("");
+  };
+
+  const isFiltered =
+    status !== "ALL" ||
+    type !== "ALL" ||
+    requestDate ||
+    nameInput !== "" ||
+    serviceDay !== "ALL" ||
+    maxDistance !== "10";
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full">
       <div>
         <h1 className="text-2xl font-bold">Transportation Dashboard</h1>
         <p className="mt-1">
@@ -176,17 +250,32 @@ export const TransportationDashboard = () => {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center">
-            <Filter className="mr-2 size-5" />
-            Filters
+            <div className="flex items-center justify-between w-full">
+              <span className="flex items-center">
+                <Filter className="mr-2 size-5" />
+                Filters
+              </span>
+
+              {/* Clear Button */}
+              {isFiltered && (
+                <Button variant="outline" onClick={clearFilters}>
+                  <XCircle className="size-4" />
+                  Clear Filters
+                </Button>
+              )}
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
-              <label className="text-sm font-medium mb-2 block">
-                Maximum Distance
-              </label>
-              <Select value={maxDistance} onValueChange={setMaxDistance}>
+              <label className="text-sm font-medium mb-2 block">Distance</label>
+              <Select
+                value={maxDistance}
+                onValueChange={(value) =>
+                  setParams({ ...params, maxDistance: value, page: 1 })
+                }
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -202,11 +291,17 @@ export const TransportationDashboard = () => {
                 </SelectContent>
               </Select>
             </div>
+
             <div className="flex-1">
               <label className="text-sm font-medium mb-2 block">
                 Status Filter
               </label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select
+                value={status}
+                onValueChange={(value) =>
+                  setParams({ ...params, status: value, page: 1 })
+                }
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -218,6 +313,38 @@ export const TransportationDashboard = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Type */}
+            <div className="">
+              <Label className="text-sm font-medium mb-2 block">
+                Request Type
+              </Label>
+              <Select
+                value={type}
+                onValueChange={(value) =>
+                  setParams({ ...params, type: value, page: 1 })
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="w-full">
+                  <SelectItem value="ALL">All Requests</SelectItem>
+                  <SelectItem value="PICKUP">PickUp</SelectItem>
+                  <SelectItem value="DROPOFF">DropOff</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Name Filter */}
+            <div className="flex-[25%]">
+              <Label className="text-sm font-medium mb-2 block">Name</Label>
+              <Input
+                placeholder="Filter by member's name..."
+                value={nameInput}
+                onChange={handleNameFilterChange}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -227,11 +354,11 @@ export const TransportationDashboard = () => {
         <CardHeader>
           <CardTitle className="text-lg">Pickup Requests</CardTitle>
           <CardDescription>
-            {statusFilter === "PENDING" &&
+            {status === "PENDING" &&
               "Available requests within your distance preference"}
-            {statusFilter === "ACCEPTED" && "Requests you have accepted"}
-            {statusFilter === "COMPLETED" && "Your completed rides"}
-            {statusFilter === "ALL" && "All requests matching your criteria"}
+            {status === "ACCEPTED" && "Requests you have accepted"}
+            {status === "COMPLETED" && "Your completed rides"}
+            {status === "ALL" && "All requests matching your criteria"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -341,6 +468,23 @@ export const TransportationDashboard = () => {
                   </div>
                 </div>
               ))}
+
+              {/* Pagination */}
+              <CustomPagination
+                currentPage={page}
+                totalItems={totalCount}
+                itemsPerPage={pageSize}
+                onPageChange={(newPage) =>
+                  setParams({ ...params, page: newPage })
+                }
+                onItemsPerPageChange={(newPageSize) => {
+                  setParams({ ...params, pageSize: newPageSize, page: 1 });
+                }}
+                itemName="requests"
+                totalPages={totalPages}
+                hasNextPage={hasNextPage}
+                hasPreviousPage={hasPreviousPage}
+              />
             </div>
           )}
         </CardContent>
@@ -352,35 +496,10 @@ export const TransportationDashboard = () => {
 // Simplified dashboard component for transportation team members' general dashboard
 export function TransportationTeamDashboard() {
   const trpc = useTRPC();
-  // const [stats, setStats] = useState({
-  //   myActiveRequests: 0,
-  //   availableRequests: 0,
-  //   completedToday: 0,
-  //   totalCompleted: 0,
-  // });
-  // const [loading, setLoading] = useState(true);
 
   const { data: stats, isLoading: loading } = useSuspenseQuery(
     trpc.driverRequests.getRequestStats.queryOptions()
   );
-
-  // useEffect(() => {
-  //   fetchStats();
-  // }, []);
-
-  // const fetchStats = async () => {
-  //   try {
-  //     const response = await fetch("/api/pickup-requests/stats");
-  //     if (response.ok) {
-  //       const data = await response.json();
-  //       setStats(data);
-  //     }
-  //   } catch (error) {
-  //     console.error("Error fetching stats:", error);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
 
   return (
     <div className="space-y-6">

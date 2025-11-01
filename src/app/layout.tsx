@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Fira_Code, Lora, Poppins } from "next/font/google";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 
 import { ThemeProvider } from "@/components/theming/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -41,8 +42,10 @@ const RootLayout = async ({
           className={`${poppins.variable} ${lora.variable} ${firaCode.variable} antialiased`}
         >
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-            {children}
-            <Toaster position="bottom-right" richColors />
+            <NuqsAdapter>
+              {children}
+              <Toaster position="bottom-right" richColors />
+            </NuqsAdapter>
           </ThemeProvider>
         </body>
       </html>

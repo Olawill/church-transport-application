@@ -452,7 +452,7 @@ export const SignupForm = () => {
   );
 };
 
-const AddressFields = <T extends AddressFormFields>({
+export const AddressFields = <T extends AddressFormFields>({
   form,
   loading,
 }: AddressFieldsProps<T>) => {
@@ -517,22 +517,6 @@ const AddressFields = <T extends AddressFormFields>({
       form.setValue("country" as Path<T>, "CA" as PathValue<T, Path<T>>);
     }
   }, [form]);
-
-  // // Get states for selected country
-  // const states = useMemo(() => {
-  //   if (!selectedCountry) return [];
-
-  //   const countryStates = getStatesForCountry(selectedCountry);
-  //   return countryStates;
-  // }, [selectedCountry]);
-
-  // // Get cities for selected state
-  // const cities = useMemo(() => {
-  //   if (!selectedCountry || !selectedState) return [];
-
-  //   const stateCities = getCitiesForState(selectedCountry, selectedState);
-  //   return stateCities;
-  // }, [selectedCountry, selectedState]);
 
   // Reset state and city when country changes
   useEffect(() => {

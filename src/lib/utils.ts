@@ -7,13 +7,8 @@ import {
 } from "postcode-validator";
 import { twMerge } from "tailwind-merge";
 
-import {
-  Frequency,
-  frequencyMap,
-  Ordinal,
-  ordinalMap,
-  ServiceDay,
-} from "./types";
+import { GetServiceType } from "@/features/admin/types";
+import { Frequency, frequencyMap, Ordinal, ordinalMap } from "./types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -451,7 +446,7 @@ export const getDayNameFromNumber = (dayNumber: number) => {
   return format(date, "EEEE"); // EEEE = full weekday name
 };
 
-export const getServiceDayOptions = (service: ServiceDay) => {
+export const getServiceDayOptions = (service: GetServiceType) => {
   if (service.weekdays && service.weekdays.length > 1) {
     // Multi-day service with cycles - generate options
     const options: Array<{ value: string; label: string; dayOfWeek: number }> =

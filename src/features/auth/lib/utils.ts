@@ -1,4 +1,4 @@
-import { PASSWORD_LENGTH } from "@/schemas/authSchemas";
+import { PASSWORD_LENGTH } from "@/config/constants";
 
 type PasswordFeedback = {
   strength: "weak" | "good" | "strong";

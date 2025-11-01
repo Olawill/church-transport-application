@@ -1,22 +1,23 @@
 import { createTRPCRouter } from "../init";
 
 import { adminAnalyticsRouter } from "@/features/admin/server/analytics/procedures";
-import { placesRouter } from "@/features/places/server/procedures";
 import { adminStatRouter } from "@/features/admin/server/dashboard/stats/procedures";
 import { servicesRouter } from "@/features/admin/server/services/procedures";
 import { adminUsersRouter } from "@/features/admin/server/users/procedures";
-import { adminUserRouter } from "@/features/admin/server/users/user/procedures";
 import { adminUserRequestRouter } from "@/features/admin/server/users/request/procedures";
+import { adminUserRouter } from "@/features/admin/server/users/user/procedures";
+import { authRouter } from "@/features/auth/server/procedures";
 import { sendMailRouter } from "@/features/email/server/procedures";
-import { userRequestRouter } from "@/features/requests/server/procedures";
-import { driverRequestsRouter } from "@/features/requests/server/driver/procedures";
+import { organizationRouter } from "@/features/organization/server/procedures";
+import { placesRouter } from "@/features/places/server/procedures";
 import { requestsRouter } from "@/features/requests/server/assignOrCancel/procedures";
+import { driverRequestsRouter } from "@/features/requests/server/driver/procedures";
+import { userRequestRouter } from "@/features/requests/server/procedures";
+import { userAddressRouter } from "@/features/user/server/addresses/address/procedures";
+import { userAddressesRouter } from "@/features/user/server/addresses/procedures";
 import { userRouter } from "@/features/user/server/procedures";
 import { userProfileRouter } from "@/features/user/server/profile/procedures";
-import { userAddressesRouter } from "@/features/user/server/addresses/procedures";
-import { userAddressRouter } from "@/features/user/server/addresses/address/procedures";
 import { usersRouter } from "@/features/users/server/procedures";
-import { authRouter } from "@/features/auth/server/procedures";
 
 export const appRouter = createTRPCRouter({
   auth: authRouter,
@@ -36,6 +37,7 @@ export const appRouter = createTRPCRouter({
   userAddresses: userAddressesRouter,
   userAddress: userAddressRouter,
   users: usersRouter,
+  organization: organizationRouter,
 });
 
 // export type definition of API

@@ -1,14 +1,15 @@
-import { z } from "zod";
 import { Frequency, Ordinal, UserRole } from "@/generated/prisma";
+import { z } from "zod";
 
 import { prisma } from "@/lib/db";
 
+import { PAGINATION } from "@/config/constants";
+import { serviceDaySchema } from "@/schemas/serviceDaySchema";
 import {
   createTRPCRouter,
   protectedProcedure,
   protectedRoleProcedure,
 } from "@/trpc/init";
-import { serviceDaySchema } from "@/schemas/serviceDaySchema";
 import { TRPCError } from "@trpc/server";
 
 const updateServiceSchema = z.object({
@@ -40,6 +41,56 @@ export const servicesRouter = createTRPCRouter({
       });
 
       return serviceDays;
+    }),
+
+  getPaginatedServices: protectedRoleProcedure(UserRole.ADMIN)
+    .input(
+      z.object({
+        status: z.string().optional(),
+        page: z.number().min(1).default(PAGINATION.DEFAULT_PAGE),
+        pageSize: z
+          .number()
+          .min(PAGINATION.MIN_PAGE_SIZE)
+          .max(PAGINATION.MAX_PAGE_SIZE)
+          .default(PAGINATION.DEFAULT_PAGE_SIZE),
+      })
+    )
+    .query(async ({ input }) => {
+      const { status, page, pageSize } = input;
+
+      let where = {};
+      if (status && status !== "all") {
+        const isActive = status === "active";
+        where = { isActive };
+      }
+
+      const [serviceDays, totalCount] = await Promise.all([
+        prisma.serviceDay.findMany({
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+          where,
+          include: { weekdays: true },
+          orderBy: [{ time: "asc" }],
+        }),
+
+        prisma.serviceDay.count({
+          where,
+        }),
+      ]);
+
+      const totalPages = Math.ceil(totalCount / pageSize);
+      const hasNextPage = page < totalPages;
+      const hasPreviousPage = page > 1;
+
+      return {
+        serviceDays,
+        page,
+        pageSize,
+        totalCount,
+        totalPages,
+        hasNextPage,
+        hasPreviousPage,
+      };
     }),
 
   createService: protectedRoleProcedure(UserRole.ADMIN)

@@ -12,7 +12,9 @@ import {
   useReactTable,
   VisibilityState,
 } from "@tanstack/react-table";
+import { useState } from "react";
 
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -21,9 +23,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
 import { DISTANCE_OPTIONS } from "@/lib/types";
-import { useState } from "react";
-import { Input } from "../ui/input";
 import { DataTableFacetedFilter } from "./data-table-faceted-filter";
 import { DataTablePagination } from "./data-table-pagination";
 import { DataTableViewOptions } from "./data-table-view-options";
@@ -128,22 +129,6 @@ export const DataTable = <TData, TValue>({
       </div>
 
       <div className="flex items-center w-full space-x-2 py-4">
-        {/* <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          Next
-        </Button> */}
         <DataTablePagination table={table} />
       </div>
     </div>

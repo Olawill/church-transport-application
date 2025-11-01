@@ -93,7 +93,7 @@ export const setHeadquarter = async (addressId: string, orgId?: string) => {
     }
 
     // Get the current headquarter, if any and make branch
-    await prisma.systemBranchInfo.updateMany({
+    await prisma.systemBranchInfo.update({
       where: {
         systemConfigId: organizationId,
         branchCategory: "HEADQUARTER",

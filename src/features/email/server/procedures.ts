@@ -1,8 +1,9 @@
-import { sendEmailSchema, SendEmailSchema } from "./emailSchema";
-
-import nodemailer from "nodemailer";
 import { render, toPlainText } from "@react-email/render";
+import nodemailer from "nodemailer";
+
 import EmailTemplate from "../../../../emails/email-template";
+import { sendEmailSchema, SendEmailSchema } from "../emailSchema";
+
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
 

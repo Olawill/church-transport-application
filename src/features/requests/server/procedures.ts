@@ -1,4 +1,3 @@
-import { z } from "zod";
 import {
   PickupRequest,
   Prisma,
@@ -6,6 +5,7 @@ import {
   RequestStatus,
   UserRole,
 } from "@/generated/prisma";
+import { z } from "zod";
 
 import { AnalyticsService } from "@/lib/analytics";
 import { prisma } from "@/lib/db";
@@ -19,6 +19,7 @@ import {
 import { calculateDistance, getNextOccurrencesOfWeekdays } from "@/lib/utils";
 import { userPayloadSchema } from "@/schemas/newRequestSchema";
 
+import { PAGINATION } from "@/config/constants";
 import {
   createTRPCRouter,
   protectedProcedure,
@@ -54,18 +55,35 @@ export const userRequestRouter = createTRPCRouter({
     .input(
       z.object({
         status: z.string().optional(),
+        serviceDay: z.string().optional(),
         type: z.string().optional(),
         requestDate: z.string().optional(),
         maxDistance: z.string().optional(),
+        page: z.number().min(1).default(PAGINATION.DEFAULT_PAGE),
+        pageSize: z
+          .number()
+          .min(PAGINATION.MIN_PAGE_SIZE)
+          .max(PAGINATION.MAX_PAGE_SIZE)
+          .default(PAGINATION.DEFAULT_PAGE_SIZE),
+        search: z.string().default(""),
       })
     )
     .query(async ({ ctx, input }) => {
-      const { status, type, requestDate, maxDistance } = input;
+      const {
+        status,
+        type,
+        requestDate,
+        maxDistance,
+        page,
+        pageSize,
+        search,
+        serviceDay,
+      } = input;
 
       const where: Prisma.PickupRequestWhereInput = {};
 
       const filter = () => {
-        if (status) {
+        if (status && status !== "ALL") {
           where.status = { equals: status as RequestStatus };
         }
 
@@ -75,7 +93,7 @@ export const userRequestRouter = createTRPCRouter({
           where.isDropOff = true;
         }
 
-        if (requestDate) {
+        if (requestDate && requestDate !== "") {
           const date = new Date(requestDate);
           if (!isNaN(date.getTime())) {
             const endOfDay = new Date(date);
@@ -85,6 +103,24 @@ export const userRequestRouter = createTRPCRouter({
               lte: endOfDay,
             };
           }
+        }
+
+        if (search && search !== "") {
+          where.user = {
+            name: {
+              contains: search,
+              mode: "insensitive",
+            },
+          };
+        }
+
+        if (serviceDay && serviceDay !== "ALL") {
+          where.serviceDay = {
+            name: {
+              equals: serviceDay,
+              mode: "insensitive",
+            },
+          };
         }
       };
 
@@ -99,33 +135,45 @@ export const userRequestRouter = createTRPCRouter({
         filter();
       }
 
-      const requests = await prisma.pickupRequest.findMany({
-        where,
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              phoneNumber: true,
+      const [requests, totalCount] = await Promise.all([
+        prisma.pickupRequest.findMany({
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+          where,
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                phoneNumber: true,
+              },
             },
-          },
-          driver: {
-            select: {
-              id: true,
-              name: true,
-              phoneNumber: true,
+            driver: {
+              select: {
+                id: true,
+                name: true,
+                phoneNumber: true,
+              },
             },
+            serviceDay: true,
+            address: true,
+            serviceWeekday: true,
           },
-          serviceDay: true,
-          address: true,
-          serviceWeekday: true,
-        },
-        orderBy: { createdAt: "desc" },
-      });
+          orderBy: { createdAt: "desc" },
+        }),
+
+        prisma.pickupRequest.count({
+          where,
+        }),
+      ]);
+
+      const totalPages = Math.ceil(totalCount / pageSize);
+      const hasNextPage = page < totalPages;
+      const hasPreviousPage = page > 1;
 
       // For transportation team members, filter by distance if coordinates are available
       if (ctx.auth.user.role === UserRole.TRANSPORTATION_TEAM && maxDistance) {
-        const driver = await prisma.user.findUnique({
+        const driver = await prisma.user.findUniqueOrThrow({
           where: { id: ctx.auth.user.id },
           include: {
             addresses: {
@@ -153,10 +201,31 @@ export const userRequestRouter = createTRPCRouter({
             return distance <= maxDistanceKm;
           });
 
-          return filteredRequests;
+          const totalFilteredCount = filteredRequests.length;
+          const totalFilteredPages = Math.ceil(totalFilteredCount / pageSize);
+          const hasNextPageFiltered = page < totalFilteredPages;
+          const hasPreviousPageFiltered = page > 1;
+
+          return {
+            requests: filteredRequests,
+            page,
+            pageSize,
+            totalCount: totalFilteredCount,
+            totalPages: totalFilteredPages,
+            hasNextPage: hasNextPageFiltered,
+            hasPreviousPage: hasPreviousPageFiltered,
+          };
         }
-        return requests;
       }
+      return {
+        requests,
+        page,
+        pageSize,
+        totalCount,
+        totalPages,
+        hasNextPage,
+        hasPreviousPage,
+      };
     }),
 
   createUserRequest: protectedRoleProcedure([UserRole.ADMIN, UserRole.USER])

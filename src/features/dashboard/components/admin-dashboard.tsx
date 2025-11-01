@@ -1,5 +1,7 @@
 "use client";
 
+import { useTRPC } from "@/trpc/client";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import {
   Activity,
   AlertTriangle,
@@ -16,14 +18,13 @@ import {
   XCircleIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { CartesianGrid, Line, LineChart, XAxis } from "recharts";
 import { toast } from "sonner";
+import { useDebounce } from "use-debounce";
 
-import {
-  CustomPagination,
-  usePaginationWithFilters,
-} from "@/components/custom-pagination";
+import { CustomPagination } from "@/components/custom-pagination";
+import { ErrorState } from "@/components/screen-states/error-state";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,10 +61,10 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { useSession } from "@/lib/auth-client";
-import { useTRPC } from "@/trpc/client";
-import { useSuspenseQuery } from "@tanstack/react-query";
+
+import { PAGINATION } from "@/config/constants";
 import { adminGetUsers } from "@/features/admin/types";
+import { useAdminDashboardParams } from "../hooks/use-admin-dashboard-params";
 
 const generateChartConfig = (tooltipLabel: string, chartLabel: string) => {
   return {
@@ -77,45 +78,46 @@ const generateChartConfig = (tooltipLabel: string, chartLabel: string) => {
   } satisfies ChartConfig;
 };
 
-type UserFilters = {
-  searchQuery: string;
-};
-
 export const AdminDashboard = () => {
-  const { data: session } = useSession();
   const trpc = useTRPC();
   const router = useRouter();
 
-  const [currentTab, setCurrentTab] = useState("overview");
+  const [params, setParams] = useAdminDashboardParams();
+  const { tab, user: search, ...otherParams } = params;
 
   const [banDialogOpen, setBanDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<adminGetUsers | null>(null);
   const [banReason, setBanReason] = useState("");
 
-  const {
-    currentPage,
-    itemsPerPage,
-    filters,
-    setCurrentPage,
-    setItemsPerPage,
-    paginateItems,
-    updateFilter,
-    clearFilters,
-  } = usePaginationWithFilters<UserFilters>(20, {
-    searchQuery: "",
-  });
+  const [nameInput, setNameInput] = useState(search || "");
+  const [debouncedNameInput] = useDebounce(search, 300);
 
   const { data: stats } = useSuspenseQuery(
     trpc.adminStats.getStats.queryOptions()
   );
 
-  const { data: users } = useSuspenseQuery(
-    trpc.adminUsers.getUsers.queryOptions()
+  const { data: usersData } = useSuspenseQuery(
+    trpc.users.getPaginatedUsers.queryOptions({
+      ...otherParams,
+      search: debouncedNameInput || "",
+    })
   );
 
   const { data: analytics } = useSuspenseQuery(
     trpc.adminAnalytics.getAnalytics.queryOptions()
   );
+
+  const handleNameFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setNameInput(val); // Immediate input update
+
+    // Update search param after debounce
+    if (val !== search) {
+      setTimeout(() => {
+        setParams({ ...params, user: val, page: 1 });
+      }, 300);
+    }
+  };
 
   const handleApproveUser = async (userId: string) => {
     try {
@@ -184,30 +186,15 @@ export const AdminDashboard = () => {
     }
   };
 
-  const filteredUsers = users.filter(
-    (user) =>
-      (user.name.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
-        user.email.toLowerCase().includes(filters.searchQuery.toLowerCase())) &&
-      user.id !== session?.user.id
-  );
-
-  // Get paginated users
-  const paginatedUsers = paginateItems(filteredUsers);
-
-  useEffect(() => {
-    if (filteredUsers.length === 0) {
-      return;
-    }
-
-    const totalPages =
-      Math.ceil(filteredUsers.length / itemsPerPage) === 0
-        ? 1
-        : Math.ceil(filteredUsers.length / itemsPerPage);
-
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, filteredUsers.length, itemsPerPage, setCurrentPage]);
+  const clearFilters = () => {
+    setParams({
+      ...params,
+      user: "",
+      page: PAGINATION.DEFAULT_PAGE,
+      pageSize: PAGINATION.DEFAULT_PAGE_SIZE,
+    });
+    setNameInput("");
+  };
 
   const total = useMemo(
     () => ({
@@ -254,6 +241,15 @@ export const AdminDashboard = () => {
     },
   ];
 
+  // Extract data from query result
+  const users = usersData?.users || [];
+  const totalCount = usersData?.totalCount || 0;
+  const totalPages = usersData?.totalPages || 1;
+  const hasNextPage = usersData?.hasNextPage || false;
+  const hasPreviousPage = usersData?.hasPreviousPage || false;
+
+  const isFiltered = nameInput !== "";
+
   return (
     <div className="space-y-6">
       <div>
@@ -264,12 +260,21 @@ export const AdminDashboard = () => {
       </div>
 
       <Tabs
-        defaultValue={currentTab}
-        value={currentTab}
-        onValueChange={setCurrentTab}
+        defaultValue={tab}
+        value={tab}
+        onValueChange={(value) => {
+          setNameInput("");
+          setParams({
+            ...params,
+            tab: value,
+            user: "",
+            page: PAGINATION.DEFAULT_PAGE,
+            pageSize: PAGINATION.DEFAULT_PAGE_SIZE,
+          });
+        }}
         className="w-full"
       >
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-4 [&_button]:data-[state=active]:shadow-none">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="users">User Management</TabsTrigger>
@@ -396,7 +401,7 @@ export const AdminDashboard = () => {
                   <Button
                     variant="outline"
                     className="h-auto p-4 justify-start"
-                    onClick={() => setCurrentTab("analytics")}
+                    onClick={() => setParams({ ...params, tab: "analytics" })}
                   >
                     <BarChart3 className="size-5 mr-3 text-orange-600" />
                     <div className="text-left">
@@ -511,61 +516,74 @@ export const AdminDashboard = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <ChartContainer
-                  config={generateChartConfig("Registrations", "30 days View")}
-                  className="aspect-auto h-[250px] w-full"
-                >
-                  <LineChart
-                    accessibilityLayer
-                    data={analytics?.registrations}
-                    margin={{
-                      left: 12,
-                      right: 12,
-                      top: 8,
-                    }}
+                {analytics.registrations.length === 0 ? (
+                  <ErrorState
+                    title="Registrations"
+                    description="No user registrations in the last 30 days for your organization"
+                  />
+                ) : (
+                  <ChartContainer
+                    config={generateChartConfig(
+                      "Registrations",
+                      "30 days View"
+                    )}
+                    className="aspect-auto h-[250px] w-full"
                   >
-                    <CartesianGrid vertical={false} />
-                    <XAxis
-                      dataKey="date"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={8}
-                      minTickGap={32}
-                      tickFormatter={(value) => {
-                        const date = new Date(value);
-                        return date.toLocaleDateString("en-CA", {
-                          month: "short",
-                          day: "numeric",
-                          timeZone: "UTC",
-                        });
+                    <LineChart
+                      accessibilityLayer
+                      data={analytics?.registrations}
+                      margin={{
+                        left: 12,
+                        right: 12,
+                        top: 8,
                       }}
-                    />
-                    <ChartTooltip
-                      content={
-                        <ChartTooltipContent
-                          className="w-[150px]"
-                          nameKey="views"
-                          labelFormatter={(value) => {
-                            return new Date(value).toLocaleDateString("en-CA", {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                              timeZone: "UTC",
-                            });
-                          }}
-                        />
-                      }
-                    />
-                    <Line
-                      // dataKey={activeChart}
-                      dataKey={"count"}
-                      type="monotone"
-                      // stroke={`var(--color-${activeChart})`}
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  </LineChart>
-                </ChartContainer>
+                    >
+                      <CartesianGrid vertical={false} />
+                      <XAxis
+                        dataKey="date"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        minTickGap={32}
+                        tickFormatter={(value) => {
+                          const date = new Date(value);
+                          return date.toLocaleDateString("en-CA", {
+                            month: "short",
+                            day: "numeric",
+                            timeZone: "UTC",
+                          });
+                        }}
+                      />
+                      <ChartTooltip
+                        content={
+                          <ChartTooltipContent
+                            className="w-[150px]"
+                            nameKey="views"
+                            labelFormatter={(value) => {
+                              return new Date(value).toLocaleDateString(
+                                "en-CA",
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                  timeZone: "UTC",
+                                }
+                              );
+                            }}
+                          />
+                        }
+                      />
+                      <Line
+                        // dataKey={activeChart}
+                        dataKey={"count"}
+                        type="monotone"
+                        // stroke={`var(--color-${activeChart})`}
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    </LineChart>
+                  </ChartContainer>
+                )}
               </CardContent>
             </Card>
 
@@ -598,62 +616,71 @@ export const AdminDashboard = () => {
               </CardHeader>
               <CardContent>
                 {/* <Line data={requestsChartData} height={100} /> */}
-
-                <ChartContainer
-                  config={generateChartConfig("Requests", "30 days View")}
-                  className="aspect-auto h-[250px] w-full"
-                >
-                  <LineChart
-                    accessibilityLayer
-                    data={analytics?.pickupRequests}
-                    margin={{
-                      left: 12,
-                      right: 12,
-                      top: 8,
-                    }}
+                {analytics.pickupRequests.length === 0 ? (
+                  <ErrorState
+                    title="Ride Requests"
+                    description="No ride requests in the last 30 days for your organization"
+                  />
+                ) : (
+                  <ChartContainer
+                    config={generateChartConfig("Requests", "30 days View")}
+                    className="aspect-auto h-[250px] w-full"
                   >
-                    <CartesianGrid vertical={false} />
-                    <XAxis
-                      dataKey="date"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={8}
-                      minTickGap={32}
-                      tickFormatter={(value) => {
-                        const date = new Date(value);
-                        return date.toLocaleDateString("en-CA", {
-                          month: "short",
-                          day: "numeric",
-                          timeZone: "UTC",
-                        });
+                    <LineChart
+                      accessibilityLayer
+                      data={analytics?.pickupRequests}
+                      margin={{
+                        left: 12,
+                        right: 12,
+                        top: 8,
                       }}
-                    />
-                    <ChartTooltip
-                      content={
-                        <ChartTooltipContent
-                          className="w-[150px]"
-                          nameKey="views"
-                          labelFormatter={(value) => {
-                            return new Date(value).toLocaleDateString("en-CA", {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                              timeZone: "UTC",
-                            });
-                          }}
-                        />
-                      }
-                    />
-                    <Line
-                      // dataKey={activeChart}
-                      dataKey={"count"}
-                      type="monotone"
-                      // stroke={`var(--color-${activeChart})`}
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  </LineChart>
-                </ChartContainer>
+                    >
+                      <CartesianGrid vertical={false} />
+                      <XAxis
+                        dataKey="date"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        minTickGap={32}
+                        tickFormatter={(value) => {
+                          const date = new Date(value);
+                          return date.toLocaleDateString("en-CA", {
+                            month: "short",
+                            day: "numeric",
+                            timeZone: "UTC",
+                          });
+                        }}
+                      />
+                      <ChartTooltip
+                        content={
+                          <ChartTooltipContent
+                            className="w-[150px]"
+                            nameKey="views"
+                            labelFormatter={(value) => {
+                              return new Date(value).toLocaleDateString(
+                                "en-CA",
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                  timeZone: "UTC",
+                                }
+                              );
+                            }}
+                          />
+                        }
+                      />
+                      <Line
+                        // dataKey={activeChart}
+                        dataKey={"count"}
+                        type="monotone"
+                        // stroke={`var(--color-${activeChart})`}
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    </LineChart>
+                  </ChartContainer>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -690,6 +717,12 @@ export const AdminDashboard = () => {
                       </Badge>
                     </div>
                   ))}
+
+                  {analytics.driverActivity.length === 0 && (
+                    <p className="text-center">
+                      No driver activities this month
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -714,6 +747,10 @@ export const AdminDashboard = () => {
                       </Badge>
                     </div>
                   ))}
+
+                  {analytics.popularServiceDays.length === 0 && (
+                    <p className="text-center">No ride requests this month</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -730,13 +767,11 @@ export const AdminDashboard = () => {
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-gray-400" />
                     <Input
                       placeholder="Search users..."
-                      value={filters.searchQuery}
-                      onChange={(e) =>
-                        updateFilter("searchQuery", e.target.value)
-                      }
+                      value={nameInput}
+                      onChange={handleNameFilterChange}
                       className="pl-9 w-64"
                     />
-                    {filters.searchQuery && (
+                    {isFiltered && (
                       <XCircleIcon
                         className="absolute right-3 top-1/2 transform -translate-y-1/2 size-4 text-gray-400 cursor-pointer"
                         onClick={clearFilters}
@@ -759,7 +794,7 @@ export const AdminDashboard = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedUsers.map((user) => (
+                  {users.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">{user.name}</TableCell>
                       <TableCell>{user.email}</TableCell>
@@ -841,7 +876,7 @@ export const AdminDashboard = () => {
                     </TableRow>
                   ))}
 
-                  {paginatedUsers.length === 0 && (
+                  {users.length === 0 && (
                     <TableRow>
                       <TableCell
                         className="font-medium text-center"
@@ -856,13 +891,20 @@ export const AdminDashboard = () => {
             </CardContent>
             <CardFooter>
               <CustomPagination
-                currentPage={currentPage}
-                totalItems={filteredUsers.length}
-                itemsPerPage={itemsPerPage}
-                onPageChange={setCurrentPage}
-                onItemsPerPageChange={setItemsPerPage}
+                currentPage={otherParams.page}
+                totalItems={totalCount}
+                itemsPerPage={otherParams.pageSize}
+                onPageChange={(newPage) =>
+                  setParams({ ...params, page: newPage })
+                }
+                onItemsPerPageChange={(newPageSize) => {
+                  setParams({ ...params, pageSize: newPageSize, page: 1 });
+                }}
                 itemName="users"
                 className="w-full"
+                totalPages={totalPages}
+                hasNextPage={hasNextPage}
+                hasPreviousPage={hasPreviousPage}
               />
             </CardFooter>
           </Card>

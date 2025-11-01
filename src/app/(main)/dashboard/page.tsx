@@ -1,3 +1,4 @@
+import { SearchParams } from "nuqs/server";
 import { Suspense } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 
@@ -5,26 +6,51 @@ import { ErrorState } from "@/components/screen-states/error-state";
 import { AdminDashboard } from "@/features/dashboard/components/admin-dashboard";
 import { TransportationTeamDashboard } from "@/features/dashboard/components/transportation-dashboard";
 import { UserDashboard } from "@/features/dashboard/components/user-dashboard";
+import { adminDashboardParamsLoader } from "@/features/dashboard/params-loader";
 
+import { LoadingState } from "@/components/screen-states/loading-state";
 import { UserRole } from "@/generated/prisma";
 import { requireAuth } from "@/lib/session/server-session";
 import { HydrateClient, prefetch, trpc } from "@/trpc/server";
-import { LoadingState } from "@/components/screen-states/loading-state";
 
-export const dynamic = "force-dynamic";
+// export const dynamic = "force-dynamic";
+type Props = {
+  searchParams: Promise<SearchParams>;
+};
 
-const DashboardPage = async () => {
+const DashboardPage = async ({ searchParams }: Props) => {
   const session = await requireAuth();
 
   const userRole = session.user.role;
 
+  const {
+    user: search,
+    page,
+    pageSize,
+  } = await adminDashboardParamsLoader(searchParams);
+
   // Admin Dashboard Data Prefetching
-  prefetch(trpc.adminStats.getStats.queryOptions());
-  prefetch(trpc.adminUsers.getUsers.queryOptions());
-  prefetch(trpc.adminAnalytics.getAnalytics.queryOptions());
+  if (userRole === UserRole.ADMIN) {
+    prefetch(trpc.adminStats.getStats.queryOptions());
+    prefetch(
+      trpc.users.getPaginatedUsers.queryOptions({
+        search,
+        page,
+        pageSize,
+      })
+    );
+    prefetch(trpc.adminAnalytics.getAnalytics.queryOptions());
+  }
 
   // User Dashboard Data Prefetching
-  prefetch(trpc.userRequests.getUserRequests.queryOptions({}));
+  if (userRole === UserRole.USER) {
+    prefetch(trpc.userRequests.getUserRequests.queryOptions({}));
+  }
+
+  // Driver Dashboard Data Prefetching
+  if (userRole === UserRole.TRANSPORTATION_TEAM) {
+    prefetch(trpc.driverRequests.getRequestStats.queryOptions());
+  }
 
   return (
     <HydrateClient>
@@ -36,6 +62,7 @@ const DashboardPage = async () => {
           />
         }
       >
+        {userRole === UserRole.ADMIN && <AdminDashboard />}
         <Suspense
           fallback={
             <LoadingState
@@ -44,8 +71,6 @@ const DashboardPage = async () => {
             />
           }
         >
-          {userRole === UserRole.ADMIN && <AdminDashboard />}
-
           {userRole === UserRole.TRANSPORTATION_TEAM && (
             <TransportationTeamDashboard />
           )}

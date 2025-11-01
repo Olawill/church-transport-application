@@ -1,5 +1,6 @@
 import { BranchType } from "@/generated/prisma";
 import {
+  getPostalCodeValidationMessage,
   isValidEmail,
   isValidPhoneNumber,
   isValidPostalCode,
@@ -21,6 +22,11 @@ const validateUserData = async (
     endDate?: Date | undefined;
     serviceDayId?: string | undefined;
     requestDate?: Date | undefined;
+    street: string;
+    city: string;
+    province: string;
+    postalCode: string;
+    country: string;
   },
   ctx: z.RefinementCtx
 ) => {
@@ -148,6 +154,20 @@ const validateUserData = async (
       }
     }
   }
+
+  // Allow validation to pass if country is not selected yet
+  if (!data.country) return;
+
+  // Validate postal code
+  const isValid = isValidPostalCode(data.postalCode, data.country);
+
+  if (!isValid) {
+    ctx.addIssue({
+      code: "custom",
+      message: getPostalCodeValidationMessage(data.postalCode, data.country),
+      path: ["postalCode"],
+    });
+  }
 };
 
 export const newUserSchema = z
@@ -188,11 +208,10 @@ export const newUserSchema = z
 
     postalCode: z
       .string()
-      .trim()
-      .min(1, "Postal code is required")
-      .refine(isValidPostalCode, {
-        message: "Please enter a valid Canadian postal code",
-      }),
+      .min(3, "Postal code must be at least 3 characters")
+      .max(10, "Postal code must be at most 10 characters"),
+
+    country: z.string().min(1, "Country is required"),
 
     serviceDayId: z
       .string()
@@ -230,11 +249,8 @@ export const newUserSchema = z
 export type NewUserSchema = z.infer<typeof newUserSchema>;
 
 export const profileUpdateSchema = z.object({
-  firstName: z.string().trim().min(1, {
-    message: "First name is required",
-  }),
-  lastName: z.string().trim().min(1, {
-    message: "Last name is required",
+  name: z.string().trim().min(1, {
+    message: "Name is required",
   }),
   userName: z.string().trim().min(1, "Username is required").or(z.literal("")),
   email: z
@@ -242,7 +258,7 @@ export const profileUpdateSchema = z.object({
       message: "Email is required",
     })
     .refine(isValidEmail, { message: "Please enter a valid email address" }),
-  phone: z
+  phoneNumber: z
     .string()
     .trim()
     .min(1, "Phone number is required")
@@ -262,20 +278,33 @@ export const profileUpdateSchema = z.object({
 
 export type ProfileUpdateSchema = z.infer<typeof profileUpdateSchema>;
 
-export const addressUpdateSchema = z.object({
-  name: z.string().trim().min(1, "Name is required"),
-  street: z.string().trim().min(1, "Street address is required"),
-  city: z.string().trim().min(1, "City is required"),
-  province: z.string().min(1, "Province is required"),
-  postalCode: z
-    .string()
-    .trim()
-    .min(1, "Postal code is required")
-    .refine(isValidPostalCode, {
-      message: "Please enter a valid Canadian postal code",
-    }),
-  country: z.string().trim().min(1, "Country is required"),
-});
+export const addressUpdateSchema = z
+  .object({
+    name: z.string().trim().min(1, "Name is required"),
+    street: z.string().trim().min(1, "Street address is required"),
+    city: z.string().trim().min(1, "City is required"),
+    province: z.string().min(1, "Province is required"),
+    postalCode: z
+      .string()
+      .min(3, "Postal code must be at least 3 characters")
+      .max(10, "Postal code must be at most 10 characters"),
+    country: z.string().trim().min(1, "Country is required"),
+  })
+  .superRefine((data, ctx) => {
+    // Allow validation to pass if country is not selected yet
+    if (!data.country) return;
+
+    // Validate postal code
+    const isValid = isValidPostalCode(data.postalCode, data.country);
+
+    if (!isValid) {
+      ctx.addIssue({
+        code: "custom",
+        message: getPostalCodeValidationMessage(data.postalCode, data.country),
+        path: ["postalCode"],
+      });
+    }
+  });
 
 export type AddressUpdateSchema = z.infer<typeof addressUpdateSchema>;
 
@@ -295,35 +324,48 @@ export const securityUpdateSchema = z
 
 export type SecurityUpdateSchema = z.infer<typeof securityUpdateSchema>;
 
-export const churchBranchContactInfoUpdateSchema = z.object({
-  branchName: z.string().nullable(),
-  branchCategory: z.enum(BranchType),
-  churchAddress: z.string().trim().min(1, "Church address is required"),
-  churchCity: z.string().trim().min(1, "City is required"),
-  churchProvince: z.string().min(1, "Province is required"),
-  churchPostalCode: z
-    .string()
-    .trim()
-    .min(1, "Postal code is required")
-    .refine(isValidPostalCode, {
-      message: "Please enter a valid Canadian postal code",
-    }),
-  churchCountry: z.string().trim().min(1, "Country is required"),
-  churchPhone: z
-    .string()
-    .trim()
-    .min(1, "Phone number is required")
-    .refine(isValidPhoneNumber, {
-      message: "Please enter a valid phone number",
-    }),
-  requestCutOffInHrs: z
-    .string()
-    .trim()
-    .refine((val) => /^\d+$/.test(val), {
-      message: "Please enter cut-off time in hours",
-    }),
-  defaultMaxDistance: z.enum(["10", "20", "30", "50"]),
-});
+export const churchBranchContactInfoUpdateSchema = z
+  .object({
+    branchName: z.string().nullable(),
+    branchCategory: z.enum(BranchType),
+    street: z.string().trim().min(1, "Church address is required"),
+    city: z.string().trim().min(1, "City is required"),
+    province: z.string().min(1, "Province is required"),
+    postalCode: z
+      .string()
+      .min(3, "Postal code must be at least 3 characters")
+      .max(10, "Postal code must be at most 10 characters"),
+    country: z.string().trim().min(1, "Country is required"),
+    churchPhone: z
+      .string()
+      .trim()
+      .min(1, "Phone number is required")
+      .refine(isValidPhoneNumber, {
+        message: "Please enter a valid phone number",
+      }),
+    requestCutOffInHrs: z
+      .string()
+      .trim()
+      .refine((val) => /^\d+$/.test(val), {
+        message: "Please enter cut-off time in hours",
+      }),
+    defaultMaxDistance: z.enum(["10", "20", "30", "50"]),
+  })
+  .superRefine((data, ctx) => {
+    // Allow validation to pass if country is not selected yet
+    if (!data.country) return;
+
+    // Validate postal code
+    const isValid = isValidPostalCode(data.postalCode, data.country);
+
+    if (!isValid) {
+      ctx.addIssue({
+        code: "custom",
+        message: getPostalCodeValidationMessage(data.postalCode, data.country),
+        path: ["postalCode"],
+      });
+    }
+  });
 
 export type ChurchBranchContactInfoUpdateSchema = z.infer<
   typeof churchBranchContactInfoUpdateSchema

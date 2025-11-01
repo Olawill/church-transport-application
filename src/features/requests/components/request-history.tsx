@@ -18,15 +18,14 @@ import {
   X,
   XCircle,
 } from "lucide-react";
-import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 
 import { UserRole } from "@/generated/prisma";
-import { Status, useRequestStore } from "@/lib/store/useRequestStore";
-import { PickupRequest, RequestType, User as UserType } from "@/lib/types";
+import { Status } from "@/lib/store/useRequestStore";
+import { RequestType } from "@/lib/types";
 import {
   calculateDistance,
   capitalize,
@@ -36,16 +35,13 @@ import {
   formatTime,
 } from "@/lib/utils";
 
-import {
-  CustomPagination,
-  usePaginationWithStore,
-} from "@/components/custom-pagination";
+import { CustomPagination } from "@/components/custom-pagination";
 import CustomDateCalendar from "@/components/custom-request-calendar";
-import { columns } from "@/components/drivers/column";
-import { DataTable } from "@/components/drivers/data-table";
 import { CarBack } from "@/components/icons/car-back";
-import { NewRequestForm } from "@/components/requests/new-request-form";
 import AdminNewUserRequest from "@/features/admin/components/admin-new-user-request";
+import { columns } from "@/features/drivers/components/column";
+import { DataTable } from "@/features/drivers/components/data-table";
+import { NewRequestForm } from "@/features/requests/components/new-request-form";
 
 import {
   Accordion,
@@ -81,125 +77,88 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { PAGINATION } from "@/config/constants";
+import { useSession } from "@/lib/auth-client";
+import { useTRPC } from "@/trpc/client";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { useRequestsParams } from "../hooks/use-requests-params";
+import { GetUserRequestsType } from "../server/types";
 
 type Type = RequestType | "ALL";
 
 export const RequestHistory = () => {
-  const { data: session } = useSession() || {};
-  const {
-    requests,
-    loading,
-    fetchRequests,
-    statusFilter,
-    setStatusFilter,
-    typeFilter,
-    setTypeFilter,
-    requestDateFilter,
-    setRequestDateFilter,
-    clearFilters,
-  } = useRequestStore();
+  const { data: session } = useSession();
+  const trpc = useTRPC();
 
-  const [drivers, setDrivers] = useState<UserType[]>([]);
+  const [params, setParams] = useRequestsParams();
+  const { page, pageSize, search, status, type, requestDate, serviceDay } =
+    params;
+
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [pickupCancelDialogOpen, setPickupCancelDialogOpen] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<PickupRequest | null>(
-    null
-  );
+  const [selectedRequest, setSelectedRequest] =
+    useState<GetUserRequestsType | null>(null);
   const [cancelReason, setCancelReason] = useState("");
 
   const [openAccordions, setOpenAccordions] = useState<Record<string, boolean>>(
     {}
   );
-  const [nameInput, setNameInput] = useState("");
-  const [serviceDay, setServiceDay] = useState("ALL");
-  const [allServices, setAllServices] = useState(["ALL"]);
-  const [debouncedNameInput] = useDebounce(nameInput, 300);
+  const [nameInput, setNameInput] = useState(search || "");
+  const [debouncedNameInput] = useDebounce(search, 300);
 
-  const {
-    currentPage,
-    itemsPerPage,
-    setCurrentPage,
-    setItemsPerPage,
-    paginateItems,
-  } = usePaginationWithStore(10, [
-    statusFilter,
-    typeFilter,
-    requestDateFilter,
-    debouncedNameInput,
-    serviceDay,
-  ]);
+  const { data: requestData, isLoading } = useSuspenseQuery(
+    trpc.userRequests.getUserRequests.queryOptions(
+      {
+        status,
+        type,
+        requestDate: requestDate || "",
+        search: debouncedNameInput || "",
+        page,
+        pageSize,
+        serviceDay: serviceDay || "ALL",
+        // maxDistance: "10",
+      },
+      {
+        placeholderData: (previousData) => previousData,
+      }
+    )
+  );
 
-  // Filter requests based on name input and service
-  const filteredRequests = requests.filter((request) => {
-    // Skip requests without user data
-    if (debouncedNameInput && !request.user) {
-      return false;
-    }
+  const { data: services } = useSuspenseQuery(
+    trpc.services.getServices.queryOptions({
+      status: "active",
+    })
+  );
 
-    const userName = `${request?.user?.firstName} ${request?.user?.lastName}`;
+  const { data: drivers } = useSuspenseQuery(
+    trpc.users.getUsers.queryOptions({
+      role: "TRANSPORTATION_TEAM",
+    })
+  );
 
-    const matchesRequest =
-      !debouncedNameInput ||
-      userName.toLowerCase().includes(debouncedNameInput.toLowerCase());
+  const names = services.map((s) => s.name).filter(Boolean);
+  const allServices = Array.from(new Set(["ALL", ...names]));
 
-    const matchesService =
-      serviceDay === "ALL" || request.serviceDay?.name === serviceDay;
-
-    return matchesRequest && matchesService;
-  });
-
-  // Get paginated requests
-  const paginatedRequests = paginateItems(filteredRequests);
+  // Extract data from query result
+  const requests = requestData?.requests || [];
+  const totalCount = requestData?.totalCount || 0;
+  const totalPages = requestData?.totalPages || 1;
+  const hasNextPage = requestData?.hasNextPage || false;
+  const hasPreviousPage = requestData?.hasPreviousPage || false;
 
   const handleNameFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setNameInput(val); // Immediate input update
-  };
 
-  useEffect(() => {
-    if (session?.user) {
-      fetchRequests();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, statusFilter, typeFilter, requestDateFilter]);
-
-  useEffect(() => {
-    if (session?.user?.role === UserRole.ADMIN) {
-      fetchDrivers();
-      fetchServices();
-    }
-  }, [session]);
-
-  const fetchDrivers = async () => {
-    try {
-      const params = new URLSearchParams();
-
-      params.set("role", "TRANSPORTATION_TEAM");
-
-      const response = await fetch(`/api/users?${params.toString()}`);
-      if (response.ok) {
-        const data = await response.json();
-        setDrivers(data);
-      }
-    } catch (error) {
-      console.error("Error fetching drivers:", error);
+    // Update search param after debounce
+    if (val !== search) {
+      setTimeout(() => {
+        setParams({ ...params, search: val, page: 1 });
+      }, 300);
     }
   };
 
-  const fetchServices = async () => {
-    try {
-      const res = await fetch("/api/service-days?status=active");
-      if (!res.ok) throw new Error("Failed to fetch services");
-      const data: Array<{ name: string }> = await res.json();
-      const names = data.map((s) => s.name).filter(Boolean);
-      const unique = Array.from(new Set(["ALL", ...names]));
-      setAllServices(unique);
-    } catch (error) {
-      console.error("Error fetching services:", error);
-      toast.error("Error fetching services");
-    }
-  };
   const handleCancelRequest = async () => {
     if (!selectedRequest || !cancelReason.trim()) {
       toast.error("Please provide a reason for cancellation");
@@ -217,7 +176,7 @@ export const RequestHistory = () => {
       );
 
       if (response.ok) {
-        await fetchRequests();
+        // await fetchRequests();
         setCancelDialogOpen(false);
         setCancelReason("");
         setSelectedRequest(null);
@@ -254,7 +213,7 @@ export const RequestHistory = () => {
       );
 
       if (response.ok) {
-        await fetchRequests();
+        // await fetchRequests();
         setPickupCancelDialogOpen(false);
         setCancelReason("");
         setSelectedRequest(null);
@@ -271,10 +230,12 @@ export const RequestHistory = () => {
 
   const handleEditDialog = (value: boolean) => {
     setEditDialogOpen(value);
-    setSelectedRequest(null);
+    if (!value) {
+      setSelectedRequest(null);
+    }
   };
 
-  const canCancelOrEditRequest = (request: PickupRequest): boolean => {
+  const canCancelOrEditRequest = (request: GetUserRequestsType): boolean => {
     // Users can cancel their pending requests
     // Or pending requests that haven't been accepted yet
     const serviceTime = request.serviceDay?.time as string;
@@ -294,7 +255,7 @@ export const RequestHistory = () => {
     ); // 2 hours before
   };
 
-  const canCancelPickup = (request: PickupRequest): boolean => {
+  const canCancelPickup = (request: GetUserRequestsType): boolean => {
     // Drivers can cancel their accepted pickup
     return (
       request.status === "ACCEPTED" &&
@@ -324,11 +285,20 @@ export const RequestHistory = () => {
     }));
   };
 
-  // const isAuthenticated = !!session?.user;
-  const isUser = session?.user?.role === UserRole.USER;
-  const isAdmin = session?.user?.role === UserRole.ADMIN;
-  const isTransportationMember =
-    session?.user?.role === UserRole.TRANSPORTATION_TEAM;
+  const clearFilters = () => {
+    setParams({
+      status: "ALL",
+      type: "ALL",
+      requestDate: "",
+      search: "",
+      serviceDay: "ALL",
+      page: PAGINATION.DEFAULT_PAGE,
+      pageSize: PAGINATION.DEFAULT_PAGE_SIZE,
+    });
+    setNameInput("");
+  };
+
+  // Statistics calculations
   const pendingRequests = requests.filter((r) => r.status === "PENDING").length;
   const acceptedRequests = requests.filter(
     (r) => r.status === "ACCEPTED"
@@ -336,15 +306,21 @@ export const RequestHistory = () => {
   const completedRequests = requests.filter(
     (r) => r.status === "COMPLETED"
   ).length;
-
   const dropOffRequest = requests.filter((r) => r.isDropOff === true).length;
   const pickUpRequest = requests.filter((r) => r.isPickUp === true).length;
+
   const isFiltered =
-    statusFilter !== "ALL" ||
-    typeFilter !== "ALL" ||
-    requestDateFilter ||
+    status !== "ALL" ||
+    type !== "ALL" ||
+    requestDate ||
     nameInput !== "" ||
     serviceDay !== "ALL";
+
+  // Role-based checks
+  const isUser = session?.user?.role === UserRole.USER;
+  const isAdmin = session?.user?.role === UserRole.ADMIN;
+  const isTransportationMember =
+    session?.user?.role === UserRole.TRANSPORTATION_TEAM;
 
   return (
     <div className="space-y-6">
@@ -459,14 +435,7 @@ export const RequestHistory = () => {
 
               {/* Clear Button */}
               {isFiltered && (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setNameInput("");
-                    setServiceDay("ALL");
-                    clearFilters();
-                  }}
-                >
+                <Button variant="outline" onClick={clearFilters}>
                   <XCircle className="size-4" />
                   Clear Filters
                 </Button>
@@ -481,9 +450,9 @@ export const RequestHistory = () => {
               <div className="">
                 <Label className="text-sm font-medium mb-2 block">Status</Label>
                 <Select
-                  value={statusFilter}
+                  value={status}
                   onValueChange={(value) => {
-                    setStatusFilter(value as Status);
+                    setParams({ ...params, status: value as Status, page: 1 });
                   }}
                 >
                   <SelectTrigger className="w-full">
@@ -505,8 +474,10 @@ export const RequestHistory = () => {
                   Request Type
                 </Label>
                 <Select
-                  value={typeFilter as string}
-                  onValueChange={(value) => setTypeFilter(value as Type)}
+                  value={type}
+                  onValueChange={(value) =>
+                    setParams({ ...params, type: value as Type, page: 1 })
+                  }
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />
@@ -527,7 +498,9 @@ export const RequestHistory = () => {
                   </Label>
                   <Select
                     value={serviceDay}
-                    onValueChange={(value) => setServiceDay(value)}
+                    onValueChange={(value) =>
+                      setParams({ ...params, serviceDay: value, page: 1 })
+                    }
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue />
@@ -546,8 +519,16 @@ export const RequestHistory = () => {
               <div className={cn(!isUser && "flex-1")}>
                 <CustomDateCalendar
                   label="Request Date"
-                  setRequestDateFilter={setRequestDateFilter}
-                  requestDateFilter={requestDateFilter}
+                  setRequestDateFilter={(date) => {
+                    setParams({
+                      ...params,
+                      requestDate: date ? date.toISOString() : "",
+                      page: 1,
+                    });
+                  }}
+                  requestDateFilter={
+                    requestDate ? new Date(requestDate) : undefined
+                  }
                 />
               </div>
             </div>
@@ -571,26 +552,23 @@ export const RequestHistory = () => {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">
-            {statusFilter === "ALL" &&
-            typeFilter === "ALL" &&
-            !requestDateFilter
+            {status === "ALL" && type === "ALL" && !requestDate
               ? "All Requests"
-              : `${statusFilter !== "ALL" ? capitalize(statusFilter) + " " : " "}` +
-                `${typeFilter !== "ALL" ? capitalize(String(typeFilter)) + " " : ""}` +
+              : `${status !== "ALL" ? capitalize(status) + " " : " "}` +
+                `${type !== "ALL" ? capitalize(String(type)) + " " : ""}` +
                 `Requests` +
-                `${requestDateFilter ? " on " + formatFilterDate(requestDateFilter) : ""}`}
+                `${requestDate ? " on " + formatFilterDate(new Date(requestDate)) : ""}`}
           </CardTitle>
           <CardDescription>
-            {statusFilter === "PENDING" &&
-              "Requests waiting for driver assignment"}
-            {statusFilter === "ACCEPTED" && "Requests accepted by drivers"}
-            {statusFilter === "COMPLETED" && "Successfully completed rides"}
-            {statusFilter === "CANCELLED" && "Cancelled requests"}
-            {statusFilter === "ALL" && "Complete history of pickup requests"}
+            {status === "PENDING" && "Requests waiting for driver assignment"}
+            {status === "ACCEPTED" && "Requests accepted by drivers"}
+            {status === "COMPLETED" && "Successfully completed rides"}
+            {status === "CANCELLED" && "Cancelled requests"}
+            {status === "ALL" && "Complete history of pickup requests"}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {isLoading ? (
             <div className="space-y-4">
               {[...Array(5)].map((_, i) => (
                 <div key={i} className="animate-pulse p-6 border rounded-lg">
@@ -624,7 +602,7 @@ export const RequestHistory = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {paginatedRequests.map((request) => (
+              {requests.map((request) => (
                 <div key={request.id} className="border rounded-lg p-6">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center space-x-3">
@@ -673,12 +651,12 @@ export const RequestHistory = () => {
                         <div>
                           <p className="text-sm font-medium">Requested by</p>
                           <p className="text-sm text-gray-600">
-                            {request.user.firstName} {request.user.lastName}
+                            {request.user.name}
                           </p>
-                          {request.user.phone && (
+                          {request.user.phoneNumber && (
                             <p className="text-xs text-gray-500 flex items-center">
                               <Phone className="h-3 w-3 mr-1" />
-                              {request.user.phone}
+                              {request.user.phoneNumber}
                             </p>
                           )}
                         </div>
@@ -702,13 +680,11 @@ export const RequestHistory = () => {
                         <Car className="h-4 w-4 text-gray-400" />
                         <div>
                           <p className="text-sm font-medium">Driver</p>
-                          <p className="text-sm">
-                            {request.driver.firstName} {request.driver.lastName}
-                          </p>
-                          {request.driver.phone && (
+                          <p className="text-sm">{request.driver.name}</p>
+                          {request.driver.phoneNumber && (
                             <p className="text-xs text-blue-600 flex items-center">
                               <Phone className="h-3 w-3 mr-1" />
-                              {request.driver.phone}
+                              {request.driver.phoneNumber}
                             </p>
                           )}
                         </div>
@@ -881,7 +857,7 @@ export const RequestHistory = () => {
 
                                     return {
                                       ...d,
-                                      name: `${d.firstName} ${d.lastName}`,
+                                      name: `${d.name}`,
                                       requestDistance: hasValidCoordinates
                                         ? calculateDistance(
                                             lat1,
@@ -904,12 +880,19 @@ export const RequestHistory = () => {
 
               {/* Pagination */}
               <CustomPagination
-                currentPage={currentPage}
-                totalItems={filteredRequests.length}
-                itemsPerPage={itemsPerPage}
-                onPageChange={setCurrentPage}
-                onItemsPerPageChange={setItemsPerPage}
+                currentPage={page}
+                totalItems={totalCount}
+                itemsPerPage={pageSize}
+                onPageChange={(newPage) =>
+                  setParams({ ...params, page: newPage })
+                }
+                onItemsPerPageChange={(newPageSize) => {
+                  setParams({ ...params, pageSize: newPageSize, page: 1 });
+                }}
                 itemName="requests"
+                totalPages={totalPages}
+                hasNextPage={hasNextPage}
+                hasPreviousPage={hasPreviousPage}
               />
             </div>
           )}
@@ -945,8 +928,8 @@ export const RequestHistory = () => {
                     isDropOff: selectedRequest.isDropOff as boolean,
                     isGroupRide: selectedRequest.isGroupRide as boolean,
                     numberOfGroup: selectedRequest.numberOfGroup ?? null,
-                    isRecurring: selectedRequest.isRecurring as boolean,
-                    endDate: selectedRequest.endDate ?? undefined,
+                    isRecurring: Boolean(selectedRequest.seriesId),
+                    endDate: selectedRequest.serviceDay.endDate ?? undefined,
                     seriesId: selectedRequest.seriesId ?? null,
                   }}
                   setShowDialog={handleEditDialog}
@@ -957,7 +940,7 @@ export const RequestHistory = () => {
                 <AdminNewUserRequest
                   isNewUser={false}
                   isGroupRequest={selectedRequest.isGroupRide}
-                  isRecurringRequest={selectedRequest.isRecurring}
+                  isRecurringRequest={Boolean(selectedRequest.seriesId)}
                   formRequestDate={selectedRequest.requestDate}
                   newRequestData={{
                     requestId: selectedRequest.id as string,
@@ -970,8 +953,8 @@ export const RequestHistory = () => {
                     isDropOff: selectedRequest.isDropOff as boolean,
                     isGroupRide: selectedRequest.isGroupRide as boolean,
                     numberOfGroup: selectedRequest.numberOfGroup ?? null,
-                    isRecurring: selectedRequest.isRecurring as boolean,
-                    endDate: selectedRequest.endDate ?? undefined,
+                    isRecurring: Boolean(selectedRequest.seriesId),
+                    endDate: selectedRequest.serviceDay.endDate ?? undefined,
                     seriesId: selectedRequest.seriesId ?? null,
                   }}
                   setShowDialog={handleEditDialog}

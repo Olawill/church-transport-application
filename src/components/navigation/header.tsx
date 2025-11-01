@@ -6,9 +6,11 @@ import {
   Calendar,
   Car,
   Home,
+  KeyIcon,
   LogOut,
   Menu,
   User,
+  UserIcon,
   Users,
   X,
 } from "lucide-react";
@@ -29,6 +31,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import { UserRole } from "@/generated/prisma";
 
 const navigationItems = [
   {
@@ -110,7 +113,7 @@ export const Header = () => {
         <div className="flex justify-between items-center h-16">
           {/* Logo and brand */}
           <div className="flex items-center">
-            <Link href="/dashboard" className="flex items-center space-x-2">
+            <Link href="/" className="flex items-center space-x-2">
               <div className="size-8 bg-blue-600 rounded-lg flex items-center justify-center">
                 <Car className="size-5 text-white" />
               </div>
@@ -191,9 +194,22 @@ export const Header = () => {
                     className="cursor-pointer"
                     onClick={() => router.push("/profile")}
                   >
-                    <User className="size-4" />
+                    <UserIcon className="size-4" />
                     Profile
                   </DropdownMenuItem>
+                  {(session.user.role === UserRole.ADMIN ||
+                    session.user.role === UserRole.OWNER) && (
+                    <>
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => router.push("/")}
+                      >
+                        <KeyIcon className="size-4" />
+                        Credentials
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
                   <DropdownMenuItem
                     onClick={handleSignOut}
                     className="text-gray-600 dark:text-gray-200 hover:text-gray-900 cursor-pointer"

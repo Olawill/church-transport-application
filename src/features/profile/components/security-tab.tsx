@@ -14,12 +14,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 
-import { UserProfile } from "@/components/profile/profile-management";
+import { GetUserProfile } from "@/features/user/types";
 import { SecurityUpdateSchema } from "@/schemas/adminCreateNewUserSchema";
 
 interface SecurityTabProps {
   securityForm: UseFormReturn<SecurityUpdateSchema>;
-  profile: UserProfile | null;
+  profile: GetUserProfile | null;
   toggleUserSettings: (
     field:
       | "twoFactorEnabled"
@@ -62,6 +62,7 @@ export const SecurityTab = ({
               onCheckedChange={(checked) =>
                 toggleUserSettings("twoFactorEnabled", !checked)
               }
+              className="cursor-pointer"
             />
           </div>
         </CardContent>

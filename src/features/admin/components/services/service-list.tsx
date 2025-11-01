@@ -1,4 +1,3 @@
-// components/admin/service-forms/ServiceList.tsx
 import {
   Archive,
   ArchiveRestore,
@@ -7,19 +6,16 @@ import {
   Edit2,
   Filter,
   Plus,
-  RefreshCcwIcon,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
 import { toast } from "sonner";
 
-import {
-  CustomPagination,
-  usePagination,
-} from "@/components/custom-pagination";
+import { CustomPagination } from "@/components/custom-pagination";
 import { useConfirm } from "@/hooks/use-confirm";
-import { DAYS_OF_WEEK, ServiceDay } from "@/lib/types";
+import { DAYS_OF_WEEK } from "@/lib/types";
 import { formatTime } from "@/lib/utils";
+import { useServiceDayParams } from "../../hooks/use-serviceDay-params";
+import { GetPaginatedServiceType, GetServiceType } from "../../types";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,14 +27,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -52,21 +40,20 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { FaPrayingHands } from "react-icons/fa";
 
 interface ServiceListProps {
-  serviceDays: ServiceDay[];
+  serviceDaysData: GetPaginatedServiceType;
   loading: boolean;
-  onEdit: (service: ServiceDay) => void;
-  onDelete: () => void;
+  onEdit: (service: GetServiceType) => void;
+  // onDelete: () => void;
   onShowForm: () => void;
 }
 
 export const ServiceList = ({
-  serviceDays,
+  serviceDaysData,
   loading,
   onEdit,
-  onDelete,
+  // onDelete,
   onShowForm,
 }: ServiceListProps) => {
   const [DeleteDialog, confirmDelete] = useConfirm(
@@ -85,30 +72,15 @@ export const ServiceList = ({
     true
   );
 
-  const [servicesStatus, setServicesStatus] = useState("active");
+  const [params, setParams] = useServiceDayParams();
+  const { page, pageSize, status } = params;
 
-  const {
-    currentPage,
-    itemsPerPage,
-    setCurrentPage,
-    setItemsPerPage,
-    paginateItems,
-  } = usePagination(10);
-
-  // Filter the services based on active status
-  const filteredServices = serviceDays.filter((service) => {
-    if (servicesStatus === "active") {
-      return service.isActive === true;
-    } else if (servicesStatus === "archived") {
-      return service.isActive === false;
-    } else if (servicesStatus === "all") {
-      return true; // show all services
-    }
-
-    return false;
-  });
-
-  const paginatedServices = paginateItems(filteredServices);
+  // Extract data from query result
+  const serviceDays = serviceDaysData?.serviceDays || [];
+  const totalCount = serviceDaysData?.totalCount || 0;
+  const totalPages = serviceDaysData?.totalPages || 1;
+  const hasNextPage = serviceDaysData?.hasNextPage || false;
+  const hasPreviousPage = serviceDaysData?.hasPreviousPage || false;
 
   const handleDelete = async (serviceId: string) => {
     const result = await confirmDelete();
@@ -121,7 +93,7 @@ export const ServiceList = ({
 
       if (response.ok) {
         toast.success("Service deleted successfully");
-        onDelete();
+        // onDelete(); Invalidate service Days
       } else {
         toast.error("Failed to delete service");
       }
@@ -147,7 +119,7 @@ export const ServiceList = ({
       if (response.ok) {
         const data = await response.json();
         toast.success(data.message || `Service ${action}d successfully`);
-        onDelete();
+        //onDelete(); // Invalidate service days
       } else {
         const error = await response.json();
         toast.error(error.error || `Failed to ${action} service`);
@@ -192,7 +164,7 @@ export const ServiceList = ({
     }
   };
 
-  const canRestore = (service: ServiceDay) => {
+  const canRestore = (service: GetServiceType) => {
     if (service.isActive) return true; // Can always archive
 
     const now = new Date();
@@ -203,7 +175,7 @@ export const ServiceList = ({
     return hoursSinceUpdate >= 24;
   };
 
-  const getRestoreTime = (service: ServiceDay) => {
+  const getRestoreTime = (service: GetServiceType) => {
     const now = new Date();
     const lastUpdated = new Date(service.updatedAt);
     const hoursSinceUpdate =
@@ -228,7 +200,12 @@ export const ServiceList = ({
                 <Filter className="size-4" />
                 Filter:
               </Label>
-              <Select value={servicesStatus} onValueChange={setServicesStatus}>
+              <Select
+                value={status}
+                onValueChange={(value) =>
+                  setParams({ ...params, status: value, page: 1 })
+                }
+              >
                 <SelectTrigger className="w-[120px]">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
@@ -270,32 +247,10 @@ export const ServiceList = ({
                 </Button>
               </div>
             </div>
-          ) : filteredServices.length === 0 ? (
-            <Empty className="from-muted/50 to-background h-full bg-gradient-to-b from-30%">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <FaPrayingHands />
-                </EmptyMedia>
-                <EmptyTitle>No Services</EmptyTitle>
-                <EmptyDescription>
-                  No services found matching your filter.
-                </EmptyDescription>
-              </EmptyHeader>
-              <EmptyContent>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setServicesStatus("active")}
-                >
-                  <RefreshCcwIcon />
-                  Refresh
-                </Button>
-              </EmptyContent>
-            </Empty>
           ) : (
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {paginatedServices.map((service) => (
+                {serviceDays.map((service) => (
                   <div
                     key={service.id}
                     className="border rounded-lg p-4 hover:bg-accent transition-colors flex flex-col h-full"
@@ -440,12 +395,19 @@ export const ServiceList = ({
               </div>
 
               <CustomPagination
-                currentPage={currentPage}
-                totalItems={filteredServices.length}
-                itemsPerPage={itemsPerPage}
-                onPageChange={setCurrentPage}
-                onItemsPerPageChange={setItemsPerPage}
+                currentPage={page}
+                totalItems={totalCount}
+                itemsPerPage={pageSize}
+                onPageChange={(newPage) =>
+                  setParams({ ...params, page: newPage })
+                }
+                onItemsPerPageChange={(newPageSize) => {
+                  setParams({ ...params, pageSize: newPageSize, page: 1 });
+                }}
                 itemName="services"
+                totalPages={totalPages}
+                hasNextPage={hasNextPage}
+                hasPreviousPage={hasPreviousPage}
               />
             </div>
           )}

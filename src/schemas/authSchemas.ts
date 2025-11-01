@@ -1,3 +1,4 @@
+import { PASSWORD_LENGTH } from "@/config/constants";
 import { passwordStrength } from "@/features/auth/lib/utils";
 import {
   getPostalCodeValidationMessage,
@@ -18,8 +19,6 @@ export const loginSchema = z.object({
 });
 
 export type LoginSchema = z.infer<typeof loginSchema>;
-
-export const PASSWORD_LENGTH = 8;
 
 export const signupSchema = z
   .object({
@@ -74,7 +73,7 @@ export const signupSchema = z
       .min(3, "Postal code must be at least 3 characters")
       .max(10, "Postal code must be at most 10 characters"),
 
-    country: z.string().min(1, "Province is required"),
+    country: z.string().min(1, "Country is required"),
   })
   .refine((data) => data.password === data.confirmPassword, {
     path: ["confirmPassword"],

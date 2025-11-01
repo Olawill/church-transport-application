@@ -9,6 +9,38 @@ import { createTRPCRouter, protectedRoleProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
 
 export const adminUserRouter = createTRPCRouter({
+  getUserAddresses: protectedRoleProcedure(UserRole.ADMIN)
+    .input(
+      z.object({
+        id: z.string(),
+      })
+    )
+    .query(async ({ input }) => {
+      const { id } = input;
+
+      // Check if user exist
+      const existingUser = await prisma.user.findUnique({
+        where: { id },
+      });
+
+      if (!existingUser) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found",
+        });
+      }
+
+      const addresses = await prisma.address.findMany({
+        where: {
+          userId: id,
+          isActive: true,
+        },
+        orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
+      });
+
+      return addresses;
+    }),
+
   approveUser: protectedRoleProcedure(UserRole.ADMIN)
     .input(
       z.object({

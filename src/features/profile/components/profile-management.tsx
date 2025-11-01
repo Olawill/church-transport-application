@@ -1,22 +1,23 @@
 "use client";
 
+import { useSession } from "@/lib/auth-client";
+import { cn } from "@/lib/utils";
+import { useTRPC } from "@/trpc/client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { skipToken, useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { cn } from "@/lib/utils";
-
 import {
   addBranch,
   deleteBranch,
-  getOrgInfo,
   setHeadquarter,
   updateBranch,
 } from "@/actions/getOrgInfo";
+import { SystemBranchInfo, SystemConfig } from "@/generated/prisma";
 import { useConfirm } from "@/hooks/use-confirm";
 import {
   AddressUpdateSchema,
@@ -28,14 +29,15 @@ import {
   SecurityUpdateSchema,
   securityUpdateSchema,
 } from "@/schemas/adminCreateNewUserSchema";
-import { SystemBranchInfo, SystemConfig } from "../../generated/prisma";
 
-import { AddressesTab } from "@/components/profile/addresses-tab";
-import { ChurchTab } from "@/components/profile/church-tab";
-import { NotificationsTab } from "@/components/profile/notifications-tab";
-import { ProfileTab } from "@/components/profile/profile-tab";
-import { SecurityTab } from "@/components/profile/security-tab";
-import { ProfileManagementSkeleton } from "./profile-management-skeleton";
+import { AddressesTab } from "@/features/profile/components/addresses-tab";
+import { ChurchTab } from "@/features/profile/components/church-tab";
+import { NotificationsTab } from "@/features/profile/components/notifications-tab";
+import { ProfileManagementSkeleton } from "@/features/profile/components/profile-management-skeleton";
+import { ProfileTab } from "@/features/profile/components/profile-tab";
+import { SecurityTab } from "@/features/profile/components/security-tab";
+import { GetUserAddress } from "@/features/user/types";
+import { useProfileParams } from "../hooks/use-profile-params";
 
 export interface Address {
   id: string;
@@ -70,16 +72,20 @@ export type OrgInfo = SystemConfig & { systemBranchInfos: SystemBranchInfo[] };
 export type BranchAddress = SystemBranchInfo;
 
 export const ProfileManagement = () => {
+  const trpc = useTRPC();
+
   const { data: session } = useSession();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [organization, setOrganization] = useState<OrgInfo | null>(null);
-  const [addresses, setAddresses] = useState<Address[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const [params, setParams] = useProfileParams();
+  const { tab } = params;
+
   const [isProfileEditing, setIsProfileEditing] = useState(false);
 
   const [isAddressEditing, setIsAddressEditing] = useState(false);
   const [addressDialogOpen, setAddressDialogOpen] = useState(false);
-  const [editingAddress, setEditingAddress] = useState<Address | null>(null);
+  const [editingAddress, setEditingAddress] = useState<GetUserAddress | null>(
+    null
+  );
 
   const [imagePreview, setImagePreview] = useState<string>("");
 
@@ -91,6 +97,19 @@ export const ProfileManagement = () => {
   const isAdminOrOwner =
     session?.user?.role === "ADMIN" || session?.user?.role === "OWNER";
 
+  const { data: profile } = useSuspenseQuery(
+    trpc.userProfile.getUserProfile.queryOptions()
+  );
+  const { data: addresses, isLoading: loading } = useSuspenseQuery(
+    trpc.userAddresses.getUserAddresses.queryOptions()
+  );
+
+  const { data: organization, isLoading: organizationLoading } = useQuery(
+    trpc.organization.getOrganizationData.queryOptions(
+      isAdminOrOwner ? {} : skipToken
+    )
+  );
+
   const [DeleteAddressDialog, confirmDeleteAddress] = useConfirm(
     "Delete Address",
     "Are you sure you want to delete this address? This is irreversible."
@@ -99,20 +118,18 @@ export const ProfileManagement = () => {
   const profileForm = useForm({
     resolver: zodResolver(profileUpdateSchema),
     values: {
-      firstName: profile?.firstName || "",
-      lastName: profile?.lastName || "",
+      name: profile?.name || "",
       userName: profile?.username || "",
       email: profile?.email || "",
-      phone: profile?.phone || "",
+      phoneNumber: profile?.phoneNumber || "",
       whatsappNumber: profile?.whatsappNumber || "",
       image: profile?.image || "",
     },
     defaultValues: {
-      firstName: profile?.firstName || "",
-      lastName: profile?.lastName || "",
+      name: profile?.name || "",
       userName: profile?.username || "",
       email: profile?.email || "",
-      phone: profile?.phone || "",
+      phoneNumber: profile?.phoneNumber || "",
       whatsappNumber: profile?.whatsappNumber || "",
       image: profile?.image || "",
     },
@@ -135,11 +152,11 @@ export const ProfileManagement = () => {
     values: {
       branchName: selectedBranchAddress?.branchName || "",
       branchCategory: selectedBranchAddress?.branchCategory || "BRANCH",
-      churchAddress: selectedBranchAddress?.churchAddress || "",
-      churchCity: selectedBranchAddress?.churchCity || "",
-      churchProvince: selectedBranchAddress?.churchProvince || "",
-      churchPostalCode: selectedBranchAddress?.churchPostalCode || "",
-      churchCountry: selectedBranchAddress?.churchCountry || "",
+      street: selectedBranchAddress?.churchAddress || "",
+      city: selectedBranchAddress?.churchCity || "",
+      province: selectedBranchAddress?.churchProvince || "",
+      postalCode: selectedBranchAddress?.churchPostalCode || "",
+      country: selectedBranchAddress?.churchCountry || "",
       churchPhone: selectedBranchAddress?.churchPhone || "",
       requestCutOffInHrs: selectedBranchAddress?.requestCutOffInHrs || "",
       defaultMaxDistance:
@@ -157,62 +174,6 @@ export const ProfileManagement = () => {
     },
   });
 
-  useEffect(() => {
-    if (session?.user) {
-      fetchProfile();
-      fetchAddresses();
-    }
-
-    if (isAdminOrOwner) {
-      fetchOrganization();
-    }
-  }, [session, isAdminOrOwner]);
-
-  const fetchProfile = async () => {
-    try {
-      const response = await fetch("/api/user/profile");
-      if (response.ok) {
-        const data = await response.json();
-        setProfile(data);
-      }
-    } catch (error) {
-      console.error("Error fetching profile:", error);
-      toast.error("Failed to fetch profile");
-    }
-  };
-
-  const fetchOrganization = async () => {
-    try {
-      const response = await getOrgInfo();
-
-      if (!response.success || !response.organization) {
-        toast.error(response.error || "Organization not found");
-        return;
-      }
-
-      const data = response.organization;
-      setOrganization(data);
-    } catch (error) {
-      console.error("Error fetching organization info:", error);
-      toast.error("Failed to fetch organization info");
-    }
-  };
-
-  const fetchAddresses = async () => {
-    try {
-      const response = await fetch("/api/user/addresses");
-      if (response.ok) {
-        const data = await response.json();
-        setAddresses(data);
-      }
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching address:", error);
-      toast.error("Failed to fetch addresses");
-      setLoading(false);
-    }
-  };
-
   const handleProfileUpdate = async (values: ProfileUpdateSchema) => {
     const validatedFields = profileUpdateSchema.safeParse(values);
 
@@ -227,7 +188,7 @@ export const ProfileManagement = () => {
 
       if (response.ok) {
         const updatedProfile = await response.json();
-        setProfile(updatedProfile);
+        // setProfile(updatedProfile);
         setIsProfileEditing(false);
         setImagePreview("");
         toast.success("Profile updated successfully");
@@ -257,7 +218,7 @@ export const ProfileManagement = () => {
       });
 
       if (response.ok) {
-        await fetchAddresses();
+        // await fetchAddresses();
         setAddressDialogOpen(false);
         addressForm.reset();
         toast.success("Address added successfully");
@@ -292,7 +253,7 @@ export const ProfileManagement = () => {
       });
 
       if (response.ok) {
-        await fetchAddresses();
+        // await fetchAddresses();
         setAddressDialogOpen(false);
         setEditingAddress(null);
         addressForm.reset();
@@ -321,7 +282,7 @@ export const ProfileManagement = () => {
     try {
       const response = await addBranch(validatedFields.data);
       if (response.success) {
-        await fetchOrganization();
+        // await fetchOrganization();
         setBranchAddressDialogOpen(false);
         churchContactInfoForm.reset();
         toast.success("Branch Added Successfully");
@@ -358,7 +319,7 @@ export const ProfileManagement = () => {
       );
 
       if (response.success) {
-        await fetchOrganization();
+        // await fetchOrganization();
         setBranchAddressDialogOpen(false);
         setSelectedBranchAddress(null);
         churchContactInfoForm.reset();
@@ -372,7 +333,7 @@ export const ProfileManagement = () => {
     }
   };
 
-  const handleAddressEdit = (address: Address) => {
+  const handleAddressEdit = (address: GetUserAddress) => {
     setEditingAddress(address);
     setIsAddressEditing(true);
     setAddressDialogOpen(true);
@@ -393,11 +354,11 @@ export const ProfileManagement = () => {
     churchContactInfoForm.reset({
       branchName: address.branchName,
       branchCategory: address.branchCategory,
-      churchAddress: address.churchAddress,
-      churchCity: address.churchCity,
-      churchProvince: address.churchProvince,
-      churchPostalCode: address.churchPostalCode,
-      churchCountry: address.churchCountry,
+      street: address.churchAddress,
+      city: address.churchCity,
+      province: address.churchProvince,
+      postalCode: address.churchPostalCode,
+      country: address.churchCountry,
       churchPhone: address.churchPhone,
       requestCutOffInHrs: address.requestCutOffInHrs,
       defaultMaxDistance:
@@ -415,7 +376,7 @@ export const ProfileManagement = () => {
       );
 
       if (response.ok) {
-        await fetchAddresses();
+        // await fetchAddresses();
         toast.success("Default address updated");
       }
     } catch (error) {
@@ -429,7 +390,7 @@ export const ProfileManagement = () => {
       const response = await setHeadquarter(addressId);
 
       if (response.success) {
-        await fetchOrganization();
+        // await fetchOrganization();
         toast.success("Headquarter address set");
       } else {
         toast.error(response.error || "Failed to set headquarters");
@@ -451,7 +412,7 @@ export const ProfileManagement = () => {
       });
 
       if (response.ok) {
-        await fetchAddresses();
+        // await fetchAddresses();
         toast.success("Address deleted");
       }
     } catch (error) {
@@ -469,7 +430,7 @@ export const ProfileManagement = () => {
       const response = await deleteBranch(addressId);
 
       if (response.success) {
-        await fetchOrganization();
+        // await fetchOrganization();
         toast.success("Branch deleted");
       } else {
         toast.error(response.error || "Failed to delete branch");
@@ -539,7 +500,7 @@ export const ProfileManagement = () => {
 
       const data = await response.json();
 
-      setProfile((prev) => (prev ? { ...prev, [field]: data[field] } : prev));
+      // setProfile((prev) => (prev ? { ...prev, [field]: data[field] } : prev));
 
       toast.success(
         `${field} ${!currentValue ? "enabled" : "disabled"} successfully`
@@ -560,10 +521,17 @@ export const ProfileManagement = () => {
       <div className="max-w-4xl mx-auto p-6 space-y-6">
         <h1 className="text-3xl font-bold">Profile Management</h1>
 
-        <Tabs defaultValue="profile" className="w-full">
+        <Tabs
+          className="w-full"
+          defaultValue={tab}
+          value={tab}
+          onValueChange={(value) => {
+            setParams({ ...params, tab: value });
+          }}
+        >
           <TabsList
             className={cn(
-              "grid w-full grid-cols-4",
+              "grid w-full grid-cols-4 [&_button]:data-[state=active]:shadow-none",
               isAdminOrOwner && "grid-cols-5"
             )}
           >
@@ -639,7 +607,7 @@ export const ProfileManagement = () => {
                 handleSetHeadquarterAddress={handleSetHeadquarterAddress}
                 handleBranchAddressEdit={handleBranchAddressEdit}
                 handleDeleteBranchAddress={handleDeleteBranchAddress}
-                loading={loading}
+                loading={organizationLoading}
               />
             </TabsContent>
           )}

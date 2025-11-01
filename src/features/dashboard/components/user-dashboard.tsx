@@ -2,7 +2,6 @@
 
 import { Calendar, Car, Clock, MapPin, Plus } from "lucide-react";
 import Link from "next/link";
-import { useEffect } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,9 +13,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-import { useRequestStore } from "@/lib/store/useRequestStore";
-import { formatDate, formatTime } from "@/lib/utils";
+// import { useRequestStore } from "@/lib/store/useRequestStore";
 import { useSession } from "@/lib/auth-client";
+import { formatDate, formatTime } from "@/lib/utils";
 import { useTRPC } from "@/trpc/client";
 import { useSuspenseQuery } from "@tanstack/react-query";
 
@@ -26,18 +25,10 @@ export const UserDashboard = () => {
 
   // const { fetchRequests, loading, requests } = useRequestStore();
 
-  const { data: requests, isLoading: loading } = useSuspenseQuery(
-    trpc.userRequests.getUserRequests.queryOptions({})
-  );
-
-  // useEffect(() => {
-  //   if (session?.user) {
-  //     fetchRequests();
-  //   }
-  //   // eslint-disable-next-line react-hooks/exhaustive-deps
-  // }, [session]);
-
-  if (!requests) return null;
+  const {
+    data: { requests },
+    isLoading: loading,
+  } = useSuspenseQuery(trpc.userRequests.getUserRequests.queryOptions({}));
 
   const getStatusColor = (status: string) => {
     switch (status) {
