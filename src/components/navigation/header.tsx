@@ -2,17 +2,16 @@
 
 import { cn } from "@/lib/utils";
 import {
-  Bell,
-  Calendar,
-  Car,
-  Home,
+  BellIcon,
+  CalendarIcon,
+  CarIcon,
+  HomeIcon,
   KeyIcon,
   LogOut,
-  Menu,
-  User,
+  MenuIcon,
   UserIcon,
-  Users,
-  X,
+  UsersIcon,
+  XIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -38,26 +37,26 @@ const navigationItems = [
   {
     name: "Dashboard",
     href: "/dashboard",
-    icon: Home,
+    icon: HomeIcon,
     roles: ["ADMIN", "TRANSPORTATION_TEAM", "USER"],
   },
   {
     name: "Requests",
     href: "/requests",
-    icon: Calendar,
+    icon: CalendarIcon,
     roles: ["ADMIN", "TRANSPORTATION_TEAM", "USER"],
   },
-  { name: "Users", href: "/admin/users", icon: Users, roles: ["ADMIN"] },
+  { name: "Users", href: "/admin/users", icon: UsersIcon, roles: ["ADMIN"] },
   {
     name: "Services",
     href: "/admin/services",
-    icon: Calendar,
+    icon: CalendarIcon,
     roles: ["ADMIN"],
   },
   {
     name: "Transportation",
     href: "/transportation",
-    icon: Car,
+    icon: CarIcon,
     roles: ["TRANSPORTATION_TEAM"],
   },
 ];
@@ -95,7 +94,7 @@ export const Header = ({
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <div className="size-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Car className="size-5 text-white" />
+                <CarIcon className="size-5 text-white" />
               </div>
               <span className="text-xl font-bold text-gray-900 dark:text-white hidden sm:block">
                 Church Transport
@@ -122,7 +121,7 @@ export const Header = ({
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-2">
               <div className="size-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Car className="size-5 text-white" />
+                <CarIcon className="size-5 text-white" />
               </div>
               <span className="text-xl font-bold text-gray-900 dark:text-white hidden sm:block">
                 Church Transport
@@ -159,7 +158,7 @@ export const Header = ({
 
             {/* Notifications - placeholder for future implementation */}
             <Button variant="ghost" size="sm" className="relative">
-              <Bell className="size-6 text-gray-600 dark:text-gray-200" />
+              <BellIcon className="size-6 text-gray-600 dark:text-gray-200" />
             </Button>
 
             {/* User info */}
@@ -168,7 +167,7 @@ export const Header = ({
                 <DropdownMenuTrigger asChild>
                   <div className="flex items-center space-x-2">
                     <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                      <User className="h-4 w-4 text-gray-600" />
+                      <UserIcon className="h-4 w-4 text-gray-600" />
                     </div>
                     <div className="text-sm">
                       <p className="text-gray-900 dark:text-gray-200 font-medium">
@@ -184,7 +183,7 @@ export const Header = ({
                   <DropdownMenuItem>
                     <div className="flex items-center space-x-2">
                       <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                        <User className="size-4 text-gray-600" />
+                        <UserIcon className="size-4 text-gray-600" />
                       </div>
                       <div className="text-sm">
                         <p className="text-gray-900 dark:text-gray-200 font-medium">
@@ -236,9 +235,9 @@ export const Header = ({
               onClick={toggleMobileMenu}
             >
               {mobileMenuOpen ? (
-                <X className="size-6" />
+                <XIcon className="size-6" />
               ) : (
-                <Menu className="size-6" />
+                <MenuIcon className="size-6" />
               )}
             </Button>
           </div>
@@ -278,7 +277,7 @@ export const Header = ({
                 <div className="border-t pt-4 mt-4">
                   <div className="flex items-center space-x-3 px-3 py-2">
                     <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                      <User className="h-4 w-4 text-gray-600" />
+                      <UserIcon className="h-4 w-4 text-gray-600" />
                     </div>
                     <div className="text-sm">
                       <p className="text-gray-900 dark:text-gray-200 font-medium">
@@ -302,7 +301,7 @@ export const Header = ({
                       pathname === "/profile" && "bg-blue-500"
                     )}
                   >
-                    <User className="size-5" />
+                    <UserIcon className="size-5" />
                     Profile
                   </Button>
                   {(session.user.role === UserRole.ADMIN ||

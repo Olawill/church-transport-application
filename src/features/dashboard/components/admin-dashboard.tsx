@@ -13,8 +13,9 @@ import {
   DollarSign,
   Search,
   TrendingUp,
+  UserCheckIcon,
   Users,
-  UserX,
+  UserXIcon,
   XCircleIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -62,6 +63,11 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { PAGINATION } from "@/config/constants";
 import { adminGetUsers } from "@/features/admin/types";
 import { useAdminDashboardParams } from "../hooks/use-admin-dashboard-params";
@@ -314,49 +320,6 @@ export const AdminDashboard = () => {
                 <CardDescription>Common administrative tasks</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                {/* <a
-                  href="/admin/users"
-                  className="block p-4 rounded-lg border hover:bg-gray-50 dark:hover:text-gray-900 transition-colors"
-                >
-                  <div className="flex items-center space-x-3">
-                    <Users className="h-5 w-5 text-blue-600" />
-                    <div>
-                      <p className="font-medium">Manage Users</p>
-                      <p className="text-sm text-gray-600">
-                        Approve registrations and manage member accounts
-                      </p>
-                    </div>
-                  </div>
-                </a>
-                <a
-                  href="/admin/services"
-                  className="block p-4 rounded-lg border hover:bg-gray-50 dark:hover:text-gray-900 transition-colors"
-                >
-                  <div className="flex items-center space-x-3">
-                    <Clock className="h-5 w-5 text-green-600" />
-                    <div>
-                      <p className="font-medium">Service Schedule</p>
-                      <p className="text-sm text-gray-600">
-                        Configure service days and times
-                      </p>
-                    </div>
-                  </div>
-                </a>
-                <a
-                  href="/requests"
-                  className="block p-4 rounded-lg border hover:bg-gray-50 dark:hover:text-gray-900 transition-colors"
-                >
-                  <div className="flex items-center space-x-3">
-                    <Car className="h-5 w-5 text-purple-600" />
-                    <div>
-                      <p className="font-medium">View All Requests</p>
-                      <p className="text-sm text-gray-600">
-                        Monitor pickup requests and assignments
-                      </p>
-                    </div>
-                  </div>
-                </a> */}
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Button
                     variant="outline"
@@ -842,28 +805,41 @@ export const AdminDashboard = () => {
                           )}
                           {user.status !== "BANNED" &&
                             user.role !== "ADMIN" && (
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => {
-                                  setSelectedUser(user);
-                                  setBanDialogOpen(true);
-                                }}
-                                title="Ban User"
-                              >
-                                <UserX className="h-4 w-4" />
-                              </Button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => {
+                                      setSelectedUser(user);
+                                      setBanDialogOpen(true);
+                                    }}
+                                  >
+                                    <UserXIcon className="size-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent className="bg-background text-foreground">
+                                  Ban User
+                                </TooltipContent>
+                              </Tooltip>
                             )}
                           {user.status === "BANNED" && (
                             <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                title="Unban User"
-                                onClick={() => handleUnbanUser(user.id)}
-                              >
-                                Unban
-                              </Button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleUnbanUser(user.id)}
+                                  >
+                                    <UserCheckIcon className="size-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent className="bg-background text-foreground">
+                                  Unban User
+                                </TooltipContent>
+                              </Tooltip>
+
                               {user.banReason && (
                                 <Badge variant="outline" className="text-xs">
                                   {user.banReason}
