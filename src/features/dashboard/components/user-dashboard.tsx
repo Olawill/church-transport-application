@@ -51,7 +51,7 @@ export const UserDashboard = () => {
   const recentRequests = requests.slice(0, 5);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">

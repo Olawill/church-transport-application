@@ -502,7 +502,7 @@ export function TransportationTeamDashboard() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full">
       <div>
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <p className="mt-1">

@@ -57,7 +57,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 
 import { CustomFormLabel } from "@/components/custom-form-label";
-import CustomPhoneInput from "@/components/custom-phone-input";
+import { CustomPhoneInput } from "@/components/custom-phone-input";
 
 import { signupSchema, SignupSchema } from "@/schemas/authSchemas";
 import { useTRPC } from "@/trpc/client";

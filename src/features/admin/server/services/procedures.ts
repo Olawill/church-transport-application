@@ -43,7 +43,7 @@ export const servicesRouter = createTRPCRouter({
       return serviceDays;
     }),
 
-  getPaginatedServices: protectedRoleProcedure(UserRole.ADMIN)
+  getPaginatedServices: protectedRoleProcedure([UserRole.ADMIN, UserRole.OWNER])
     .input(
       z.object({
         status: z.string().optional(),
@@ -93,7 +93,7 @@ export const servicesRouter = createTRPCRouter({
       };
     }),
 
-  createService: protectedRoleProcedure(UserRole.ADMIN)
+  createService: protectedRoleProcedure([UserRole.ADMIN, UserRole.OWNER])
     .input(serviceDaySchema)
     .mutation(async ({ input }) => {
       const {
@@ -144,7 +144,7 @@ export const servicesRouter = createTRPCRouter({
       return serviceDay;
     }),
 
-  updateService: protectedRoleProcedure(UserRole.ADMIN)
+  updateService: protectedRoleProcedure([UserRole.ADMIN, UserRole.OWNER])
     .input(updateServiceSchema)
     .mutation(async ({ input }) => {
       const { id, service } = input;
@@ -232,7 +232,7 @@ export const servicesRouter = createTRPCRouter({
       return serviceDay;
     }),
 
-  deleteService: protectedRoleProcedure(UserRole.ADMIN)
+  deleteService: protectedRoleProcedure([UserRole.ADMIN, UserRole.OWNER])
     .input(
       z.object({
         id: z.string(),
@@ -262,7 +262,7 @@ export const servicesRouter = createTRPCRouter({
       };
     }),
 
-  toggleServiceActive: protectedRoleProcedure(UserRole.ADMIN)
+  toggleServiceActive: protectedRoleProcedure([UserRole.ADMIN, UserRole.OWNER])
     .input(
       z.object({
         id: z.string(),

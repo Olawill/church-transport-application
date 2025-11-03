@@ -27,7 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 
-import CustomPhoneInput from "@/components/custom-phone-input";
+import { CustomPhoneInput } from "@/components/custom-phone-input";
 import AdminNewUserRequest from "@/features/admin/components/admin-new-user-request";
 import { AddressFields } from "@/features/auth/components/signup-form";
 import { generateTempPassword } from "@/lib/utils";
@@ -144,7 +144,7 @@ export const NewUserCreationForm = () => {
   const formRequestDate = form?.watch("requestDate");
 
   return (
-    <div>
+    <div className="w-full">
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center space-x-3 mb-2">

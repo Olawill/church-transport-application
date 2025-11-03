@@ -257,7 +257,7 @@ export const AdminDashboard = () => {
   const isFiltered = nameInput !== "";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full">
       <div>
         <h1 className="text-2xl font-bold">Admin Dashboard</h1>
         <p className="mt-1">

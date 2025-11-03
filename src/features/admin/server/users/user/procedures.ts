@@ -9,7 +9,7 @@ import { createTRPCRouter, protectedRoleProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
 
 export const adminUserRouter = createTRPCRouter({
-  getUserAddresses: protectedRoleProcedure(UserRole.ADMIN)
+  getUserAddresses: protectedRoleProcedure([UserRole.ADMIN, UserRole.OWNER])
     .input(
       z.object({
         id: z.string(),
@@ -41,7 +41,7 @@ export const adminUserRouter = createTRPCRouter({
       return addresses;
     }),
 
-  approveUser: protectedRoleProcedure(UserRole.ADMIN)
+  approveUser: protectedRoleProcedure([UserRole.ADMIN, UserRole.OWNER])
     .input(
       z.object({
         id: z.string(),
@@ -90,7 +90,7 @@ export const adminUserRouter = createTRPCRouter({
       };
     }),
 
-  banUser: protectedRoleProcedure(UserRole.ADMIN)
+  banUser: protectedRoleProcedure([UserRole.ADMIN, UserRole.OWNER])
     .input(
       z.object({
         id: z.string(),
@@ -171,7 +171,7 @@ export const adminUserRouter = createTRPCRouter({
       };
     }),
 
-  unBanUser: protectedRoleProcedure(UserRole.ADMIN)
+  unBanUser: protectedRoleProcedure([UserRole.ADMIN, UserRole.OWNER])
     .input(
       z.object({
         id: z.string(),

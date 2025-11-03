@@ -15,7 +15,7 @@ interface CustomPhoneInputProps {
   error?: FieldError;
 }
 
-const CustomPhoneInput = ({
+export const CustomPhoneInput = ({
   placeholder,
   defaultCountry,
   value,
@@ -47,5 +47,3 @@ const CustomPhoneInput = ({
     />
   );
 };
-
-export default CustomPhoneInput;

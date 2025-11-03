@@ -30,7 +30,7 @@ export const adminUsersRouter = createTRPCRouter({
     return users;
   }),
 
-  createUser: protectedRoleProcedure(UserRole.ADMIN)
+  createUser: protectedRoleProcedure([UserRole.ADMIN, UserRole.OWNER])
     .input(newUserSchema)
     .mutation(async ({ ctx, input }) => {
       const {

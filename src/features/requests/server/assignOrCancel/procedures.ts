@@ -1,16 +1,16 @@
-import { z } from "zod";
 import { RequestStatus, UserRole } from "@/generated/prisma";
+import { z } from "zod";
 
 import { prisma } from "@/lib/db";
 
+import { AnalyticsService } from "@/lib/analytics";
+import { NotificationService } from "@/lib/notifications";
+import { calculateDistance } from "@/lib/utils";
 import { createTRPCRouter, protectedRoleProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
-import { NotificationService } from "@/lib/notifications";
-import { AnalyticsService } from "@/lib/analytics";
-import { calculateDistance } from "@/lib/utils";
 
 export const requestsRouter = createTRPCRouter({
-  adminAssign: protectedRoleProcedure(UserRole.ADMIN)
+  adminAssign: protectedRoleProcedure([UserRole.ADMIN, UserRole.OWNER])
     .input(
       z.object({
         id: z.string(),
@@ -111,7 +111,11 @@ export const requestsRouter = createTRPCRouter({
       return updatedRequest;
     }),
 
-  cancelRequest: protectedRoleProcedure([UserRole.USER, UserRole.ADMIN])
+  cancelRequest: protectedRoleProcedure([
+    UserRole.USER,
+    UserRole.ADMIN,
+    UserRole.OWNER,
+  ])
     .input(
       z.object({
         id: z.string(),

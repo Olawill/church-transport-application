@@ -219,7 +219,7 @@ export const UserManagement = () => {
     <>
       <UpdateRoleDialog />
 
-      <div className="space-y-6">
+      <div className="space-y-6 w-full">
         <div className="flex flex-row justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold">User Management</h1>

@@ -36,7 +36,7 @@ import {
 } from "@/lib/utils";
 
 import { CustomPagination } from "@/components/custom-pagination";
-import CustomDateCalendar from "@/components/custom-request-calendar";
+import { CustomDateCalendar } from "@/components/custom-request-calendar";
 import { CarBack } from "@/components/icons/car-back";
 import AdminNewUserRequest from "@/features/admin/components/admin-new-user-request";
 import { columns } from "@/features/drivers/components/column";
@@ -323,7 +323,7 @@ export const RequestHistory = () => {
     session?.user?.role === UserRole.TRANSPORTATION_TEAM;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">

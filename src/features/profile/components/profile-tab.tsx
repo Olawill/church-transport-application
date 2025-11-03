@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 
-import CustomPhoneInput from "@/components/custom-phone-input";
+import { CustomPhoneInput } from "@/components/custom-phone-input";
 import { GetUserProfile } from "@/features/user/types";
 import { ProfileUpdateSchema } from "@/schemas/adminCreateNewUserSchema";
 

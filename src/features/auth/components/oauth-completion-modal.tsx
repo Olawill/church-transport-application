@@ -41,7 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import CustomPhoneInput from "@/components/custom-phone-input";
+import { CustomPhoneInput } from "@/components/custom-phone-input";
 import { useSession } from "@/lib/auth-client";
 import { PROVINCES } from "@/lib/types";
 import {

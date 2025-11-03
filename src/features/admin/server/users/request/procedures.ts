@@ -28,7 +28,7 @@ const validatePassword = (isLoginRequired: boolean, password?: string) => {
 };
 
 export const adminUserRequestRouter = createTRPCRouter({
-  createUserRequest: protectedRoleProcedure(UserRole.ADMIN)
+  createUserRequest: protectedRoleProcedure([UserRole.ADMIN, UserRole.OWNER])
     .input(adminPayloadSchema)
     .mutation(async ({ ctx, input }) => {
       const {
@@ -192,11 +192,13 @@ export const adminUserRequestRouter = createTRPCRouter({
               name: `${firstName} ${lastName}`,
               email,
               phoneNumber: phone,
-              password: hashedPassword,
+              // password: hashedPassword,
               role: "USER",
               status: "APPROVED",
             },
           });
+
+          // TODO: Do we need to create an account for them as well?
 
           // Create default address
           const newAddress = await tx.address.create({

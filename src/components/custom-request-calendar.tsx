@@ -43,7 +43,7 @@ interface CustomDateCalendarProp {
   requestDateFilter: Date | undefined;
 }
 
-const CustomDateCalendar = ({
+export const CustomDateCalendar = ({
   label,
   setRequestDateFilter,
   requestDateFilter,
@@ -119,5 +119,3 @@ const CustomDateCalendar = ({
     </div>
   );
 };
-
-export default CustomDateCalendar;

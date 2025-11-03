@@ -14,7 +14,7 @@ import {
   CustomPagination,
   usePagination,
 } from "@/components/custom-pagination";
-import CustomPhoneInput from "@/components/custom-phone-input";
+import { CustomPhoneInput } from "@/components/custom-phone-input";
 
 import { GetOrganizationData } from "@/features/organization/types";
 import { ChurchBranchContactInfoUpdateSchema } from "@/schemas/adminCreateNewUserSchema";

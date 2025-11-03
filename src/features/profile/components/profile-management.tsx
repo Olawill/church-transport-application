@@ -518,7 +518,7 @@ export const ProfileManagement = () => {
     <>
       <DeleteAddressDialog />
 
-      <div className="max-w-4xl mx-auto p-6 space-y-6">
+      <div className="w-full p-6 space-y-6">
         <h1 className="text-3xl font-bold">Profile Management</h1>
 
         <Tabs
