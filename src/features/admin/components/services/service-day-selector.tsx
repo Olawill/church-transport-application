@@ -7,12 +7,12 @@ import {
   isWithinRequestBuffer,
 } from "@/lib/utils";
 
+import { CustomFormLabel } from "@/components/custom-form-label";
 import {
   FormControl,
   FormDescription,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import {
@@ -70,10 +70,7 @@ export const ServiceDaySelector = <T extends ServiceDayFormFields>({
 
         return (
           <FormItem className="space-y-2">
-            <FormLabel>
-              Select Service Day
-              <span className="text-red-400">*</span>
-            </FormLabel>
+            <CustomFormLabel title="Select Service Day" />
             <Select
               value={field.value}
               onValueChange={(value) => {

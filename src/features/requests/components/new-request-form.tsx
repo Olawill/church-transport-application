@@ -32,6 +32,7 @@ import {
 import { newRequestSchema, NewRequestSchema } from "@/schemas/newRequestSchema";
 import { PickUpDropOffField } from "./pickup-dropoff-field";
 
+import { CustomFormLabel } from "@/components/custom-form-label";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -417,7 +418,7 @@ export const NewRequestForm = ({
                   name="serviceDayId"
                   render={({ field }) => (
                     <FormItem className="space-y-2">
-                      <FormLabel>Church Service</FormLabel>
+                      <CustomFormLabel title="Church Service" />
                       <Select
                         defaultValue={field.value}
                         onValueChange={field.onChange}
@@ -481,7 +482,7 @@ export const NewRequestForm = ({
 
                     return (
                       <FormItem className="space-y-2">
-                        <FormLabel>Service Date</FormLabel>
+                        <CustomFormLabel title="Service Date" />
                         <Popover>
                           <PopoverTrigger asChild className="w-full">
                             <FormControl>
@@ -523,7 +524,7 @@ export const NewRequestForm = ({
                             />
                           </PopoverContent>
                         </Popover>
-                        <FormDescription className="text-xs text-gray-500">
+                        <FormDescription className="text-xs text-gray-500 dark:text-gray-200">
                           Requests must be made at least 2 hour before the
                           service
                         </FormDescription>
@@ -541,7 +542,7 @@ export const NewRequestForm = ({
                   name="addressId"
                   render={({ field }) => (
                     <FormItem className="space-y-2">
-                      <FormLabel>Pickup Address</FormLabel>
+                      <CustomFormLabel title="Pickup Address" />
                       <Select
                         defaultValue={field.value}
                         onValueChange={field.onChange}
@@ -573,7 +574,7 @@ export const NewRequestForm = ({
                             <MapPin className="h-4 w-4" />
                             <span>{formatAddress(selectedAddress)}</span>
                           </span>
-                          <span className="text-xs text-gray-500 mt-1">
+                          <span className="text-xs text-gray-500 dark:text-gray-200 mt-1">
                             Please ensure this address is correct before
                             submitting your request
                           </span>
@@ -757,7 +758,7 @@ export const NewRequestForm = ({
                                   />
                                 </PopoverContent>
                               </Popover>
-                              <FormDescription className="text-xs text-gray-500">
+                              <FormDescription className="text-xs text-gray-500 dark:text-gray-200">
                                 End date must be between 2 weeks and 3 months
                               </FormDescription>
                               <div className="min-h-[1.25rem]">
@@ -787,7 +788,7 @@ export const NewRequestForm = ({
                           rows={5}
                         />
                       </FormControl>
-                      <FormDescription className="text-xs text-gray-500">
+                      <FormDescription className="text-xs text-gray-500 dark:text-gray-200">
                         Optional: Let your driver know about any special
                         requirements or instructions
                       </FormDescription>

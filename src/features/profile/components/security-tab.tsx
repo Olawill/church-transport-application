@@ -8,12 +8,12 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 
+import { CustomFormLabel } from "@/components/custom-form-label";
 import { GetUserProfile } from "@/features/user/types";
 import { SecurityUpdateSchema } from "@/schemas/adminCreateNewUserSchema";
 
@@ -86,7 +86,7 @@ export const SecurityTab = ({
                 name="currentPassword"
                 render={({ field }) => (
                   <FormItem className="space-y-2">
-                    <FormLabel>Current Password</FormLabel>
+                    <CustomFormLabel title="Current Password" />
                     <FormControl>
                       <Input
                         {...field}
@@ -109,7 +109,7 @@ export const SecurityTab = ({
                 name="newPassword"
                 render={({ field }) => (
                   <FormItem className="space-y-2">
-                    <FormLabel>New Password</FormLabel>
+                    <CustomFormLabel title="New Password" />
                     <FormControl>
                       <Input
                         {...field}
@@ -132,7 +132,7 @@ export const SecurityTab = ({
                 name="confirmPassword"
                 render={({ field }) => (
                   <FormItem className="space-y-2">
-                    <FormLabel>Confirm New Password</FormLabel>
+                    <CustomFormLabel title="Confirm New Password" />
                     <FormControl>
                       <Input
                         {...field}

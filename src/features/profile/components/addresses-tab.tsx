@@ -85,6 +85,20 @@ export const AddressesTab = ({
   // Get paginated addresses
   const paginatedAddresses = paginateItems(addresses);
 
+  const handleAddAddressClick = () => {
+    setEditingAddress(null);
+    setIsAddressEditing(!isAddressEditing);
+    // Reset form with default country for new address
+    addressForm.reset({
+      name: "",
+      street: "",
+      city: "",
+      province: "",
+      postalCode: "",
+      country: "CA",
+    });
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -92,12 +106,7 @@ export const AddressesTab = ({
           My Addresses
           <Dialog open={addressDialogOpen} onOpenChange={setAddressDialogOpen}>
             <DialogTrigger asChild>
-              <Button
-                onClick={() => {
-                  setEditingAddress(null);
-                  setIsAddressEditing(!isAddressEditing);
-                }}
-              >
+              <Button onClick={handleAddAddressClick}>
                 <Plus className="w-4 h-4" />
                 Add Address
               </Button>

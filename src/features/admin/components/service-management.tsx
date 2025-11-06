@@ -345,7 +345,7 @@ export const ServiceManagement = () => {
           onClick={() => setShowForm({ showForm: true })}
           disabled={loading || !!editingService}
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="size-4" />
           Add Service
         </Button>
       </div>

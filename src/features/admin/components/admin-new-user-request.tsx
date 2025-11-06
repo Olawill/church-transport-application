@@ -63,6 +63,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
+import { CustomFormLabel } from "@/components/custom-form-label";
 import { PickUpDropOffField } from "@/features/requests/components/pickup-dropoff-field";
 import { UserType } from "@/features/users/types";
 import { useConfirm } from "@/hooks/use-confirm";
@@ -431,7 +432,7 @@ const AdminNewUserRequest = ({
             render={({ field }) => {
               return (
                 <FormItem className="space-y-2">
-                  <FormLabel>Church Service</FormLabel>
+                  <CustomFormLabel title="Church Service" />
                   <Select
                     defaultValue={field.value}
                     onValueChange={field.onChange}
@@ -493,7 +494,7 @@ const AdminNewUserRequest = ({
 
               return (
                 <FormItem className="space-y-2">
-                  <FormLabel>Service Date</FormLabel>
+                  <CustomFormLabel title="Service Date" />
                   <Popover>
                     <PopoverTrigger asChild className="w-full">
                       <FormControl>
@@ -530,7 +531,7 @@ const AdminNewUserRequest = ({
                       />
                     </PopoverContent>
                   </Popover>
-                  <FormDescription className="text-xs text-gray-500">
+                  <FormDescription className="text-xs text-gray-500 dark:text-gray-200">
                     Requests must be made at least 2 hour before the service
                   </FormDescription>
                   <div className="min-h-[1.25rem]">
@@ -696,7 +697,7 @@ const AdminNewUserRequest = ({
                           />
                         </PopoverContent>
                       </Popover>
-                      <FormDescription className="text-xs text-gray-500">
+                      <FormDescription className="text-xs text-gray-500 dark:text-gray-200">
                         End date must be between 2 weeks and 3 months
                       </FormDescription>
                       <div className="min-h-[1.25rem]">
@@ -759,7 +760,7 @@ const AdminNewUserRequest = ({
                     name="userId"
                     render={({ field }) => (
                       <FormItem className="space-y-2">
-                        <FormLabel>On Behalf of</FormLabel>
+                        <CustomFormLabel title="On Behalf of" />
                         <Popover open={usersOpen} onOpenChange={setUsersOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
@@ -837,13 +838,13 @@ const AdminNewUserRequest = ({
                                   <UserCheck className="h-4 w-4" />
                                   <span>{selectedUser.name}</span>
                                 </span>
-                                <span className="text-xs text-gray-500 mt-1">
+                                <span className="text-xs text-gray-500 dark:text-gray-200 mt-1">
                                   Please ensure this is the person you want to
                                   request a ride on behalf of
                                 </span>
                               </>
                             ) : (
-                              <span className="text-xs text-gray-500 mt-1">
+                              <span className="text-xs text-gray-500 dark:text-gray-200 mt-1">
                                 You cannot change the user for this request
                               </span>
                             )}
@@ -862,7 +863,7 @@ const AdminNewUserRequest = ({
                     name="serviceDayId"
                     render={({ field }) => (
                       <FormItem className="space-y-2">
-                        <FormLabel>Church Service</FormLabel>
+                        <CustomFormLabel title="Church Service" />
                         <Popover
                           open={userAddressesOpen}
                           onOpenChange={setUserAddressesOpen}
@@ -976,7 +977,7 @@ const AdminNewUserRequest = ({
 
                       return (
                         <FormItem className="space-y-2">
-                          <FormLabel>Service Date</FormLabel>
+                          <CustomFormLabel title="Service Date" />
                           <Popover>
                             <PopoverTrigger asChild className="w-full">
                               <FormControl>
@@ -1016,7 +1017,7 @@ const AdminNewUserRequest = ({
                               />
                             </PopoverContent>
                           </Popover>
-                          <FormDescription className="text-xs text-gray-500">
+                          <FormDescription className="text-xs text-gray-500 dark:text-gray-200">
                             Requests must be made at least 2 hour before the
                             service
                           </FormDescription>
@@ -1034,7 +1035,7 @@ const AdminNewUserRequest = ({
                     name="addressId"
                     render={({ field }) => (
                       <FormItem className="space-y-2">
-                        <FormLabel>Pickup Address</FormLabel>
+                        <CustomFormLabel title="Pickup Address" />
                         <Select
                           defaultValue={field.value}
                           onValueChange={field.onChange}
@@ -1071,7 +1072,7 @@ const AdminNewUserRequest = ({
                               <MapPin className="h-4 w-4" />
                               <span>{formatAddress(selectedAddress)}</span>
                             </span>
-                            <span className="text-xs text-gray-500 mt-1">
+                            <span className="text-xs text-gray-500 dark:text-gray-200 mt-1">
                               Please ensure this address is correct before
                               submitting your request
                             </span>
@@ -1124,7 +1125,7 @@ const AdminNewUserRequest = ({
                         name="numberOfGroup"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Number of people</FormLabel>
+                            <CustomFormLabel title="Number of people" />
                             <FormControl>
                               <Input
                                 placeholder="Enter number of people"
@@ -1206,7 +1207,7 @@ const AdminNewUserRequest = ({
 
                             return (
                               <FormItem className="space-y-2">
-                                <FormLabel>End Date</FormLabel>
+                                <CustomFormLabel title="End Date" />
                                 <Popover>
                                   <PopoverTrigger asChild className="w-full">
                                     <FormControl>
@@ -1257,7 +1258,7 @@ const AdminNewUserRequest = ({
                                     />
                                   </PopoverContent>
                                 </Popover>
-                                <FormDescription className="text-xs text-gray-500">
+                                <FormDescription className="text-xs text-gray-500 dark:text-gray-200">
                                   End date must be between 2 weeks and 3 months
                                 </FormDescription>
                                 <div className="min-h-[1.25rem]">
@@ -1287,7 +1288,7 @@ const AdminNewUserRequest = ({
                             rows={5}
                           />
                         </FormControl>
-                        <FormDescription className="text-xs text-gray-500">
+                        <FormDescription className="text-xs text-gray-500 dark:text-gray-200">
                           Optional: Let your driver know about any special
                           requirements or instructions
                         </FormDescription>

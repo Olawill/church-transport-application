@@ -11,7 +11,7 @@ export const CustomFormLabel = ({ title, className }: Props) => {
   return (
     <FormLabel
       className={cn(
-        "after:content-['*'] after:text-sm after:text-red-500 after:-ml-1",
+        "after:content-['*'] after:text-sm after:text-red-500 after:-ml-1 -mt-1",
         className
       )}
     >

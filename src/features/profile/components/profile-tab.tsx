@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 
+import { CustomFormLabel } from "@/components/custom-form-label";
 import { CustomPhoneInput } from "@/components/custom-phone-input";
 import { GetUserProfile } from "@/features/user/types";
 import { ProfileUpdateSchema } from "@/schemas/adminCreateNewUserSchema";
@@ -101,7 +102,7 @@ export const ProfileTab = ({
                 name="name"
                 render={({ field }) => (
                   <FormItem className="space-y-2">
-                    <FormLabel>Name</FormLabel>
+                    <CustomFormLabel title="Name" />
                     <FormControl>
                       <Input
                         {...field}
@@ -149,7 +150,7 @@ export const ProfileTab = ({
                 name="email"
                 render={({ field }) => (
                   <FormItem className="space-y-2">
-                    <FormLabel>Email</FormLabel>
+                    <CustomFormLabel title="Email" />
                     <FormControl>
                       <Input
                         {...field}
@@ -172,7 +173,7 @@ export const ProfileTab = ({
                 name="phoneNumber"
                 render={({ field, fieldState }) => (
                   <FormItem className="space-y-2">
-                    <FormLabel>Phone Number</FormLabel>
+                    <CustomFormLabel title="Phone Number" />
                     <FormControl>
                       <CustomPhoneInput
                         placeholder="(123) 456-7890"

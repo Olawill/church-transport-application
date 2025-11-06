@@ -386,24 +386,24 @@ export const AdminDashboard = () => {
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-center space-x-3 text-sm">
-                    <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                    <span className="text-gray-600">
+                    <div className="size-2 bg-blue-600 rounded-full"></div>
+                    <span className="text-gray-600 dark:text-gray-300">
                       System initialized with default data
                     </span>
                   </div>
                   <div className="flex items-center space-x-3 text-sm">
-                    <div className="w-2 h-2 bg-green-600 rounded-full"></div>
-                    <span className="text-gray-600">
+                    <div className="size-2 bg-green-600 rounded-full"></div>
+                    <span className="text-gray-600 dark:text-gray-300">
                       Service days configured
                     </span>
                   </div>
                   <div className="flex items-center space-x-3 text-sm">
-                    <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
-                    <span className="text-gray-600">
+                    <div className="size-2 bg-purple-600 rounded-full"></div>
+                    <span className="text-gray-600 dark:text-gray-300">
                       Transportation team members added
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500 mt-4">
+                  <p className="text-xs text-gray-500 dark:text-gray-200 mt-4">
                     Activity log will populate as users interact with the system
                   </p>
                 </div>
@@ -890,7 +890,7 @@ export const AdminDashboard = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                <DollarSign className="h-5 w-5 mr-2" />
+                <DollarSign className="size-4 mr-2" />
                 Subscription Management
               </CardTitle>
               <CardDescription>
@@ -899,7 +899,7 @@ export const AdminDashboard = () => {
             </CardHeader>
             <CardContent>
               <Alert>
-                <AlertTriangle className="h-4 w-4" />
+                <AlertTriangle className="size-4" />
                 <AlertDescription>
                   Multi-tenant subscription management will be implemented in
                   the enhanced version. Currently operating in
@@ -911,7 +911,9 @@ export const AdminDashboard = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-semibold">Current Organization</h3>
-                    <p className="text-sm text-gray-600">Free for Life</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-200">
+                      Free for Life
+                    </p>
                   </div>
                   <Badge variant="outline" className="text-green-600">
                     Active

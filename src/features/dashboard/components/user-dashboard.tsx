@@ -61,7 +61,7 @@ export const UserDashboard = () => {
         </div>
         <Link href="/requests/new">
           <Button>
-            <Plus className="h-4 w-4" />
+            <Plus className="size-4" />
             New Request
           </Button>
         </Link>
@@ -197,7 +197,7 @@ export const UserDashboard = () => {
               <div className="mt-6">
                 <Link href="/requests/new">
                   <Button>
-                    <Plus className="mr-2 h-4 w-4" />
+                    <Plus className="size-4" />
                     Create Request
                   </Button>
                 </Link>
@@ -211,7 +211,7 @@ export const UserDashboard = () => {
                   className="flex items-center justify-between p-4 border rounded-lg"
                 >
                   <div className="flex items-center space-x-4">
-                    <Calendar className="h-5 w-5 text-gray-400" />
+                    <Calendar className="size-5 text-gray-400" />
                     <div>
                       <p className="font-medium">{request.serviceDay?.name}</p>
                       <p className="text-sm text-gray-600">

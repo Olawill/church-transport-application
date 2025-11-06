@@ -593,7 +593,7 @@ export const RequestHistory = () => {
                 <div className="mt-6">
                   <Link href="/requests/new">
                     <Button>
-                      <Plus className="mr-2 h-4 w-4" />
+                      <Plus className="size-4" />
                       Create Your First Request
                     </Button>
                   </Link>
@@ -650,12 +650,12 @@ export const RequestHistory = () => {
                         <User className="h-4 w-4 text-gray-400" />
                         <div>
                           <p className="text-sm font-medium">Requested by</p>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-gray-600 dark:text-gray-300">
                             {request.user.name}
                           </p>
                           {request.user.phoneNumber && (
-                            <p className="text-xs text-gray-500 flex items-center">
-                              <Phone className="h-3 w-3 mr-1" />
+                            <p className="text-xs text-gray-500 dark:text-gray-200 flex items-center">
+                              <Phone className="size-3 mr-1" />
                               {request.user.phoneNumber}
                             </p>
                           )}
@@ -677,7 +677,7 @@ export const RequestHistory = () => {
 
                     {request.driver && (
                       <div className="flex items-center space-x-2">
-                        <Car className="h-4 w-4 text-gray-400" />
+                        <Car className="size-4 text-gray-400" />
                         <div>
                           <p className="text-sm font-medium">Driver</p>
                           <p className="text-sm">{request.driver.name}</p>

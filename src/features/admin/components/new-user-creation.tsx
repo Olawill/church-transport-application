@@ -27,6 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 
+import { CustomFormLabel } from "@/components/custom-form-label";
 import { CustomPhoneInput } from "@/components/custom-phone-input";
 import AdminNewUserRequest from "@/features/admin/components/admin-new-user-request";
 import { AddressFields } from "@/features/auth/components/signup-form";
@@ -180,7 +181,7 @@ export const NewUserCreationForm = () => {
                   name="firstName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>First Name</FormLabel>
+                      <CustomFormLabel title="First Name" />
                       <FormControl>
                         <Input
                           {...field}
@@ -202,7 +203,7 @@ export const NewUserCreationForm = () => {
                   name="lastName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Last Name</FormLabel>
+                      <CustomFormLabel title="Last Name" />
                       <FormControl>
                         <Input
                           {...field}
@@ -227,7 +228,7 @@ export const NewUserCreationForm = () => {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email Address</FormLabel>
+                      <CustomFormLabel title="Email Address" />
                       <FormControl>
                         <Input
                           {...field}
@@ -251,7 +252,7 @@ export const NewUserCreationForm = () => {
                   render={({ field, fieldState }) => {
                     return (
                       <FormItem>
-                        <FormLabel>Phone Number</FormLabel>
+                        <CustomFormLabel title="Phone Number" />
                         <FormControl>
                           <CustomPhoneInput
                             placeholder="(123) 456-7890"
@@ -302,7 +303,7 @@ export const NewUserCreationForm = () => {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Password</FormLabel>
+                        <CustomFormLabel title="Password" />
                         <FormControl>
                           <div className="relative">
                             <Input
@@ -315,11 +316,11 @@ export const NewUserCreationForm = () => {
                               className="pr-32"
                             />
                             <Button
-                              className="absolute right-1 top-1 h-7 px-3"
+                              className="absolute right-1 top-1 h-7 px-3 shadow-none"
                               onClick={generatePassword}
                               disabled={loading}
                             >
-                              <Key className="h-3 w-3 mr-1" />
+                              <Key className="size-3" />
                               Generate
                             </Button>
                           </div>
@@ -387,7 +388,7 @@ export const NewUserCreationForm = () => {
                       "Creating User and Request..."
                     ) : (
                       <>
-                        <UserPlus2Icon className="mr-2 h-4 w-4" />
+                        <UserPlus2Icon className="size-4" />
                         Create New User and Request
                       </>
                     )}
@@ -401,7 +402,7 @@ export const NewUserCreationForm = () => {
                       "Creating User..."
                     ) : (
                       <>
-                        <UserPlus2Icon className="mr-2 h-4 w-4" />
+                        <UserPlus2Icon className="size-4" />
                         Create New User
                       </>
                     )}

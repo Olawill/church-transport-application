@@ -136,16 +136,16 @@ export const Header = ({
                 key={item.name}
                 href={{ pathname: item.href }}
                 className={cn(
-                  "flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                  pathname === item.href && "text-blue-500"
+                  "flex items-center space-x-1 px-3 py-2 rounded-md text-sm text-gray-900 dark:text-white font-semibold transition-colors",
+                  pathname === item.href && "text-blue-500 dark:text-blue-700"
                 )}
               >
                 <div className="relative flex items-center space-x-1">
                   {pathname === item.href && (
-                    <div className="absolute h-1 w-full bg-blue-500 rounded-sm -bottom-2 left-0" />
+                    <div className="absolute h-1 w-full bg-blue-500 dark:bg-blue-700 rounded-sm -bottom-2 left-0" />
                   )}
                   <item.icon className="size-4" />
-                  <span>{item.name}</span>
+                  <span>{item.name.toUpperCase()}</span>
                 </div>
               </Link>
             ))}
@@ -166,15 +166,15 @@ export const Header = ({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                      <UserIcon className="h-4 w-4 text-gray-600" />
+                    <div className="size-8 bg-gray-300 rounded-full flex items-center justify-center">
+                      <UserIcon className="size-4 text-gray-600" />
                     </div>
                     <div className="text-sm">
-                      <p className="text-gray-900 dark:text-gray-200 font-medium">
+                      <p className="text-gray-900 dark:text-white font-medium">
                         {session.user.name}
                       </p>
-                      <p className="text-gray-500 dark:text-gray-400 capitalize">
-                        {session.user.role?.toLowerCase().replace("_", " ")}
+                      <p className="text-gray-700 dark:text-gray-100 text-xs font-semibold italic capitalize">
+                        {session.user.role?.toUpperCase().replace("_", " ")}
                       </p>
                     </div>
                   </div>
@@ -186,42 +186,42 @@ export const Header = ({
                         <UserIcon className="size-4 text-gray-600" />
                       </div>
                       <div className="text-sm">
-                        <p className="text-gray-900 dark:text-gray-200 font-medium">
+                        <p className="text-gray-900 dark:text-white font-medium">
                           {session.user.name}
                         </p>
-                        <p className="text-gray-500 dark:text-gray-400 capitalize">
-                          {session.user.role?.toLowerCase().replace("_", " ")}
+                        <p className="text-gray-700 dark:text-gray-300 text-xs italic font-semibold capitalize">
+                          {session.user.role?.toUpperCase().replace("_", " ")}
                         </p>
                       </div>
                     </div>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    className="cursor-pointer"
+                    className="cursor-pointer  font-semibold"
                     onClick={() => router.push("/profile")}
                   >
                     <UserIcon className="size-4" />
-                    Profile
+                    PROFILE
                   </DropdownMenuItem>
                   {(session.user.role === UserRole.ADMIN ||
                     session.user.role === UserRole.OWNER) && (
                     <>
                       <DropdownMenuItem
-                        className="cursor-pointer"
+                        className="cursor-pointer font-semibold"
                         onClick={() => router.push("/credentials")}
                       >
                         <KeyIcon className="size-4" />
-                        Credentials
+                        CREDENTIALS
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                     </>
                   )}
                   <DropdownMenuItem
                     onClick={handleSignOut}
-                    className="text-gray-600 dark:text-gray-200 hover:text-gray-900 cursor-pointer"
+                    className="text-gray-900 dark:text-white hover:text-gray-900 cursor-pointer  font-semibold"
                   >
                     <LogOut className="size-4" />
-                    Sign out
+                    LOGOUT
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -265,26 +265,27 @@ export const Header = ({
                     key={item.name}
                     href={{ pathname: item.href }}
                     className={cn(
-                      "flex items-center space-x-2 text-gray-600 dark:text-gray-200 hover:text-gray-900 px-3 py-2 rounded-md text-base font-medium",
-                      pathname === item.href && "bg-blue-500"
+                      "flex items-center space-x-2 hover:bg-accent px-3 py-2 rounded-md text-base font-semibold",
+                      pathname === item.href &&
+                        "bg-blue-500 text-white dark:text-gray-900"
                     )}
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <item.icon className="h-5 w-5" />
-                    <span>{item.name}</span>
+                    <span>{item.name.toUpperCase()}</span>
                   </Link>
                 ))}
                 <div className="border-t pt-4 mt-4">
                   <div className="flex items-center space-x-3 px-3 py-2">
-                    <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                      <UserIcon className="h-4 w-4 text-gray-600" />
+                    <div className="size-8 bg-gray-300 rounded-full flex items-center justify-center">
+                      <UserIcon className="size-4 text-gray-600" />
                     </div>
                     <div className="text-sm">
-                      <p className="text-gray-900 dark:text-gray-200 font-medium">
+                      <p className="text-gray-900 dark:text-white font-medium">
                         {session.user.name}
                       </p>
-                      <p className="text-gray-500 dark:text-gray-300 capitalize">
-                        {session.user.role?.toLowerCase().replace("_", " ")}
+                      <p className="text-gray-700 dark:text-gray-100 text-xs font-semibold italic capitalize">
+                        {session.user.role?.toUpperCase().replace("_", " ")}
                       </p>
                     </div>
                   </div>
@@ -297,32 +298,40 @@ export const Header = ({
                       setMobileMenuOpen(false);
                     }}
                     className={cn(
-                      "w-full justify-start text-gray-600 dark:text-gray-200 hover:text-gray-900 px-3 py-3 text-base",
+                      "w-full justify-start px-3 py-3 text-base",
                       pathname === "/profile" && "bg-blue-500"
                     )}
                   >
                     <UserIcon className="size-5" />
-                    Profile
+                    PROFILE
                   </Button>
                   {(session.user.role === UserRole.ADMIN ||
                     session.user.role === UserRole.OWNER) && (
-                    <Button
-                      className="cursor-pointer"
-                      onClick={() => router.push("/credentials")}
-                    >
-                      <KeyIcon className="size-4" />
-                      Credentials
-                    </Button>
+                    <>
+                      <Separator className="my-2" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          "w-full justify-start px-3 py-3 text-base",
+                          pathname === "/profile" && "bg-blue-500"
+                        )}
+                        onClick={() => router.push("/credentials")}
+                      >
+                        <KeyIcon className="size-4" />
+                        CREDENTIALS
+                      </Button>
+                    </>
                   )}
                   <Separator className="my-2" />
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={handleSignOut}
-                    className="w-full justify-start text-gray-600 dark:text-gray-200 hover:text-gray-900 px-3 py-2 text-base"
+                    className="w-full justify-start text-gray-600 dark:text-white hover:text-gray-900 dark:hover:text-gray-white px-3 py-2 text-base"
                   >
                     <LogOut className="size-5" />
-                    Sign out
+                    LOGOUT
                   </Button>
                 </div>
               </nav>

@@ -133,7 +133,7 @@ export const ChurchTab = ({
                 <>
                   <p className="font-medium">{organization?.churchName}</p>
                   {organization?.churchAcronym && (
-                    <Badge className="text-sm text-gray-300">
+                    <Badge className="text-sm text-gray-300 dark:text-gray-700">
                       {organization?.churchAcronym}
                     </Badge>
                   )}

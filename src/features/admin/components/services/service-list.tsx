@@ -253,7 +253,7 @@ export const ServiceList = ({
                 {serviceDays.map((service) => (
                   <div
                     key={service.id}
-                    className="border rounded-lg p-4 hover:bg-accent transition-colors flex flex-col h-full"
+                    className="border rounded-lg p-4 hover:bg-accent dark:hover:bg-accent/5 transition-colors flex flex-col h-full"
                   >
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
