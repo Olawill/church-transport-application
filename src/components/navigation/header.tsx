@@ -77,7 +77,7 @@ export const Header = ({
     await signOut({
       fetchOptions: {
         onSuccess: () => {
-          router.push("/login");
+          router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
         },
       },
     });

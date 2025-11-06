@@ -16,7 +16,10 @@ export const requireAuth = async () => {
   const session = await getAuthSession();
 
   if (!session) {
-    redirect("/login");
+    // Get current path from headers (set in middleware)
+    const headersList = await headers();
+    const pathname = headersList.get("x-pathname") || "/";
+    redirect(`/login?redirect=${encodeURIComponent(pathname)}`);
   }
 
   return session;

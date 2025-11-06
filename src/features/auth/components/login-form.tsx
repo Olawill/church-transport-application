@@ -2,8 +2,9 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeClosed, Loader, LogIn, OctagonAlertIcon } from "lucide-react";
+import { Route } from "next";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -29,13 +30,17 @@ import { Input } from "@/components/ui/input";
 
 import { signIn } from "@/lib/auth-client";
 import { loginSchema, LoginSchema } from "@/schemas/authSchemas";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTRPC } from "@/trpc/client";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export const LoginForm = () => {
   const queryClient = useQueryClient();
   const trpc = useTRPC();
   const router = useRouter();
+
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get("redirect") || "/dashboard";
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
@@ -46,7 +51,7 @@ export const LoginForm = () => {
       onSuccess: async () => {
         // await queryClient.invalidateQueries(trpc.auth.session.queryOptions());
         toast.success("Logged in successfully");
-        router.push("/dashboard");
+        router.push(redirectUrl as Route);
       },
       onError: (error) => {
         setError(error.message);
