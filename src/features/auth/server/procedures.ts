@@ -4,13 +4,13 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { loginSchema, signupSchema } from "@/schemas/authSchemas";
 
-import { baseProcedure, createTRPCRouter } from "@/trpc/init";
-import { TRPCError } from "@trpc/server";
 import { comparePassword } from "@/lib/compare-password";
 import { geocodeAddress } from "@/lib/geocoding";
+import { createTRPCRouter, publicProcedure } from "@/trpc/init";
+import { TRPCError } from "@trpc/server";
 
 export const authRouter = createTRPCRouter({
-  session: baseProcedure.query(async () => {
+  session: publicProcedure.query(async () => {
     const session = await auth.api.getSession({
       headers: await headers(),
     });
@@ -18,7 +18,7 @@ export const authRouter = createTRPCRouter({
     return session;
   }),
 
-  login: baseProcedure.input(loginSchema).mutation(async ({ input }) => {
+  login: publicProcedure.input(loginSchema).mutation(async ({ input }) => {
     const { email, password } = input;
 
     const user = await prisma.user.findUnique({ where: { email } });
@@ -46,7 +46,7 @@ export const authRouter = createTRPCRouter({
     return data;
   }),
 
-  register: baseProcedure.input(signupSchema).mutation(async ({ input }) => {
+  register: publicProcedure.input(signupSchema).mutation(async ({ input }) => {
     const {
       firstName,
       lastName,

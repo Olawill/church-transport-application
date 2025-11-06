@@ -1,4 +1,4 @@
-import { baseProcedure, createTRPCRouter } from "@/trpc/init";
+import { createTRPCRouter, publicProcedure } from "@/trpc/init";
 import { z } from "zod";
 
 import {
@@ -8,11 +8,11 @@ import {
 } from "@/lib/countries";
 
 export const placesRouter = createTRPCRouter({
-  countries: baseProcedure.query(() => {
+  countries: publicProcedure.query(() => {
     return countriesByContinent;
   }),
 
-  states: baseProcedure
+  states: publicProcedure
     .input(
       z.object({
         countryCode: z.string(),
@@ -20,7 +20,7 @@ export const placesRouter = createTRPCRouter({
     )
     .query(({ input }) => getStatesForCountry(input.countryCode)),
 
-  cities: baseProcedure
+  cities: publicProcedure
     .input(
       z.object({
         countryCode: z.string(),

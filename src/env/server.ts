@@ -13,6 +13,7 @@ export const env = createEnv({
     FACEBOOK_CLIENT_SECRET: z.string().min(1),
     BETTER_AUTH_SECRET: z.string().min(1),
     BETTER_AUTH_URL: z.string().min(1),
+    ARCJET_KEY: z.string().min(1),
   },
   experimental__runtimeEnv: process.env,
 });

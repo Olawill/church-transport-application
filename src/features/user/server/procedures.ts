@@ -2,11 +2,11 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/db";
 
-import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
+import { createTRPCRouter, sensitiveProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
 
 export const userRouter = createTRPCRouter({
-  toggleSettings: protectedProcedure
+  toggleSettings: sensitiveProcedure
     .input(
       z.object({
         field: z.string(),
