@@ -21,6 +21,7 @@ import { UserRole } from "@/generated/prisma";
 import { ExtendedSession } from "@/lib/auth";
 import { signOut, useSession } from "@/lib/auth-client";
 
+import { ActsOnWheelsLogo } from "@/components/logo";
 import { ModeToggle } from "@/components/theming/mode-toggle";
 
 import { Button } from "@/components/ui/button";
@@ -118,16 +119,7 @@ export const Header = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo and brand */}
-          <div className="flex items-center">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="size-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <CarIcon className="size-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-gray-900 dark:text-white hidden sm:block">
-                Church Transport
-              </span>
-            </Link>
-          </div>
+          <ActsOnWheelsLogo />
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex space-x-8">
@@ -265,13 +257,13 @@ export const Header = ({
                     key={item.name}
                     href={{ pathname: item.href }}
                     className={cn(
-                      "flex items-center space-x-2 hover:bg-accent px-3 py-2 rounded-md text-base font-semibold",
+                      "flex items-center space-x-2 hover:bg-accent px-3 py-2 rounded-md text-base font-semibold hover:text-gray-900 dark:hover:text-white",
                       pathname === item.href &&
                         "bg-blue-500 text-white dark:text-gray-900"
                     )}
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    <item.icon className="h-5 w-5" />
+                    <item.icon className="size-5" />
                     <span>{item.name.toUpperCase()}</span>
                   </Link>
                 ))}
@@ -298,7 +290,7 @@ export const Header = ({
                       setMobileMenuOpen(false);
                     }}
                     className={cn(
-                      "w-full justify-start px-3 py-3 text-base",
+                      "w-full justify-start px-3 py-3 text-base font-semibold",
                       pathname === "/profile" && "bg-blue-500"
                     )}
                   >
@@ -313,7 +305,7 @@ export const Header = ({
                         variant="ghost"
                         size="sm"
                         className={cn(
-                          "w-full justify-start px-3 py-3 text-base",
+                          "w-full justify-start px-3 py-3 text-base font-semibold",
                           pathname === "/profile" && "bg-blue-500"
                         )}
                         onClick={() => router.push("/credentials")}
@@ -328,7 +320,7 @@ export const Header = ({
                     variant="ghost"
                     size="sm"
                     onClick={handleSignOut}
-                    className="w-full justify-start text-gray-600 dark:text-white hover:text-gray-900 dark:hover:text-gray-white px-3 py-2 text-base"
+                    className="w-full justify-start text-gray-600 dark:text-white hover:text-gray-900 dark:hover:text-white px-3 py-2 text-base font-semibold"
                   >
                     <LogOut className="size-5" />
                     LOGOUT

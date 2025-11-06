@@ -89,6 +89,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@iconify-icon/react": "^3.0.3",
     "@react-email/preview-server": "4.2.12",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",

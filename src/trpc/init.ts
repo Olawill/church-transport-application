@@ -28,8 +28,20 @@ const t = initTRPC
 // Routers
 export const createTRPCRouter = t.router;
 export const createCallerFactory = t.createCallerFactory;
-export const baseProcedure = t.procedure;
 export const middleware = t.middleware;
+export const baseProcedure = t.procedure;
+
+// Request validation middleware - reusable
+const requestMiddleware = middleware(({ ctx, next }) => {
+  if (!ctx.req) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Request object not available",
+    });
+  }
+
+  return next({ ctx: { ...ctx, req: ctx.req } });
+});
 
 // Auth middleware
 const authMiddleware = middleware(async ({ ctx, next }) => {
@@ -42,14 +54,7 @@ const authMiddleware = middleware(async ({ ctx, next }) => {
 
 // Public rate limiting middleware (IP-based)
 const publicMiddleware = middleware(async ({ ctx, next }) => {
-  if (!ctx.req) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Request object not available",
-    });
-  }
-
-  const decision = await ajPublic.protect(ctx.req);
+  const decision = await ajPublic.protect(ctx.req!);
 
   handleArcjetDecision(decision);
 
@@ -57,22 +62,18 @@ const publicMiddleware = middleware(async ({ ctx, next }) => {
 });
 
 // Protected procedure with arcjet
-export const publicProcedure = baseProcedure.use(publicMiddleware);
+export const publicProcedure = baseProcedure
+  .use(requestMiddleware)
+  .use(publicMiddleware);
 
 // Protected rate limiting middleware (userId-based)
 export const protectedProcedure = baseProcedure
+  .use(requestMiddleware)
   .use(authMiddleware)
   .use(async ({ ctx, next }) => {
-    if (!ctx.req) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Request object not available",
-      });
-    }
-
     const userId = ctx.auth?.user?.id;
 
-    const decision = await ajProtected.protect(ctx.req, {
+    const decision = await ajProtected.protect(ctx.req!, {
       userId,
       requested: 1,
     });
@@ -85,16 +86,9 @@ export const protectedProcedure = baseProcedure
 // Sensitive operations middleware (stricter limits: password changes, etc.)
 export const sensitiveProcedure = protectedProcedure.use(
   async ({ ctx, next }) => {
-    if (!ctx.req) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Request object not available",
-      });
-    }
-
     const userId = ctx.auth?.user?.id;
 
-    const decision = await ajSensitive.protect(ctx.req, {
+    const decision = await ajSensitive.protect(ctx.req!, {
       userId,
     });
 
