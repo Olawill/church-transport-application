@@ -17,6 +17,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Fetch all history
+          persist-credentials: false # 👈 Prevent checkout from using GITHUB_TOKEN
 
       - name: Configure Git
         run: |
@@ -25,7 +26,7 @@ jobs:
 
       - name: Mirror to ActsOnWheels
         env:
-          DEST_REPO: https://actsonwheels:${{ secrets.SYNC_TOKEN }}@github.com/actsonwheels/ChurchTransport.git
+          DEST_REPO: https://x-access-token:${{ secrets.SYNC_TOKEN }}@github.com/actsonwheels/ChurchTransport.git
         run: |
           git remote add mirror $DEST_REPO
           git push mirror --all
