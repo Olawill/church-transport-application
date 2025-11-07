@@ -30,9 +30,5 @@ jobs:
         run: |
           git remote add mirror $DEST_REPO
 
-          # Create a temporary branch excluding workflows
-          git checkout -b sync-tmp
-          git filter-repo --path .github/workflows --invert-paths --force
-
           git push mirror --all
           git push mirror --tags
