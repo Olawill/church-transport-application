@@ -1,0 +1,26 @@
+name: Sync to ChurchTransport
+on:
+  push:
+    branches:
+      - main
+      - "feature/*"
+    tags:
+      - "*"
+
+jobs:
+  sync:
+    if: github.actor != "github-actions[bot]"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout all branches
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history
+
+      - name: Mirror to ActsOnWheels
+        env:
+          DEST_REPO: https://actsonwheels:${{ secrets.SYNC_TOKEN }}@github.com/actsonwheels/ChurchTransport.git
+        run: |
+          git remote add mirror $DEST_REPO
+          git push mirror --all
+          git push mirror --tags
