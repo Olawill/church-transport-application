@@ -3,32 +3,34 @@ on:
   push:
     branches:
       - main
-      - "feature/*"
-    tags:
-      - "*"
 
 jobs:
   sync:
-    if: github.actor != 'github-actions[bot]'
+    # Only run in the source repo, not the mirrored destination
+    if: github.repository == 'Olawill/church-transport-application' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout all branches
+      - name: Checkout main branch
         uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0 # Fetch all history
-          persist-credentials: false # 👈 Prevent checkout from using GITHUB_TOKEN
+          persist-credentials: false # Prevent checkout from using GITHUB_TOKEN
 
       - name: Configure Git
         run: |
           git config user.name "sync-bot"
           git config user.email "sync-bot@users.noreply.github.com"
 
-      - name: Mirror to ActsOnWheels
+      - name: Push main branch to ActsOnWheels/ChurchTransport
         env:
           DEST_REPO: https://x-access-token:${{ secrets.SYNC_TOKEN }}@github.com/actsonwheels/ChurchTransport.git
         run: |
           git remote add mirror $DEST_REPO
 
-          git push mirror --all
-          git push mirror --tags
+          # Force update main branch
+          git push mirror main:main --force
+
+          # Sync all tags (create/update/delete to match source)
+          git push mirror --tags --force
