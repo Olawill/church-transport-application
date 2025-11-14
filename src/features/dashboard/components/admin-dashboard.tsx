@@ -1,7 +1,11 @@
 "use client";
 
 import { useTRPC } from "@/trpc/client";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import {
   Activity,
   AlertTriangle,
@@ -11,6 +15,8 @@ import {
   CheckCircle,
   Clock,
   DollarSign,
+  LockIcon,
+  LockOpenIcon,
   Search,
   TrendingUp,
   UserCheckIcon,
@@ -86,6 +92,7 @@ const generateChartConfig = (tooltipLabel: string, chartLabel: string) => {
 
 export const AdminDashboard = () => {
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
   const router = useRouter();
 
   const [params, setParams] = useAdminDashboardParams();
@@ -113,6 +120,74 @@ export const AdminDashboard = () => {
     trpc.adminAnalytics.getAnalytics.queryOptions()
   );
 
+  // Logic to approve, reject, ban and unban users
+  const approveUser = useMutation(
+    trpc.adminUser.approveUser.mutationOptions({
+      onSuccess: (data) => {
+        //TODO: Send approved email to users to they can login
+        toast.success(`User ${data.user.name} has been approved.`);
+
+        queryClient.invalidateQueries(
+          trpc.users.getPaginatedUsers.queryOptions({})
+        );
+      },
+      onError: (error) => {
+        toast.error(error.message || `Failed to approve user`);
+      },
+    })
+  );
+
+  const rejectUser = useMutation(
+    trpc.adminUser.rejectUser.mutationOptions({
+      onSuccess: (data) => {
+        //TODO: Send reject email to users to they can login
+        toast.success(`User ${data.user.name} has been rejected.`);
+
+        queryClient.invalidateQueries(
+          trpc.users.getPaginatedUsers.queryOptions({})
+        );
+      },
+      onError: (error) => {
+        toast.error(error.message || `Failed to reject user`);
+      },
+    })
+  );
+
+  const banUser = useMutation(
+    trpc.adminUser.banUser.mutationOptions({
+      onSuccess: (data) => {
+        //TODO: Send reject email to users to they can login
+        setBanDialogOpen(false);
+        setBanReason("");
+        setSelectedUser(null);
+        toast.success(`User ${data.user.name}'s account has been deactivated.`);
+
+        queryClient.invalidateQueries(
+          trpc.users.getPaginatedUsers.queryOptions({})
+        );
+      },
+      onError: (error) => {
+        toast.error(error.message || `Failed to ban user`);
+      },
+    })
+  );
+
+  const unBanUser = useMutation(
+    trpc.adminUser.unBanUser.mutationOptions({
+      onSuccess: (data) => {
+        //TODO: Send banned email to users to they can login
+        toast.success(`User ${data.user.name}'s account has been reactivated.`);
+
+        queryClient.invalidateQueries(
+          trpc.users.getPaginatedUsers.queryOptions({})
+        );
+      },
+      onError: (error) => {
+        toast.error(error.message || `Failed to unban user`);
+      },
+    })
+  );
+
   const handleNameFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setNameInput(val); // Immediate input update
@@ -126,22 +201,11 @@ export const AdminDashboard = () => {
   };
 
   const handleApproveUser = async (userId: string) => {
-    try {
-      const response = await fetch(`/api/admin/users/${userId}/approve`, {
-        method: "PUT",
-      });
+    await approveUser.mutateAsync({ id: userId });
+  };
 
-      if (response.ok) {
-        // await fetchUsers();
-        // await fetchStats();
-        toast.success("User approved successfully");
-      } else {
-        toast.error("Failed to approve user");
-      }
-    } catch (error) {
-      console.error("Error approving user:", error);
-      toast.error("Error approving user");
-    }
+  const handleRejectUser = async (userId: string) => {
+    await rejectUser.mutateAsync({ id: userId });
   };
 
   const handleBanUser = async () => {
@@ -150,46 +214,11 @@ export const AdminDashboard = () => {
       return;
     }
 
-    try {
-      const response = await fetch(`/api/admin/users/${selectedUser.id}/ban`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason: banReason }),
-      });
-
-      if (response.ok) {
-        // await fetchUsers();
-        // await fetchStats();
-        setBanDialogOpen(false);
-        setBanReason("");
-        setSelectedUser(null);
-        toast.success("User banned successfully");
-      } else {
-        toast.error("Failed to ban user");
-      }
-    } catch (error) {
-      console.error("Error banning user:", error);
-      toast.error("Error banning user");
-    }
+    await banUser.mutateAsync({ id: selectedUser.id, reason: banReason });
   };
 
   const handleUnbanUser = async (userId: string) => {
-    try {
-      const response = await fetch(`/api/admin/users/${userId}/unban`, {
-        method: "PUT",
-      });
-
-      if (response.ok) {
-        // await fetchUsers();
-        // await fetchStats();
-        toast.success("User unbanned successfully");
-      } else {
-        toast.error("Failed to unban user");
-      }
-    } catch (error) {
-      console.error("Error unbanning user:", error);
-      toast.error("Error unbanning user");
-    }
+    await unBanUser.mutateAsync({ id: userId });
   };
 
   const clearFilters = () => {
@@ -795,15 +824,42 @@ export const AdminDashboard = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
-                          {user.status === "PENDING" && (
-                            <Button
-                              size="sm"
-                              onClick={() => handleApproveUser(user.id)}
-                            >
-                              Approve
-                            </Button>
+                          {(user.status === "PENDING" ||
+                            user.status === "REJECTED") && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleApproveUser(user.id)}
+                                >
+                                  <UserCheckIcon className="size-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent className="bg-background text-foreground">
+                                Approve User
+                              </TooltipContent>
+                            </Tooltip>
                           )}
+                          {user.status === "PENDING" && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  className="bg-red-500 hover:bg-red-600"
+                                  onClick={() => handleRejectUser(user.id)}
+                                >
+                                  <UserXIcon className="size-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent className="bg-background text-foreground">
+                                Reject User
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+
                           {user.status !== "BANNED" &&
+                            user.status !== "PENDING" &&
+                            user.status !== "REJECTED" &&
                             user.role !== "ADMIN" && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -815,7 +871,7 @@ export const AdminDashboard = () => {
                                       setBanDialogOpen(true);
                                     }}
                                   >
-                                    <UserXIcon className="size-4" />
+                                    <LockIcon className="size-4" />
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent className="bg-background text-foreground">
@@ -832,7 +888,7 @@ export const AdminDashboard = () => {
                                     variant="outline"
                                     onClick={() => handleUnbanUser(user.id)}
                                   >
-                                    <UserCheckIcon className="size-4" />
+                                    <LockOpenIcon className="size-4" />
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent className="bg-background text-foreground">
@@ -935,16 +991,19 @@ export const AdminDashboard = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label>User</Label>
+            <div className="space-y-2">
+              <Label className="font-semibold">User</Label>
               <p className="text-sm">
-                {selectedUser?.name}({selectedUser?.email})
+                {selectedUser?.name} ({selectedUser?.email})
               </p>
             </div>
-            <div>
-              <Label htmlFor="banReason">Reason for Ban</Label>
+            <div className="space-y-2">
+              <Label className="font-semibold" htmlFor="banReason">
+                Reason for Ban
+              </Label>
               <Textarea
                 id="banReason"
+                className="resize-none"
                 value={banReason}
                 onChange={(e) => setBanReason(e.target.value)}
                 placeholder="Please provide a reason for banning this user..."
