@@ -306,7 +306,7 @@ export const Header = ({
                         size="sm"
                         className={cn(
                           "w-full justify-start px-3 py-3 text-base font-semibold",
-                          pathname === "/profile" && "bg-blue-500"
+                          pathname === "/credentials" && "bg-blue-500"
                         )}
                         onClick={() => router.push("/credentials")}
                       >
