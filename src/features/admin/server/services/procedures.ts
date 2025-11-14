@@ -11,6 +11,7 @@ import {
   protectedRoleProcedure,
 } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
+import { canRestore } from "../../utils";
 
 const updateServiceSchema = z.object({
   id: z.string(),
@@ -148,10 +149,26 @@ export const servicesRouter = createTRPCRouter({
     .input(updateServiceSchema)
     .mutation(async ({ input }) => {
       const { id, service } = input;
+
+      // Fetch the existing serviceDay to determine the restore logic
+      const existing = await prisma.serviceDay.findUnique({
+        where: { id },
+      });
+
+      if (!existing)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Service not found",
+        });
+
+      // Apply the restore check on isActive
+      const isActiveToSave =
+        service.isActive && canRestore(existing) ? true : false;
+
+      // Prepare the data
       const {
         name,
         time,
-        isActive = true,
         serviceCategory,
         serviceType,
         startDate,
@@ -215,7 +232,7 @@ export const servicesRouter = createTRPCRouter({
             time,
             serviceType,
             serviceCategory,
-            isActive: isActive ?? true,
+            isActive: isActiveToSave,
             startDate: validatedStartDate?.toISOString() || null,
             endDate: validatedEndDate || null,
             frequency:
