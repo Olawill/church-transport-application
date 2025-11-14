@@ -9,6 +9,58 @@ import { createTRPCRouter, protectedRoleProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
 
 export const adminUserRouter = createTRPCRouter({
+  updateUserRole: protectedRoleProcedure([UserRole.ADMIN, UserRole.OWNER])
+    .input(
+      z.object({
+        id: z.string(),
+        role: z.enum(UserRole),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { id, role } = input;
+
+      // Check if user already exist
+      const existingUser = await prisma.user.findUnique({
+        where: { id },
+      });
+
+      if (!existingUser) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found",
+        });
+      }
+
+      if (["REJECTED", "PENDING", "BANNED"].includes(existingUser.status)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Only approved users' role can be changed",
+        });
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { id },
+        data: {
+          role,
+        },
+      });
+
+      // Track analytics
+      await AnalyticsService.trackEvent({
+        eventType: "user_role_update",
+        userId: id,
+        metadata: {
+          updatedBy: ctx.auth.user.id,
+          updatedAt: new Date(),
+        },
+      });
+
+      return {
+        success: true,
+        user: updatedUser,
+      };
+    }),
+
   getUserAddresses: protectedRoleProcedure([UserRole.ADMIN, UserRole.OWNER])
     .input(
       z.object({
@@ -62,10 +114,10 @@ export const adminUserRouter = createTRPCRouter({
         });
       }
 
-      if (existingUser.status !== "PENDING") {
+      if (!["REJECTED", "PENDING"].includes(existingUser.status)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Only pending users can be approved",
+          message: "Only pending or rejected users can be approved",
         });
       }
 
@@ -82,6 +134,55 @@ export const adminUserRouter = createTRPCRouter({
         eventType: "user_approval",
         userId: id,
         metadata: { approvedBy: ctx.auth.user.id },
+      });
+
+      return {
+        success: true,
+        user: updatedUser,
+      };
+    }),
+
+  rejectUser: protectedRoleProcedure([UserRole.ADMIN, UserRole.OWNER])
+    .input(
+      z.object({
+        id: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { id } = input;
+
+      // Check if user already exist
+      const existingUser = await prisma.user.findUnique({
+        where: { id },
+      });
+
+      if (!existingUser) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found",
+        });
+      }
+
+      if (existingUser.status !== "PENDING") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Only pending users can be rejected",
+        });
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { id },
+        data: {
+          status: "REJECTED",
+          isActive: false,
+        },
+      });
+
+      // Track analytics
+      await AnalyticsService.trackEvent({
+        eventType: "user_rejected",
+        userId: id,
+        metadata: { rejectedBy: ctx.auth.user.id },
       });
 
       return {
