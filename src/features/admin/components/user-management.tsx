@@ -1,7 +1,11 @@
 "use client";
 
 import { useSession } from "@/lib/auth-client";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import {
   CheckCircle,
   Filter,
@@ -58,12 +62,13 @@ import {
 import { PAGINATION } from "@/config/constants";
 import { useUsersParams } from "@/features/users/hooks/use-users-params";
 import { useConfirm } from "@/hooks/use-confirm";
-import { AnalyticsService } from "@/lib/analytics";
 import { useTRPC } from "@/trpc/client";
 import { CustomPagination } from "../../../components/custom-pagination";
+import { UserRole } from "@/generated/prisma";
 
 export const UserManagement = () => {
   const { data: session } = useSession();
+  const queryClient = useQueryClient();
   const trpc = useTRPC();
 
   const [params, setParams] = useUsersParams();
@@ -95,37 +100,61 @@ export const UserManagement = () => {
   const hasNextPage = usersData?.hasNextPage || false;
   const hasPreviousPage = usersData?.hasPreviousPage || false;
 
+  // Logic to approve, reject, or change users' role
+  const approveUser = useMutation(
+    trpc.adminUser.approveUser.mutationOptions({
+      onSuccess: (data) => {
+        //TODO: Send approved email to users to they can login
+        toast.success(`User ${data.user.name} has been approved.`);
+
+        queryClient.invalidateQueries(
+          trpc.users.getPaginatedUsers.queryOptions({})
+        );
+      },
+      onError: (error) => {
+        toast.error(error.message || `Failed to approve user`);
+      },
+    })
+  );
+
+  const rejectUser = useMutation(
+    trpc.adminUser.rejectUser.mutationOptions({
+      onSuccess: (data) => {
+        //TODO: Send reject email to users to they can login
+        toast.success(`User ${data.user.name} has been rejected.`);
+
+        queryClient.invalidateQueries(
+          trpc.users.getPaginatedUsers.queryOptions({})
+        );
+      },
+      onError: (error) => {
+        toast.error(error.message || `Failed to reject user`);
+      },
+    })
+  );
+
+  const updateUserRole = useMutation(
+    trpc.adminUser.updateUserRole.mutationOptions({
+      onSuccess: (data) => {
+        //TODO: Send reject email to users to they can login
+        toast.success(`User ${data.user.name}'s role has been updated.`);
+
+        queryClient.invalidateQueries(
+          trpc.users.getPaginatedUsers.queryOptions({})
+        );
+      },
+      onError: (error) => {
+        toast.error(error.message || `Failed to update user role`);
+      },
+    })
+  );
+
   const handleStatusUpdate = async (userId: string, newStatus: string) => {
-    try {
-      const response = await fetch("/api/users", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId,
-          status: newStatus,
-        }),
-      });
-
-      if (response.ok) {
-        toast.success(`User ${newStatus.toLowerCase()} successfully`);
-        // fetchUsers();
-
-        if (session?.user) {
-          // Track analytics
-          await AnalyticsService.trackEvent({
-            eventType: "user_approval",
-            userId,
-            metadata: { approvedBy: session.user.id },
-          });
-        }
-      } else {
-        toast.error("Failed to update user status");
-      }
-    } catch (error) {
-      console.error("Error updating user:", error);
-      toast.error("An error occurred");
+    if (newStatus === "APPROVED") {
+      await approveUser.mutateAsync({ id: userId });
+    }
+    if (newStatus === "REJECTED") {
+      await rejectUser.mutateAsync({ id: userId });
     }
   };
 
@@ -134,28 +163,7 @@ export const UserManagement = () => {
 
     if (result !== "confirm") return;
 
-    try {
-      const response = await fetch("/api/users", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId,
-          role: newRole,
-        }),
-      });
-
-      if (response.ok) {
-        toast.success("User role updated successfully");
-        // fetchUsers();
-      } else {
-        toast.error("Failed to update user role");
-      }
-    } catch (error) {
-      console.error("Error updating user role:", error);
-      toast.error("An error occurred");
-    }
+    await updateUserRole.mutateAsync({ id: userId, role: newRole as UserRole });
   };
 
   const getStatusColor = (status: string) => {
