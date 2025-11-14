@@ -32,13 +32,15 @@ import { addMonths, format } from "date-fns";
 import { CalendarIcon, CheckCircle, X } from "lucide-react";
 import { useEffect } from "react";
 import { UseFormReturn } from "react-hook-form";
+import { canRestore } from "../../utils";
+import { GetServiceType } from "../../types";
 
 interface FrequentMultiDayFormProps {
   form: UseFormReturn<FrequentMultiDaySchema>;
   onSubmit: (values: FrequentMultiDaySchema) => void;
   onCancel: () => void;
   loading: boolean;
-  isEditing: boolean;
+  service: GetServiceType | null;
 }
 
 export const FrequentMultiDayForm = ({
@@ -46,8 +48,10 @@ export const FrequentMultiDayForm = ({
   onSubmit,
   onCancel,
   loading,
-  isEditing,
+  service,
 }: FrequentMultiDayFormProps) => {
+  const isEditing = !!service;
+
   // const selectedDays = form.watch("dayOfWeek") || [];
   const dayOfWeekValue = form.watch("dayOfWeek");
   const selectedDays = Array.isArray(dayOfWeekValue) ? dayOfWeekValue : [];
@@ -309,6 +313,8 @@ export const FrequentMultiDayForm = ({
                   <Switch
                     checked={field.value}
                     onCheckedChange={field.onChange}
+                    disabled={!canRestore(service)}
+                    className="disabled:cursor-not-allowed cursor-pointer"
                   />
                 </FormControl>
                 <FormLabel className="!mt-0">
@@ -417,7 +423,7 @@ export const FrequentMultiDayForm = ({
         >
           Cancel
         </Button>
-        <Button type="submit" disabled={loading}>
+        <Button type="submit" disabled={loading || !form.formState.isDirty}>
           <CheckCircle className="h-4 w-4 mr-2" />
           {isEditing ? "Update Service" : "Create Service"}
         </Button>

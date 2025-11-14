@@ -30,13 +30,15 @@ import { OnetimeMultiDaySchema } from "@/schemas/serviceDaySchema";
 import { addMonths, format } from "date-fns";
 import { CalendarIcon, CheckCircle, X } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
+import { canRestore } from "../../utils";
+import { GetServiceType } from "../../types";
 
 interface OnetimeMultiDayFormProps {
   form: UseFormReturn<OnetimeMultiDaySchema>;
   onSubmit: (values: OnetimeMultiDaySchema) => void;
   onCancel: () => void;
   loading: boolean;
-  isEditing: boolean;
+  service: GetServiceType | null;
 }
 
 export const OnetimeMultiDayForm = ({
@@ -44,8 +46,10 @@ export const OnetimeMultiDayForm = ({
   onSubmit,
   onCancel,
   loading,
-  isEditing,
+  service,
 }: OnetimeMultiDayFormProps) => {
+  const isEditing = !!service;
+
   // const selectedDays = form.watch("dayOfWeek") || [];
   const dayOfWeekValue = form.watch("dayOfWeek");
   const selectedDays = Array.isArray(dayOfWeekValue) ? dayOfWeekValue : [];
@@ -255,6 +259,8 @@ export const OnetimeMultiDayForm = ({
                   <Switch
                     checked={field.value}
                     onCheckedChange={field.onChange}
+                    disabled={!canRestore(service)}
+                    className="disabled:cursor-not-allowed cursor-pointer"
                   />
                 </FormControl>
                 <FormLabel className="!mt-0">
@@ -426,7 +432,7 @@ export const OnetimeMultiDayForm = ({
         >
           Cancel
         </Button>
-        <Button type="submit" disabled={loading}>
+        <Button type="submit" disabled={loading || !form.formState.isDirty}>
           <CheckCircle className="h-4 w-4 mr-2" />
           {isEditing ? "Update Service" : "Create Service"}
         </Button>

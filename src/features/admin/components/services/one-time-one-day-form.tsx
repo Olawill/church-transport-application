@@ -29,13 +29,15 @@ import { OnetimeOneDaySchema } from "@/schemas/serviceDaySchema";
 import { addMonths, format } from "date-fns";
 import { CalendarIcon, CheckCircle } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
+import { GetServiceType } from "../../types";
+import { canRestore } from "../../utils";
 
 interface OnetimeOneDayFormProps {
   form: UseFormReturn<OnetimeOneDaySchema>;
   onSubmit: (values: OnetimeOneDaySchema) => void;
   onCancel: () => void;
   loading: boolean;
-  isEditing: boolean;
+  service: GetServiceType | null;
 }
 
 export const OnetimeOneDayForm = ({
@@ -43,8 +45,9 @@ export const OnetimeOneDayForm = ({
   onSubmit,
   onCancel,
   loading,
-  isEditing,
+  service,
 }: OnetimeOneDayFormProps) => {
+  const isEditing = !!service;
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -115,6 +118,8 @@ export const OnetimeOneDayForm = ({
                   <Switch
                     checked={field.value}
                     onCheckedChange={field.onChange}
+                    disabled={!canRestore(service)}
+                    className="disabled:cursor-not-allowed cursor-pointer"
                   />
                 </FormControl>
                 <FormLabel className="!mt-0">
@@ -225,7 +230,7 @@ export const OnetimeOneDayForm = ({
         >
           Cancel
         </Button>
-        <Button type="submit" disabled={loading}>
+        <Button type="submit" disabled={loading || !form.formState.isDirty}>
           <CheckCircle className="h-4 w-4 mr-2" />
           {isEditing ? "Update Service" : "Create Service"}
         </Button>

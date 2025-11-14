@@ -33,13 +33,15 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { CalendarIcon, CheckCircle } from "lucide-react";
 import { useEffect } from "react";
+import { GetServiceType } from "../../types";
+import { canRestore } from "../../utils";
 
 interface RecurringFormProps {
   form: UseFormReturn<RecurringSchema>;
   onSubmit: (values: RecurringSchema) => void;
   onCancel: () => void;
   loading: boolean;
-  isEditing: boolean;
+  service: GetServiceType | null;
 }
 
 export const RecurringForm = ({
@@ -47,8 +49,10 @@ export const RecurringForm = ({
   onSubmit,
   onCancel,
   loading,
-  isEditing,
+  service,
 }: RecurringFormProps) => {
+  const isEditing = !!service;
+
   const frequency = form.watch("frequency");
 
   const ordinalOptions =
@@ -209,6 +213,8 @@ export const RecurringForm = ({
                       <Switch
                         checked={field.value}
                         onCheckedChange={field.onChange}
+                        disabled={!canRestore(service)}
+                        className="disabled:cursor-not-allowed cursor-pointer"
                       />
                     </div>
                   </FormControl>
@@ -312,7 +318,7 @@ export const RecurringForm = ({
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" disabled={loading}>
+        <Button type="submit" disabled={loading || !form.formState.isDirty}>
           <CheckCircle className="h-4 w-4 mr-2" />
           {isEditing ? "Update Service" : "Create Service"}
         </Button>
