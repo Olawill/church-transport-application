@@ -2,7 +2,11 @@
 
 import { useTRPC } from "@/trpc/client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
@@ -59,6 +63,7 @@ type PropertyError = {
 
 export const ServiceManagement = () => {
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
 
   const [editingService, setEditingService] = useState<GetServiceType | null>(
     null
@@ -250,6 +255,49 @@ export const ServiceManagement = () => {
     setActiveTab(value as ServiceCategory);
   }, []);
 
+  // Logic to create, edit service
+  const addService = useMutation(
+    trpc.services.createService.mutationOptions({
+      onSuccess: (data) => {
+        toast.success(`${data.name} created successfully!`);
+
+        resetForm();
+
+        queryClient.invalidateQueries(
+          trpc.services.getPaginatedServices.queryOptions({})
+        );
+
+        queryClient.invalidateQueries(
+          trpc.services.getServices.queryOptions({})
+        );
+      },
+      onError: (error) => {
+        toast.error(error.message || `Failed to create service`);
+      },
+    })
+  );
+
+  const editService = useMutation(
+    trpc.services.updateService.mutationOptions({
+      onSuccess: (data) => {
+        toast.success(`${data.name} updated successfully!`);
+
+        resetForm();
+
+        queryClient.invalidateQueries(
+          trpc.services.getPaginatedServices.queryOptions({})
+        );
+
+        queryClient.invalidateQueries(
+          trpc.services.getServices.queryOptions({})
+        );
+      },
+      onError: (error) => {
+        toast.error(error.message || `Failed to update service`);
+      },
+    })
+  );
+
   const handleSubmit = useCallback(
     async (values: FormSchema) => {
       try {
@@ -270,45 +318,15 @@ export const ServiceManagement = () => {
           ? validatedData.dayOfWeek
           : validatedData.dayOfWeek;
 
-        const response = await fetch("/api/service-days", {
-          method: editingService ? "PUT" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...validatedData,
-            ...(editingService && { id: editingService.id }),
-            dayOfWeek, // Send as array
-            startDate: validatedData.startDate ? validatedData.startDate : null,
-            endDate:
-              "endDate" in validatedData && validatedData.endDate
-                ? validatedData.endDate
-                : null,
-          }),
-        });
-        if (response.ok) {
-          toast.success(
-            `Service ${editingService ? "updated" : "created"} successfully`
-          );
-          resetForm();
-          // fetchServiceDays();
-        } else {
-          const errorResponse = await response.json();
+        if (editingService) {
+          await editService.mutateAsync({
+            id: editingService.id,
+            service: validatedData,
+          });
+        }
 
-          if (errorResponse.details?.properties) {
-            for (const [, rawError] of Object.entries(
-              errorResponse.details?.properties ?? {}
-            )) {
-              const errorData = rawError as PropertyError;
-              if (
-                Array.isArray(errorData.errors) &&
-                errorData.errors.length > 0
-              ) {
-                toast.error(errorData.errors[0]);
-              }
-            }
-          }
-          toast.error(
-            `Failed to ${editingService ? "update" : "create"} service`
-          );
+        if (!editingService) {
+          await addService.mutateAsync(validatedData);
         }
       } catch (error) {
         console.error("Error submitting service:", error);
@@ -399,7 +417,7 @@ export const ServiceManagement = () => {
                     onSubmit={handleSubmit}
                     onCancel={resetForm}
                     loading={loading}
-                    isEditing={!!editingService}
+                    service={editingService}
                   />
                 </TabsContent>
                 <TabsContent value={ServiceCategory.ONETIME_ONEDAY}>
@@ -408,7 +426,7 @@ export const ServiceManagement = () => {
                     onSubmit={handleSubmit}
                     onCancel={resetForm}
                     loading={loading}
-                    isEditing={!!editingService}
+                    service={editingService}
                   />
                 </TabsContent>
                 <TabsContent value={ServiceCategory.ONETIME_MULTIDAY}>
@@ -417,7 +435,7 @@ export const ServiceManagement = () => {
                     onSubmit={handleSubmit}
                     onCancel={resetForm}
                     loading={loading}
-                    isEditing={!!editingService}
+                    service={editingService}
                   />
                 </TabsContent>
                 <TabsContent value={ServiceCategory.FREQUENT_MULTIDAY}>
@@ -426,7 +444,7 @@ export const ServiceManagement = () => {
                     onSubmit={handleSubmit}
                     onCancel={resetForm}
                     loading={loading}
-                    isEditing={!!editingService}
+                    service={editingService}
                   />
                 </TabsContent>
               </Form>
