@@ -1,8 +1,9 @@
 import { betterAuth, BetterAuthOptions } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
-import { customSession } from "better-auth/plugins";
+import { customSession, haveIBeenPwned, twoFactor } from "better-auth/plugins";
 
+import { APP_NAME } from "@/config/constants";
 import { env } from "@/env/server";
 import { UserRole, UserStatus } from "@/generated/prisma";
 import { prisma } from "./db";
@@ -19,6 +20,7 @@ const options = {
     enabled: true,
     autoSignIn: false,
     minPasswordLength: 5,
+    // requireEmailVerification: true,
   },
   socialProviders: {
     facebook: {
@@ -26,6 +28,7 @@ const options = {
       clientSecret: env.FACEBOOK_CLIENT_SECRET,
     },
     google: {
+      prompt: "select_account",
       clientId: env.GOOGLE_CLIENT_ID,
       clientSecret: env.GOOGLE_CLIENT_SECRET,
     },
@@ -44,21 +47,34 @@ const options = {
       },
     },
   },
-  plugins: [nextCookies()],
+  plugins: [haveIBeenPwned(), twoFactor(), nextCookies()],
 } satisfies BetterAuthOptions;
 
 export const auth = betterAuth({
+  appName: APP_NAME,
   ...options,
+  // emailVerification
   plugins: [
     ...(options.plugins ?? []),
     customSession(async ({ user, session }) => {
-      const { role, status } = await extendUserSession(session.userId);
+      const {
+        role,
+        status,
+        provider,
+        accessToken,
+        isOAuthSignup,
+        needsCompletion,
+      } = await extendUserSession(session.userId);
 
       return {
         user: {
           ...user,
           role,
           status,
+          provider,
+          accessToken,
+          isOAuthSignup,
+          needsCompletion,
         },
         session,
       };
@@ -72,6 +88,10 @@ export type ExtendedSession = {
   user: BaseSession["user"] & {
     role: UserRole;
     status: UserStatus;
+    provider: string;
+    accessToken: string | null;
+    isOAuthSignup: boolean;
+    needsCompletion: boolean;
   };
   session: BaseSession["session"];
 };

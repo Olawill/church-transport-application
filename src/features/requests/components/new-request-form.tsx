@@ -17,7 +17,6 @@ import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 
 import { ServiceDaySelector } from "@/features/admin/components/services/service-day-selector";
-import { useConfirm } from "@/hooks/use-confirm";
 import { Address } from "@/lib/types";
 import {
   cn,
@@ -67,6 +66,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { GetServiceType } from "@/features/admin/types";
+import { useConfirmExtended } from "@/hooks/use-confirm-extended";
 import { useTRPC } from "@/trpc/client";
 import { useSuspenseQuery } from "@tanstack/react-query";
 
@@ -97,13 +97,13 @@ export const NewRequestForm = ({
   );
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
 
-  const [SeriesUpdateDialog, confirmSeriesUpdate] = useConfirm(
-    "Update Series",
-    "Do you want to update the entire series or occurrence?",
-    true,
-    "Update occurrence",
-    "Update series"
-  );
+  const [SeriesUpdateDialog, confirmSeriesUpdate] = useConfirmExtended({
+    title: "Update Series",
+    message: "Do you want to update the entire series or occurrence?",
+    update: true,
+    primaryText: "Update occurrence",
+    secondaryText: "Update series",
+  });
 
   const { data: serviceDays } = useSuspenseQuery(
     trpc.services.getServices.queryOptions({
@@ -315,13 +315,13 @@ export const NewRequestForm = ({
       const result = await confirmSeriesUpdate();
 
       // Handle the three possible results
-      if (result === "cancel") {
+      if (result.action === "cancel") {
         // User clicked cancel - do nothing
         return;
-      } else if (result === "primary") {
+      } else if (result.action === "primary") {
         // User clicked "Update occurrence" - update only this one
         updateSeries = false;
-      } else if (result === "secondary") {
+      } else if (result.action === "secondary") {
         // User clicked "Update series" - update entire series
         updateSeries = true;
       }

@@ -10,23 +10,18 @@ export const passwordStrength = (password: string): PasswordFeedback => {
 
   if (password.length < PASSWORD_LENGTH) {
     errors.push("be at least 8 characters");
-    console.log(errors);
   }
   if (!/[a-z]/.test(password)) {
     errors.push("have at least one lowercase letter");
-    console.log(errors);
   }
   if (!/[A-Z]/.test(password)) {
     errors.push("have at least one uppercase letter");
-    console.log(errors);
   }
   if (!/\d/.test(password)) {
     errors.push("have at least one number");
-    console.log(errors);
   }
   if (!/[\W_]/.test(password)) {
     errors.push("have at least a special character");
-    console.log(errors);
   }
 
   if (errors.length === 0) return { strength: "strong", errors };

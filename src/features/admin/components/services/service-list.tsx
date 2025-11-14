@@ -11,7 +11,6 @@ import {
 import { toast } from "sonner";
 
 import { CustomPagination } from "@/components/custom-pagination";
-import { useConfirm } from "@/hooks/use-confirm";
 import { DAYS_OF_WEEK } from "@/lib/types";
 import { formatTime } from "@/lib/utils";
 import { useServiceDayParams } from "../../hooks/use-serviceDay-params";
@@ -40,6 +39,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useConfirmExtended } from "@/hooks/use-confirm-extended";
 
 interface ServiceListProps {
   serviceDaysData: GetPaginatedServiceType;
@@ -56,21 +56,24 @@ export const ServiceList = ({
   // onDelete,
   onShowForm,
 }: ServiceListProps) => {
-  const [DeleteDialog, confirmDelete] = useConfirm(
-    "Delete Service",
-    "Are you sure you want to delete this service? This action cannot be undone."
-  );
+  const [DeleteDialog, confirmDelete] = useConfirmExtended({
+    title: "Delete Service",
+    message:
+      "Are you sure you want to delete this service? This action cannot be undone.",
+  });
 
-  const [ArchiveDialog, confirmArchive] = useConfirm(
-    "Archive Service",
-    "Are you sure you want to archive this service? You will only be able to reactivate this service after 24 hours."
-  );
+  const [ArchiveDialog, confirmArchive] = useConfirmExtended({
+    title: "Archive Service",
+    message:
+      "Are you sure you want to archive this service? You will only be able to reactivate this service after 24 hours.",
+  });
 
-  const [RestoreDialog, confirmRestore] = useConfirm(
-    "Restore Service",
-    "Are you sure you want to restore this service? You can only reactivate this service after 24 hours of being deactivated.",
-    true
-  );
+  const [RestoreDialog, confirmRestore] = useConfirmExtended({
+    title: "Restore Service",
+    message:
+      "Are you sure you want to restore this service? You can only reactivate this service after 24 hours of being deactivated.",
+    update: true,
+  });
 
   const [params, setParams] = useServiceDayParams();
   const { page, pageSize, status } = params;
@@ -84,7 +87,7 @@ export const ServiceList = ({
 
   const handleDelete = async (serviceId: string) => {
     const result = await confirmDelete();
-    if (result !== "confirm") return;
+    if (result.action !== "confirm") return;
 
     try {
       const response = await fetch(`/api/service-days?id=${serviceId}`, {
@@ -109,7 +112,7 @@ export const ServiceList = ({
     const confirmFn = currentStatus ? confirmArchive : confirmRestore;
 
     const result = await confirmFn();
-    if (result !== "confirm") return;
+    if (result.action !== "confirm") return;
 
     try {
       const response = await fetch(`/api/service-days?id=${serviceId}`, {

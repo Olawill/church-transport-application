@@ -1,10 +1,10 @@
 import { UserRole } from "@/generated/prisma";
 import { redirect } from "next/navigation";
-import { Suspense } from "react";
+// import { Suspense } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 
 import { ErrorState } from "@/components/screen-states/error-state";
-import { LoadingState } from "@/components/screen-states/loading-state";
+// import { LoadingState } from "@/components/screen-states/loading-state";
 import { NewUserCreationForm } from "@/features/admin/components/new-user-creation";
 import { requireAuth } from "@/lib/session/server-session";
 import { HydrateClient, prefetch, trpc } from "@/trpc/server";
@@ -36,16 +36,16 @@ const NewUserPage = async () => {
           />
         }
       >
-        <Suspense
+        {/* <Suspense
           fallback={
             <LoadingState
               title="New User Form Loading..."
               description="Please wait while we load your form."
             />
           }
-        >
-          <NewUserCreationForm />
-        </Suspense>
+        > */}
+        <NewUserCreationForm />
+        {/* </Suspense> */}
       </ErrorBoundary>
     </HydrateClient>
   );

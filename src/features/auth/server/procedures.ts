@@ -38,12 +38,24 @@ export const authRouter = createTRPCRouter({
       });
     }
 
+    const isFirstTimeLoginIn = !user.firstLoginAt;
+
     const data = await auth.api.signInEmail({
       body: { email, password, callbackURL: "/dashboard" },
       headers: await headers(),
     });
 
-    return data;
+    // Update firstLoginAt if isFirstTimeLogin is true
+    if (isFirstTimeLoginIn) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          firstLoginAt: new Date(),
+        },
+      });
+    }
+
+    return { ...data, isFirstTimeLoginIn };
   }),
 
   register: publicProcedure.input(signupSchema).mutation(async ({ input }) => {

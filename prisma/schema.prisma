@@ -156,6 +156,8 @@ model User {
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
 
+  firstLoginAt        DateTime?
+
   emailNotifications  Boolean       @default(false)
   whatsAppNotifications Boolean     @default(false)
   smsNotifications    Boolean       @default(false)
@@ -169,8 +171,23 @@ model User {
   otps                OTP[]
   subscription        Subscription?
 
+  twoFactor           TwoFactor?
+
   @@index([email])
   @@map("users")
+}
+
+model TwoFactor {
+  id                  String       @id @default(cuid())
+
+  userId              String
+  user                User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  secret              String?
+  backupCodes         String?
+
+  @@unique([userId])
+  @@map("twoFactor")
 }
 
 model Verification {

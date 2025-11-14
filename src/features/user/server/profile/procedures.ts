@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { prisma } from "@/lib/db";
 import { AnalyticsService } from "@/lib/analytics";
+import { prisma } from "@/lib/db";
 
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
@@ -122,5 +122,45 @@ export const userProfileRouter = createTRPCRouter({
       });
 
       return updatedUser;
+    }),
+
+  updateContact: protectedProcedure
+    .input(
+      z.object({
+        phoneNumber: z.string(),
+        whatsappNumber: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { phoneNumber, whatsappNumber } = input;
+
+      try {
+        const updatedUser = await prisma.user.update({
+          where: { id: ctx.auth.user.id },
+          data: { phoneNumber, whatsappNumber },
+          select: { id: true, phoneNumber: true, whatsappNumber: true },
+        });
+
+        // Track analytics
+        await AnalyticsService.trackEvent({
+          eventType: "profile_update",
+          userId: ctx.auth.user.id,
+          metadata: {
+            fields: [
+              "phoneNumber",
+              whatsappNumber ? "whatsappNumber" : null,
+            ].filter(Boolean),
+            oauthCompletion: true,
+          },
+        });
+
+        return { ...updatedUser, success: true };
+      } catch (error) {
+        console.error("Failed to update contact:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update contact information",
+        });
+      }
     }),
 });

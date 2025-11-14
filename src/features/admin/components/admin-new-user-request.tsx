@@ -66,7 +66,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { CustomFormLabel } from "@/components/custom-form-label";
 import { PickUpDropOffField } from "@/features/requests/components/pickup-dropoff-field";
 import { UserType } from "@/features/users/types";
-import { useConfirm } from "@/hooks/use-confirm";
+import { useConfirmExtended } from "@/hooks/use-confirm-extended";
 import { Address } from "@/lib/types";
 import {
   cn,
@@ -130,13 +130,13 @@ const AdminNewUserRequest = ({
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
 
-  const [SeriesUpdateDialog, confirmSeriesUpdate] = useConfirm(
-    "Update Series",
-    "Do you want to update the entire occurrence?",
-    true,
-    "Update occurrence",
-    "Update series"
-  );
+  const [SeriesUpdateDialog, confirmSeriesUpdate] = useConfirmExtended({
+    title: "Update Series",
+    message: "Do you want to update the entire occurrence?",
+    update: true,
+    primaryText: "Update occurrence",
+    secondaryText: "Update series",
+  });
 
   const { data: serviceDays, isLoading: servicesLoading } = useSuspenseQuery(
     trpc.services.getServices.queryOptions({
@@ -370,13 +370,13 @@ const AdminNewUserRequest = ({
       const result = await confirmSeriesUpdate();
 
       // Handle the three possible results
-      if (result === "cancel") {
+      if (result.action === "cancel") {
         // User clicked cancel - do nothing
         return;
-      } else if (result === "primary") {
+      } else if (result.action === "primary") {
         // User clicked "Update occurrence" - update only this one
         updateSeries = false;
-      } else if (result === "secondary") {
+      } else if (result.action === "secondary") {
         // User clicked "Update series" - update entire series
         updateSeries = true;
       }

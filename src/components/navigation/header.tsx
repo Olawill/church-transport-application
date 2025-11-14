@@ -189,7 +189,10 @@ export const Header = ({
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    className="cursor-pointer  font-semibold"
+                    className={cn(
+                      "cursor-pointer  font-semibold mb-1",
+                      pathname === "/profile" && "bg-accent"
+                    )}
                     onClick={() => router.push("/profile")}
                   >
                     <UserIcon className="size-4" />
@@ -199,7 +202,10 @@ export const Header = ({
                     session.user.role === UserRole.OWNER) && (
                     <>
                       <DropdownMenuItem
-                        className="cursor-pointer font-semibold"
+                        className={cn(
+                          "cursor-pointer  font-semibold",
+                          pathname === "/credentials" && "bg-accent"
+                        )}
                         onClick={() => router.push("/credentials")}
                       >
                         <KeyIcon className="size-4" />

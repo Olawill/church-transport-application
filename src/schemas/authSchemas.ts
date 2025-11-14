@@ -9,10 +9,23 @@ import {
 import z from "zod";
 import { addressUpdateSchema } from "./adminCreateNewUserSchema";
 
-export const loginSchema = z.object({
+export const passwordResetSchema = z.object({
   email: z.email({
     message: "Email is required",
   }),
+});
+
+export type PasswordResetValues = z.infer<typeof passwordResetSchema>;
+
+export const twoFactorToggleSchema = z.object({
+  password: z.string().min(1, {
+    message: "Password is required for authentication",
+  }),
+});
+
+export type TwoFactorToggleValues = z.infer<typeof twoFactorToggleSchema>;
+
+export const loginSchema = passwordResetSchema.extend({
   password: z.string().min(1, {
     message: "Password is required for authentication",
   }),
@@ -98,7 +111,7 @@ export const signupSchema = z
 export type SignupSchema = z.infer<typeof signupSchema>;
 
 export const profileContactSchema = z.object({
-  phone: z
+  phoneNumber: z
     .string()
     .trim()
     .min(1, "Phone number is required")

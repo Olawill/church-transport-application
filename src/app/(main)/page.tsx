@@ -1,10 +1,10 @@
-import { getAuthSession } from "@/lib/session/server-session";
+import { requireAuth } from "@/lib/session/server-session";
 import { redirect } from "next/navigation";
 
 const Home = async () => {
-  const session = await getAuthSession();
+  const session = await requireAuth();
 
-  if (session?.user) {
+  if (session) {
     redirect("/dashboard");
   } else {
     redirect("/login");

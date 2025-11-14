@@ -18,7 +18,6 @@ import {
   updateBranch,
 } from "@/actions/getOrgInfo";
 import { SystemBranchInfo, SystemConfig } from "@/generated/prisma";
-import { useConfirm } from "@/hooks/use-confirm";
 import {
   AddressUpdateSchema,
   addressUpdateSchema,
@@ -37,6 +36,7 @@ import { ProfileManagementSkeleton } from "@/features/profile/components/profile
 import { ProfileTab } from "@/features/profile/components/profile-tab";
 import { SecurityTab } from "@/features/profile/components/security-tab";
 import { GetUserAddress } from "@/features/user/types";
+import { useConfirmExtended } from "@/hooks/use-confirm-extended";
 import { useProfileParams } from "../hooks/use-profile-params";
 
 export interface Address {
@@ -110,10 +110,11 @@ export const ProfileManagement = () => {
     )
   );
 
-  const [DeleteAddressDialog, confirmDeleteAddress] = useConfirm(
-    "Delete Address",
-    "Are you sure you want to delete this address? This is irreversible."
-  );
+  const [DeleteAddressDialog, confirmDeleteAddress] = useConfirmExtended({
+    title: "Delete Address",
+    message:
+      "Are you sure you want to delete this address? This is irreversible.",
+  });
 
   const profileForm = useForm({
     resolver: zodResolver(profileUpdateSchema),
@@ -143,7 +144,7 @@ export const ProfileManagement = () => {
       city: editingAddress?.city || "",
       province: editingAddress?.province || "",
       postalCode: editingAddress?.postalCode || "",
-      country: editingAddress?.country || "Canada",
+      country: editingAddress?.country || "CA",
     },
   });
 
@@ -156,7 +157,7 @@ export const ProfileManagement = () => {
       city: selectedBranchAddress?.churchCity || "",
       province: selectedBranchAddress?.churchProvince || "",
       postalCode: selectedBranchAddress?.churchPostalCode || "",
-      country: selectedBranchAddress?.churchCountry || "",
+      country: selectedBranchAddress?.churchCountry || "CA",
       churchPhone: selectedBranchAddress?.churchPhone || "",
       requestCutOffInHrs: selectedBranchAddress?.requestCutOffInHrs || "",
       defaultMaxDistance:
@@ -404,7 +405,7 @@ export const ProfileManagement = () => {
   const handleDeleteAddress = async (addressId: string) => {
     const result = await confirmDeleteAddress();
 
-    if (result !== "confirm") return;
+    if (result.action !== "confirm") return;
 
     try {
       const response = await fetch(`/api/user/addresses/${addressId}`, {
@@ -424,7 +425,7 @@ export const ProfileManagement = () => {
   const handleDeleteBranchAddress = async (addressId: string) => {
     const result = await confirmDeleteAddress();
 
-    if (result !== "confirm") return;
+    if (result.action !== "confirm") return;
 
     try {
       const response = await deleteBranch(addressId);

@@ -30,8 +30,15 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 
-import { signIn } from "@/lib/auth-client";
-import { loginSchema, LoginSchema } from "@/schemas/authSchemas";
+import { env } from "@/env/client";
+import { useConfirmExtended } from "@/hooks/use-confirm-extended";
+import { requestPasswordReset, signIn } from "@/lib/auth-client";
+import {
+  loginSchema,
+  LoginSchema,
+  passwordResetSchema,
+  PasswordResetValues,
+} from "@/schemas/authSchemas";
 import { useTRPC } from "@/trpc/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -42,15 +49,35 @@ export const LoginForm = () => {
 
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect") || "/dashboard";
+  const passwordReset = searchParams.get("passwordReset");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
+  const [EnableTwoFactorDialog, confirmEnableTwoFactor] = useConfirmExtended({
+    title: "Enable 2FA",
+    message:
+      "Do you want to enable Two-Factor Authentication? This adds an extra layer of security to your account.",
+    update: true,
+    cancelText: "Skip",
+    primaryText: "Enable 2FA",
+  });
+
   const login = useMutation(
     trpc.auth.login.mutationOptions({
-      onSuccess: async () => {
+      onSuccess: async (data) => {
+        // Check if this is users first time logging in.
+        const firstLogin = data.isFirstTimeLoginIn;
+
+        if (firstLogin) {
+          const result = await confirmEnableTwoFactor();
+
+          if (result.action === "confirm") {
+            console.log("Enable 2FA"); // TODO: Finish 2FA and also on profiles page (Also, add ability to regenerate backup codes.)
+          }
+        }
         // await queryClient.invalidateQueries(trpc.auth.session.queryOptions());
         toast.success("Logged in successfully");
         router.push(redirectUrl as Route);
@@ -93,10 +120,11 @@ export const LoginForm = () => {
     await signIn.social(
       {
         provider,
-        callbackURL: "/dashboard",
+        callbackURL: "/",
       },
       {
-        onSuccess: () => {
+        onSuccess: (data) => {
+          console.log({ data });
           setLoading(false);
           setOauthLoading(null);
         },
@@ -109,187 +137,325 @@ export const LoginForm = () => {
     );
   };
 
+  const handleReset = () => {
+    const params = new URLSearchParams(searchParams);
+    params.set("passwordReset", "true");
+    router.push(`?${params.toString()}`);
+  };
+
+  const userPassword = form.watch("password");
+
   return (
-    <Card className="w-full max-w-md shadow-lg">
-      <CardHeader className="space-y-2 text-center">
-        <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
-        <CardDescription>Sign in to access your account</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* OAuth Sign-in Buttons */}
-        <div className="space-y-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => handleOAuthSignIn("google")}
-            disabled={loading || oauthLoading !== null}
-            className="w-full relative h-11 bg-white hover:bg-gray-50"
-          >
-            {oauthLoading === "google" ? (
-              <>
-                <Loader className="absolute left-3 size-5 animate-spin" />
-                Connecting to Google
-              </>
-            ) : (
-              <>
-                <FcGoogle className="absolute left-3 size-5" />
-                <span>Continue with Google</span>
-              </>
-            )}
-          </Button>
+    <>
+      <EnableTwoFactorDialog />
 
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => handleOAuthSignIn("facebook")}
-            disabled={loading || oauthLoading !== null}
-            className="w-full relative h-11 bg-white hover:bg-gray-50"
-          >
-            {oauthLoading === "facebook" ? (
-              <>
-                <Loader className="absolute left-3 size-5 animate-spin" />
-                Connecting to Facebook
-              </>
-            ) : (
-              <>
-                <Icon
-                  icon="logos:facebook"
-                  className="absolute left-3 size-5"
-                  width={20}
-                  height={20}
-                />
+      <Card className="w-full max-w-md mx-auto shadow-lg transition-all duration-300">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold">
+            {passwordReset ? "Reset Your Password" : "Welcome Back"}
+          </CardTitle>
+          <CardDescription>
+            {passwordReset
+              ? "Enter your email to reset your password"
+              : "Sign in to access your account"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6 w-full">
+          {!passwordReset && (
+            <>
+              {/* OAuth Sign-in Buttons */}
+              <div className="space-y-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleOAuthSignIn("google")}
+                  disabled={loading || oauthLoading !== null}
+                  className="w-full relative h-11 bg-white hover:bg-gray-50"
+                >
+                  {oauthLoading === "google" ? (
+                    <>
+                      <Loader className="absolute left-3 size-5 animate-spin" />
+                      Connecting to Google
+                    </>
+                  ) : (
+                    <>
+                      <FcGoogle className="absolute left-3 size-5" />
+                      <span>Continue with Google</span>
+                    </>
+                  )}
+                </Button>
 
-                <span>Continue with Facebook</span>
-              </>
-            )}
-          </Button>
-        </div>
-
-        {/* Divider */}
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">
-              Or continue with email
-            </span>
-          </div>
-        </div>
-
-        {!!error && (
-          <Alert className="bg-destructive/10 border-none">
-            <OctagonAlertIcon className="size-4 !text-destructive" />
-            <p className="text-xs break-words !whitespace-normal">{error}</p>
-          </Alert>
-        )}
-
-        {/* Email/Password Form */}
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem className="space-y-2">
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      id="email"
-                      name="email"
-                      type="email"
-                      placeholder="Enter your email"
-                      disabled={login.isPending}
-                    />
-                  </FormControl>
-                  <div className="min-h-[1.25rem]">
-                    <FormMessage />
-                  </div>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem className="space-y-2">
-                  <FormLabel>
-                    Password
-                    <Link
-                      href="/"
-                      className="ml-auto inline-block text-sm font-light underline-offset-4 hover:underline hover:text-blue-500"
-                    >
-                      Forgot your password?
-                    </Link>
-                  </FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input
-                        {...field}
-                        id="password"
-                        name="password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Enter your password"
-                        disabled={login.isPending}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleOAuthSignIn("facebook")}
+                  disabled={loading || oauthLoading !== null}
+                  className="w-full relative h-11 bg-white hover:bg-gray-50"
+                >
+                  {oauthLoading === "facebook" ? (
+                    <>
+                      <Loader className="absolute left-3 size-5 animate-spin" />
+                      Connecting to Facebook
+                    </>
+                  ) : (
+                    <>
+                      <Icon
+                        icon="logos:facebook"
+                        className="absolute left-3 size-5"
+                        width={20}
+                        height={20}
                       />
 
-                      <Button
-                        variant="ghost"
-                        type="button"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-gray-600"
-                        onClick={() => setShowPassword(!showPassword)}
-                        disabled={login.isPending || !form.watch("password")}
-                      >
-                        {showPassword ? (
-                          <Eye className="h-4 w-4" />
-                        ) : (
-                          <EyeClosed className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </FormControl>
-                  <div className="min-h-[1.25rem]">
-                    <FormMessage />
-                  </div>
-                </FormItem>
-              )}
-            />
+                      <span>Continue with Facebook</span>
+                    </>
+                  )}
+                </Button>
+              </div>
 
-            <Button
-              type="submit"
-              className="w-full mt-6"
-              disabled={login.isPending}
-            >
-              {login.isPending ? (
-                <>
-                  <Loader className="h-4 w-4" />
-                  Signing in...
-                </>
-              ) : (
-                <>
-                  <LogIn className="h-4 w-4" />
-                  Sign In
-                </>
-              )}
-            </Button>
-          </form>
-        </Form>
+              {/* Divider */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">
+                    Or continue with email
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
 
-        <div className="mt-6 text-center">
-          <p className="text-sm">
-            Don&apos;t have an account?{" "}
-            <Link
-              href="/signup"
-              className="font-medium text-blue-600 hover:text-blue-500"
-            >
-              Sign up
-            </Link>
-          </p>
-        </div>
-      </CardContent>
-    </Card>
+          {!!error && (
+            <Alert className="bg-destructive/10 border-none">
+              <OctagonAlertIcon className="size-4 !text-destructive" />
+              <p className="text-xs break-words !whitespace-normal">{error}</p>
+            </Alert>
+          )}
+
+          {passwordReset ? (
+            <PasswordResetForm setError={setError} />
+          ) : (
+            // Email/Password Form
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-2"
+              >
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1">
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          id="email"
+                          name="email"
+                          type="email"
+                          placeholder="Enter your email"
+                          disabled={login.isPending}
+                        />
+                      </FormControl>
+                      <div className="min-h-[1.25rem]">
+                        <FormMessage />
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1">
+                      <FormLabel>
+                        Password
+                        <Button
+                          type="button"
+                          variant="link"
+                          onClick={handleReset}
+                          className="ml-auto inline-block text-sm font-light underline-offset-4 hover:text-blue-500 pr-0"
+                        >
+                          Forgot your password?
+                        </Button>
+                      </FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            {...field}
+                            id="password"
+                            name="password"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Enter your password"
+                            disabled={login.isPending}
+                          />
+
+                          <Button
+                            variant="ghost"
+                            type="button"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-gray-600"
+                            onClick={() => setShowPassword(!showPassword)}
+                            disabled={
+                              login.isPending || !form.watch("password")
+                            }
+                          >
+                            {showPassword ? (
+                              <Eye className="size-4" />
+                            ) : (
+                              <EyeClosed className="size-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </FormControl>
+                      <div className="min-h-[1.25rem]">
+                        <FormMessage />
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
+                <Button
+                  type="submit"
+                  className="w-full mt-1"
+                  disabled={login.isPending}
+                >
+                  {login.isPending ? (
+                    <>
+                      <Loader className="size-4" />
+                      Signing in...
+                    </>
+                  ) : (
+                    <>
+                      <LogIn className="size-4" />
+                      Sign In
+                    </>
+                  )}
+                </Button>
+              </form>
+            </Form>
+          )}
+
+          <div className="mt-2 text-center">
+            <p className="text-sm">
+              Don&apos;t have an account?{" "}
+              <Link
+                href="/signup"
+                prefetch
+                className="font-medium text-blue-600 hover:text-blue-500"
+              >
+                Sign up
+              </Link>
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </>
+  );
+};
+
+const PasswordResetForm = ({
+  setError,
+}: {
+  setError: (value: string | null) => void;
+}) => {
+  const [resettingPassword, setResettingPassword] = useState(false);
+
+  const resetPasswordForm = useForm<PasswordResetValues>({
+    resolver: zodResolver(passwordResetSchema),
+    defaultValues: {
+      email: "",
+    },
+  });
+
+  const onSubmit = async (values: PasswordResetValues) => {
+    setError(null);
+    setResettingPassword(true);
+
+    const validatedFields = passwordResetSchema.safeParse(values);
+
+    if (!validatedFields.success) {
+      toast.error("Invalid email");
+      return;
+    }
+
+    const { email } = validatedFields.data;
+
+    requestPasswordReset(
+      {
+        email,
+        redirectTo: `${env.NEXT_PUBLIC_APP_URL}/reset-password`,
+      },
+      {
+        onSuccess: (data) => {
+          setResettingPassword(false);
+          setError(null);
+          console.log(data);
+        },
+        onError: (ctx) => {
+          setResettingPassword(false);
+          setError(ctx.error.message);
+          console.log(ctx.error.message);
+        },
+      }
+    );
+  };
+
+  return (
+    <Form {...resetPasswordForm}>
+      <form
+        onSubmit={resetPasswordForm.handleSubmit(onSubmit)}
+        className="flex flex-col gap-4 w-full min-w-sm mx-auto"
+      >
+        <FormField
+          control={resetPasswordForm.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem className="space-y-1">
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  disabled={resettingPassword}
+                />
+              </FormControl>
+              <div className="min-h-[1.25rem]">
+                <FormMessage />
+              </div>
+            </FormItem>
+          )}
+        />
+
+        <Button type="submit" className="w-full" disabled={resettingPassword}>
+          {resettingPassword ? (
+            <>
+              <Loader className="size-4" />
+              Resetting Password...
+            </>
+          ) : (
+            <>
+              <LogIn className="size-4" />
+              Reset Password
+            </>
+          )}
+        </Button>
+
+        <Button
+          type="button"
+          className="w-full"
+          variant="outline"
+          disabled={resettingPassword}
+          asChild
+        >
+          <Link href="/login">Back to Login</Link>
+        </Button>
+      </form>
+    </Form>
   );
 };

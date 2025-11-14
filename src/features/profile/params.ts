@@ -4,4 +4,7 @@ export const profileParams = {
   tab: parseAsString
     .withDefault("profile")
     .withOptions({ clearOnDefault: true }),
+  securityAction: parseAsString
+    .withDefault("Change Password")
+    .withOptions({ clearOnDefault: true }),
 };

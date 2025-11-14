@@ -1,14 +1,11 @@
 import { requireNoAuth } from "@/lib/session/server-session";
-import { Suspense } from "react";
+// import { Suspense } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 
 import { HydrateClient, prefetch, trpc } from "@/trpc/server";
 
 import { ErrorState } from "@/components/screen-states/error-state";
-import {
-  SignupForm,
-  SignupFormSkeleton,
-} from "@/features/auth/components/signup-form";
+import { SignupForm } from "@/features/auth/components/signup-form";
 
 const SignupPage = async () => {
   await requireNoAuth();
@@ -25,9 +22,9 @@ const SignupPage = async () => {
           />
         }
       >
-        <Suspense fallback={<SignupFormSkeleton />}>
-          <SignupForm />
-        </Suspense>
+        {/* <Suspense fallback={<SignupFormSkeleton />}> */}
+        <SignupForm />
+        {/* </Suspense> */}
       </ErrorBoundary>
     </HydrateClient>
   );

@@ -170,7 +170,7 @@ export const SignupForm = () => {
 
   return (
     <Card className="w-full max-w-2xl shadow-lg">
-      <CardHeader className="space-y-2 text-center">
+      <CardHeader className="text-center">
         <CardTitle className="text-2xl font-bold">Join Our Community</CardTitle>
         <CardDescription>
           Create an account to request pickup services

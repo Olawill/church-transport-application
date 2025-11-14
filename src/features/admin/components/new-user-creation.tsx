@@ -55,7 +55,7 @@ export const NewUserCreationForm = () => {
       city: "",
       province: "",
       postalCode: "",
-      country: "",
+      country: "CA",
       password: "",
       serviceDayId: "",
       isDropOff: false,

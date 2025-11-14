@@ -1,5 +1,4 @@
 import { SearchParams } from "nuqs/server";
-import { Suspense } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 
 import { ErrorState } from "@/components/screen-states/error-state";
@@ -12,6 +11,7 @@ import { LoadingState } from "@/components/screen-states/loading-state";
 import { UserRole } from "@/generated/prisma";
 import { requireAuth } from "@/lib/session/server-session";
 import { HydrateClient, prefetch, trpc } from "@/trpc/server";
+import { Suspense } from "react";
 
 // export const dynamic = "force-dynamic";
 type Props = {

@@ -57,7 +57,7 @@ import {
 
 import { PAGINATION } from "@/config/constants";
 import { useUsersParams } from "@/features/users/hooks/use-users-params";
-import { useConfirm } from "@/hooks/use-confirm";
+import { useConfirmExtended } from "@/hooks/use-confirm-extended";
 import { AnalyticsService } from "@/lib/analytics";
 import { useTRPC } from "@/trpc/client";
 import { CustomPagination } from "../../../components/custom-pagination";
@@ -72,11 +72,11 @@ export const UserManagement = () => {
   const [nameInput, setNameInput] = useState(search || "");
   const [debouncedNameInput] = useDebounce(search, 300);
 
-  const [UpdateRoleDialog, confirmUpdateRole] = useConfirm(
-    "Change role",
-    "Are you sure you want to change this member's role?",
-    true
-  );
+  const [UpdateRoleDialog, confirmUpdateRole] = useConfirmExtended({
+    title: "Change role",
+    message: "Are you sure you want to change this member's role?",
+    update: true,
+  });
 
   const { data: usersData, isLoading: loading } = useSuspenseQuery(
     trpc.users.getPaginatedUsers.queryOptions({
@@ -132,7 +132,7 @@ export const UserManagement = () => {
   const handleRoleUpdate = async (userId: string, newRole: string) => {
     const result = await confirmUpdateRole();
 
-    if (result !== "confirm") return;
+    if (result.action !== "confirm") return;
 
     try {
       const response = await fetch("/api/users", {
