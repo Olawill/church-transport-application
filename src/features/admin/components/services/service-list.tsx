@@ -40,6 +40,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTRPC } from "@/trpc/client";
+import { canRestore, getRestoreTime } from "../../utils";
 
 interface ServiceListProps {
   serviceDaysData: GetPaginatedServiceType;
@@ -72,8 +75,12 @@ export const ServiceList = ({
     true
   );
 
+  const trpc = useTRPC();
+
   const [params, setParams] = useServiceDayParams();
   const { page, pageSize, status } = params;
+
+  const queryClient = useQueryClient();
 
   // Extract data from query result
   const serviceDays = serviceDaysData?.serviceDays || [];
@@ -82,53 +89,77 @@ export const ServiceList = ({
   const hasNextPage = serviceDaysData?.hasNextPage || false;
   const hasPreviousPage = serviceDaysData?.hasPreviousPage || false;
 
+  // Logic to Delete, Archive or Restore
+  const deleteService = useMutation(
+    trpc.services.deleteService.mutationOptions({
+      onSuccess: (data) => {
+        toast.success(`${data.deletedService.name} deleted successfully!`);
+
+        queryClient.invalidateQueries(
+          trpc.services.getPaginatedServices.queryOptions({})
+        );
+
+        queryClient.invalidateQueries(
+          trpc.services.getServices.queryOptions({})
+        );
+      },
+      onError: (error) => {
+        toast.error(error.message || `Failed to deleted service`);
+      },
+    })
+  );
+
+  const archiveService = useMutation(
+    trpc.services.toggleServiceActive.mutationOptions({
+      onSuccess: (data) => {
+        toast.success(
+          `${data.updatedService.name} has been ${data.updatedService.isActive ? "restored" : "deactivated"} successfully!`
+        );
+
+        queryClient.invalidateQueries(
+          trpc.services.getPaginatedServices.queryOptions({})
+        );
+
+        queryClient.invalidateQueries(
+          trpc.services.getServices.queryOptions({})
+        );
+      },
+      onError: (error) => {
+        toast.error(error.message || `Failed to update service status`);
+      },
+    })
+  );
+
   const handleDelete = async (serviceId: string) => {
     const result = await confirmDelete();
     if (result !== "confirm") return;
 
-    try {
-      const response = await fetch(`/api/service-days?id=${serviceId}`, {
-        method: "DELETE",
-      });
+    await deleteService.mutateAsync({ id: serviceId });
 
-      if (response.ok) {
-        toast.success("Service deleted successfully");
-        // onDelete(); Invalidate service Days
-      } else {
-        toast.error("Failed to delete service");
-      }
-    } catch (error) {
-      console.error("Error deleting service:", error);
-      toast.error("An error occurred");
-    }
+    // try {
+    //   const response = await fetch(`/api/service-days?id=${serviceId}`, {
+    //     method: "DELETE",
+    //   });
+
+    //   if (response.ok) {
+    //     toast.success("Service deleted successfully");
+    //     // onDelete(); Invalidate service Days
+    //   } else {
+    //     toast.error("Failed to delete service");
+    //   }
+    // } catch (error) {
+    //   console.error("Error deleting service:", error);
+    //   toast.error("An error occurred");
+    // }
   };
 
   const handleArchive = async (serviceId: string, currentStatus: boolean) => {
-    const action = currentStatus ? "archive" : "restore";
-
     const confirmFn = currentStatus ? confirmArchive : confirmRestore;
 
     const result = await confirmFn();
     if (result !== "confirm") return;
 
-    try {
-      const response = await fetch(`/api/service-days?id=${serviceId}`, {
-        method: "PATCH",
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        toast.success(data.message || `Service ${action}d successfully`);
-        //onDelete(); // Invalidate service days
-      } else {
-        const error = await response.json();
-        toast.error(error.error || `Failed to ${action} service`);
-      }
-    } catch (error) {
-      const act = action.slice(0, -1);
-      console.error(`Error ${act}ing service:`, error);
-      toast.error("An error occurred");
-    }
+    await archiveService.mutateAsync({ id: serviceId });
   };
 
   const getDayName = (dayOfWeek: number) => {
@@ -162,27 +193,6 @@ export const ServiceList = ({
       default:
         return category;
     }
-  };
-
-  const canRestore = (service: GetServiceType) => {
-    if (service.isActive) return true; // Can always archive
-
-    const now = new Date();
-    const lastUpdated = new Date(service.updatedAt);
-    const hoursSinceUpdate =
-      (now.getTime() - lastUpdated.getTime()) / (1000 * 60 * 60);
-
-    return hoursSinceUpdate >= 24;
-  };
-
-  const getRestoreTime = (service: GetServiceType) => {
-    const now = new Date();
-    const lastUpdated = new Date(service.updatedAt);
-    const hoursSinceUpdate =
-      (now.getTime() - lastUpdated.getTime()) / (1000 * 60 * 60);
-    const hoursRemaining = Math.ceil(24 - hoursSinceUpdate);
-
-    return hoursRemaining;
   };
 
   return (
