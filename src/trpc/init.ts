@@ -14,8 +14,9 @@ import { initTRPC, TRPCError } from "@trpc/server";
 
 export const createTRPCContext = cache(
   async (opts?: FetchCreateContextFnOptions) => {
-    // return { userId: "user_123" };
-    return { req: opts?.req };
+    const session = await getAuthSession();
+
+    return { req: opts?.req, session };
   }
 );
 
@@ -31,72 +32,62 @@ export const createCallerFactory = t.createCallerFactory;
 export const middleware = t.middleware;
 export const baseProcedure = t.procedure;
 
-// Request validation middleware - reusable
-const requestMiddleware = middleware(({ ctx, next }) => {
-  if (!ctx.req) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Request object not available",
-    });
-  }
-
-  return next({ ctx: { ...ctx, req: ctx.req } });
-});
-
 // Auth middleware
 const authMiddleware = middleware(async ({ ctx, next }) => {
-  const session = await getAuthSession();
-  if (!session) {
+  if (!ctx.session) {
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
   }
-  return next({ ctx: { ...ctx, auth: session } });
+  return next({ ctx: { ...ctx, auth: ctx.session } });
 });
 
 // Public rate limiting middleware (IP-based)
 const publicMiddleware = middleware(async ({ ctx, next }) => {
-  const decision = await ajPublic.protect(ctx.req!);
+  if (ctx.req) {
+    const decision = await ajPublic.protect(ctx.req!);
 
-  handleArcjetDecision(decision);
+    handleArcjetDecision(decision);
+  }
 
   return next({ ctx });
 });
 
 // Protected procedure with arcjet
-export const publicProcedure = baseProcedure
-  .use(requestMiddleware)
-  .use(publicMiddleware);
+export const publicProcedure = baseProcedure.use(publicMiddleware);
 
 // Protected rate limiting middleware (userId-based)
 export const protectedProcedure = baseProcedure
-  .use(requestMiddleware)
   .use(authMiddleware)
   .use(async ({ ctx, next }) => {
-    const userId = ctx.auth?.user?.id;
+    if (ctx.req) {
+      const userId = ctx.auth?.user?.id;
 
-    const decision = await ajProtected.protect(ctx.req!, {
-      userId,
-      requested: 1,
-    });
+      const decision = await ajProtected.protect(ctx.req!, {
+        userId,
+        requested: 1,
+      });
 
-    handleArcjetDecision(decision);
+      handleArcjetDecision(decision);
+    }
 
     return next({ ctx });
   });
 
 // Sensitive operations middleware (stricter limits: password changes, etc.)
-export const sensitiveProcedure = protectedProcedure.use(
-  async ({ ctx, next }) => {
-    const userId = ctx.auth?.user?.id;
+export const sensitiveProcedure = baseProcedure
+  .use(authMiddleware)
+  .use(async ({ ctx, next }) => {
+    if (ctx.req) {
+      const userId = ctx.auth?.user?.id;
 
-    const decision = await ajSensitive.protect(ctx.req!, {
-      userId,
-    });
+      const decision = await ajSensitive.protect(ctx.req!, {
+        userId,
+      });
 
-    handleArcjetDecision(decision);
+      handleArcjetDecision(decision);
+    }
 
     return next({ ctx });
-  }
-);
+  });
 
 export const protectedRoleProcedure = (role: UserRole | UserRole[]) =>
   protectedProcedure.use(async ({ ctx, next }) => {
