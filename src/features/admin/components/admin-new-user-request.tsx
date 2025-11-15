@@ -736,7 +736,7 @@ const AdminNewUserRequest = ({
             </div>
           </div>
 
-          <Card>
+          <Card className={cn(newRequestData && "shadow-none")}>
             <CardHeader>
               <CardTitle className="text-lg">Request Details</CardTitle>
               <CardDescription>
@@ -752,7 +752,7 @@ const AdminNewUserRequest = ({
                       ? newRequestForm.handleSubmit(handleUpdate)
                       : newRequestForm.handleSubmit(handleSubmit)
                   }
-                  className="space-y-6"
+                  className="space-y-6 w-full min-w-0"
                 >
                   {/* User Selection */}
                   <FormField
@@ -762,7 +762,7 @@ const AdminNewUserRequest = ({
                       <FormItem className="space-y-2">
                         <CustomFormLabel title="On Behalf of" />
                         <Popover open={usersOpen} onOpenChange={setUsersOpen}>
-                          <PopoverTrigger asChild>
+                          <PopoverTrigger asChild className="w-full">
                             <FormControl>
                               <Button
                                 variant="outline"
@@ -835,16 +835,16 @@ const AdminNewUserRequest = ({
                             {!newRequestData ? (
                               <>
                                 <span className="flex items-center space-x-2 text-sm text-gray-700">
-                                  <UserCheck className="h-4 w-4" />
+                                  <UserCheck className="size-4" />
                                   <span>{selectedUser.name}</span>
                                 </span>
-                                <span className="text-xs text-gray-500 dark:text-gray-200 mt-1">
+                                <span className="text-xs text-gray-500 dark:text-gray-900 mt-1">
                                   Please ensure this is the person you want to
                                   request a ride on behalf of
                                 </span>
                               </>
                             ) : (
-                              <span className="text-xs text-gray-500 dark:text-gray-200 mt-1">
+                              <span className="text-xs text-gray-500 dark:text-gray-900 mt-1">
                                 You cannot change the user for this request
                               </span>
                             )}
@@ -868,7 +868,7 @@ const AdminNewUserRequest = ({
                           open={userAddressesOpen}
                           onOpenChange={setUserAddressesOpen}
                         >
-                          <PopoverTrigger asChild>
+                          <PopoverTrigger asChild className="w-full">
                             <FormControl>
                               <Button
                                 variant="outline"
@@ -1046,18 +1046,26 @@ const AdminNewUserRequest = ({
                           }
                         >
                           <FormControl>
-                            <SelectTrigger className="w-full">
+                            <SelectTrigger
+                              className={cn(
+                                !newRequestData
+                                  ? "w-full"
+                                  : "max-w-[min(calc(100vw-4rem),430px)]"
+                              )}
+                            >
                               <SelectValue placeholder="Select pickup address" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
                             {selectedUser?.addresses?.map((address) => (
                               <SelectItem key={address.id} value={address.id}>
-                                <div className="flex items-center space-x-2">
-                                  <MapPin className="h-4 w-4" />
-                                  <span>{formatAddress(address)}</span>
+                                <div className="flex items-center space-x-2 overflow-hidden">
+                                  <MapPin className="size-4 shrink-0" />
+                                  <span className="truncate flex-1">
+                                    {formatAddress(address)}
+                                  </span>
                                   {address.isDefault && (
-                                    <span className="text-xs text-blue-600">
+                                    <span className="text-xs text-blue-600 shrink-0 whitespace-nowrap">
                                       (Default)
                                     </span>
                                   )}
@@ -1068,11 +1076,13 @@ const AdminNewUserRequest = ({
                         </Select>
                         {selectedAddress && (
                           <FormDescription className="mt-2 p-3 bg-gray-50 rounded-lg">
-                            <span className="flex items-center space-x-2 text-sm text-gray-700">
-                              <MapPin className="h-4 w-4" />
-                              <span>{formatAddress(selectedAddress)}</span>
+                            <span className="flex items-center space-x-2 text-sm text-gray-700 min-w-0">
+                              <MapPin className="size-4" />
+                              <span className="break-words">
+                                {formatAddress(selectedAddress)}
+                              </span>
                             </span>
-                            <span className="text-xs text-gray-500 dark:text-gray-200 mt-1">
+                            <span className="text-xs text-gray-500 dark:text-gray-900  mt-1 block">
                               Please ensure this address is correct before
                               submitting your request
                             </span>
@@ -1284,7 +1294,7 @@ const AdminNewUserRequest = ({
                             {...field}
                             id="notes"
                             placeholder="Any special instructions or requirements..."
-                            className="resize-none"
+                            className="resize-none w-full"
                             rows={5}
                           />
                         </FormControl>
@@ -1353,7 +1363,7 @@ const AdminNewUserRequest = ({
                         )
                       ) : (
                         <>
-                          <Send className="mr-2 h-4 w-4" />
+                          <Send className="size-4" />
                           {newRequestData ? "Update Request" : "Submit Request"}
                         </>
                       )}

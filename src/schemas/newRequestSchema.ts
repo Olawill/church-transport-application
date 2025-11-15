@@ -123,7 +123,7 @@ export const serverValidateRequest = async (
     isRecurring: boolean;
     endDate?: Date | string;
     serviceDayId: string;
-    serviceDayOfWeek: string;
+    serviceDayOfWeek?: string;
     requestDate: Date | string;
   },
   ctx: z.RefinementCtx
@@ -355,9 +355,9 @@ export const userPayloadSchema = z
     userId: z.string().optional(),
     requestId: z.string().optional(),
     serviceDayId: z.string().min(1),
-    serviceDayOfWeek: z.string().min(1),
+    serviceDayOfWeek: z.string().optional(),
     addressId: z.string(),
-    requestDate: z.string(),
+    requestDate: z.date(),
     notes: z.string().optional(),
     isPickUp: z.boolean(),
     isDropOff: z.boolean(),
@@ -365,6 +365,6 @@ export const userPayloadSchema = z
     numberOfGroup: z.number().int().min(2).max(10).nullable(),
     isRecurring: z.boolean(),
     updateSeries: z.boolean().optional(),
-    endDate: z.string().optional(),
+    endDate: z.date().optional(),
   })
   .superRefine(serverValidateRequest);

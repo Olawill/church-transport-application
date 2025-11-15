@@ -323,589 +323,600 @@ export const RequestHistory = () => {
     session?.user?.role === UserRole.TRANSPORTATION_TEAM;
 
   return (
-    <div className="space-y-6 w-full">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold">
-            {isUser ? "My Ride Requests" : "All Ride Requests"}
-          </h1>
-          <p className="mt-1">
-            {isUser
-              ? "View and manage your transportation requests"
-              : "Monitor all ride requests in the system"}
-          </p>
+    <>
+      <div className="space-y-6 w-full">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold">
+              {isUser ? "My Ride Requests" : "All Ride Requests"}
+            </h1>
+            <p className="mt-1">
+              {isUser
+                ? "View and manage your transportation requests"
+                : "Monitor all ride requests in the system"}
+            </p>
+          </div>
+          {(isUser || isAdmin) && (
+            <Link href="/requests/new">
+              <Button>
+                <Plus className="size-4" />
+                New Request
+              </Button>
+            </Link>
+          )}
         </div>
-        {(isUser || isAdmin) && (
-          <Link href="/requests/new">
-            <Button>
-              <Plus className="size-4" />
-              New Request
-            </Button>
-          </Link>
-        )}
-      </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Pending Request */}
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Pending Request */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Pending</p>
+                  <p className="text-2xl font-bold">{pendingRequests}</p>
+                </div>
+                <div className="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                  <Clock className="h-6 w-6" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Accepted Request */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Accepted</p>
+                  <p className="text-2xl font-bold">{acceptedRequests}</p>
+                </div>
+                <div className="p-3 rounded-full bg-blue-100 text-blue-600">
+                  <Car className="h-6 w-6" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Completed Request */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Completed</p>
+                  <p className="text-2xl font-bold">{completedRequests}</p>
+                </div>
+                <div className="p-3 rounded-full bg-green-100 text-green-600">
+                  <CheckCircle className="h-6 w-6" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* PickUp Request */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">PickUp</p>
+                  <p className="text-2xl font-bold">{pickUpRequest}</p>
+                </div>
+                <div className="p-3 rounded-full bg-lime-100 text-lime-700">
+                  <CarFront className="size-6" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* DropOff Request */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">DropOff</p>
+                  <p className="text-2xl font-bold">{dropOffRequest}</p>
+                </div>
+                <div className="p-3 rounded-full bg-cyan-100 text-cyan-700">
+                  <CarBack className="size-6" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Filters */}
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">Pending</p>
-                <p className="text-2xl font-bold">{pendingRequests}</p>
-              </div>
-              <div className="p-3 rounded-full bg-yellow-100 text-yellow-600">
-                <Clock className="h-6 w-6" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center">
+              <div className="flex items-center justify-between w-full">
+                <span className="flex items-center">
+                  <Filter className="mr-2 size-5" />
+                  Filters
+                </span>
 
-        {/* Accepted Request */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">Accepted</p>
-                <p className="text-2xl font-bold">{acceptedRequests}</p>
+                {/* Clear Button */}
+                {isFiltered && (
+                  <Button variant="outline" onClick={clearFilters}>
+                    <XCircle className="size-4" />
+                    Clear Filters
+                  </Button>
+                )}
               </div>
-              <div className="p-3 rounded-full bg-blue-100 text-blue-600">
-                <Car className="h-6 w-6" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Completed Request */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">Completed</p>
-                <p className="text-2xl font-bold">{completedRequests}</p>
-              </div>
-              <div className="p-3 rounded-full bg-green-100 text-green-600">
-                <CheckCircle className="h-6 w-6" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* PickUp Request */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">PickUp</p>
-                <p className="text-2xl font-bold">{pickUpRequest}</p>
-              </div>
-              <div className="p-3 rounded-full bg-lime-100 text-lime-700">
-                <CarFront className="size-6" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* DropOff Request */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">DropOff</p>
-                <p className="text-2xl font-bold">{dropOffRequest}</p>
-              </div>
-              <div className="p-3 rounded-full bg-cyan-100 text-cyan-700">
-                <CarBack className="size-6" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center">
-            <div className="flex items-center justify-between w-full">
-              <span className="flex items-center">
-                <Filter className="mr-2 size-5" />
-                Filters
-              </span>
-
-              {/* Clear Button */}
-              {isFiltered && (
-                <Button variant="outline" onClick={clearFilters}>
-                  <XCircle className="size-4" />
-                  Clear Filters
-                </Button>
-              )}
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row justify-between gap-8">
-            <div className="flex-[70%] flex flex-col sm:flex-row justify-between gap-2">
-              {/* Status */}
-              <div className="">
-                <Label className="text-sm font-medium mb-2 block">Status</Label>
-                <Select
-                  value={status}
-                  onValueChange={(value) => {
-                    setParams({ ...params, status: value as Status, page: 1 });
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="w-full">
-                    <SelectItem value="ALL">All Requests</SelectItem>
-                    <SelectItem value="PENDING">Pending</SelectItem>
-                    <SelectItem value="ACCEPTED">Accepted</SelectItem>
-                    <SelectItem value="COMPLETED">Completed</SelectItem>
-                    <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Type */}
-              <div className="">
-                <Label className="text-sm font-medium mb-2 block">
-                  Request Type
-                </Label>
-                <Select
-                  value={type}
-                  onValueChange={(value) =>
-                    setParams({ ...params, type: value as Type, page: 1 })
-                  }
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="w-full">
-                    <SelectItem value="ALL">All Requests</SelectItem>
-                    <SelectItem value="PICKUP">PickUp</SelectItem>
-                    <SelectItem value="DROPOFF">DropOff</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Service */}
-              {!isUser && (
-                <div className="flex-1">
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row justify-between gap-8">
+              <div className="flex-[70%] flex flex-col sm:flex-row justify-between gap-2">
+                {/* Status */}
+                <div className="">
                   <Label className="text-sm font-medium mb-2 block">
-                    Service
+                    Status
                   </Label>
                   <Select
-                    value={serviceDay}
+                    value={status}
+                    onValueChange={(value) => {
+                      setParams({
+                        ...params,
+                        status: value as Status,
+                        page: 1,
+                      });
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="w-full">
+                      <SelectItem value="ALL">All Requests</SelectItem>
+                      <SelectItem value="PENDING">Pending</SelectItem>
+                      <SelectItem value="ACCEPTED">Accepted</SelectItem>
+                      <SelectItem value="COMPLETED">Completed</SelectItem>
+                      <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Type */}
+                <div className="">
+                  <Label className="text-sm font-medium mb-2 block">
+                    Request Type
+                  </Label>
+                  <Select
+                    value={type}
                     onValueChange={(value) =>
-                      setParams({ ...params, serviceDay: value, page: 1 })
+                      setParams({ ...params, type: value as Type, page: 1 })
                     }
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="w-full">
-                      {allServices.map((service) => (
-                        <SelectItem key={service} value={service}>
-                          {service === "ALL" ? "All Services" : service}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="ALL">All Requests</SelectItem>
+                      <SelectItem value="PICKUP">PickUp</SelectItem>
+                      <SelectItem value="DROPOFF">DropOff</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-              )}
-              {/* Request Date */}
-              <div className={cn(!isUser && "flex-1")}>
-                <CustomDateCalendar
-                  label="Request Date"
-                  setRequestDateFilter={(date) => {
-                    setParams({
-                      ...params,
-                      requestDate: date ? date.toISOString() : "",
-                      page: 1,
-                    });
-                  }}
-                  requestDateFilter={
-                    requestDate ? new Date(requestDate) : undefined
-                  }
-                />
-              </div>
-            </div>
 
-            {/* Name Filter */}
-            {!isUser && (
-              <div className="flex-[25%]">
-                <Label className="text-sm font-medium mb-2 block">Name</Label>
-                <Input
-                  placeholder="Filter by member's name..."
-                  value={nameInput}
-                  onChange={handleNameFilterChange}
-                />
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Requests List */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">
-            {status === "ALL" && type === "ALL" && !requestDate
-              ? "All Requests"
-              : `${status !== "ALL" ? capitalize(status) + " " : " "}` +
-                `${type !== "ALL" ? capitalize(String(type)) + " " : ""}` +
-                `Requests` +
-                `${requestDate ? " on " + formatFilterDate(new Date(requestDate)) : ""}`}
-          </CardTitle>
-          <CardDescription>
-            {status === "PENDING" && "Requests waiting for driver assignment"}
-            {status === "ACCEPTED" && "Requests accepted by drivers"}
-            {status === "COMPLETED" && "Successfully completed rides"}
-            {status === "CANCELLED" && "Cancelled requests"}
-            {status === "ALL" && "Complete history of pickup requests"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="animate-pulse p-6 border rounded-lg">
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-                </div>
-              ))}
-            </div>
-          ) : requests.length === 0 ? (
-            <div className="text-center py-8">
-              <Car className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">
-                No requests found
-              </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                {isUser
-                  ? "You haven't made any pickup requests yet."
-                  : "No requests match your current filters."}
-              </p>
-              {isUser && (
-                <div className="mt-6">
-                  <Link href="/requests/new">
-                    <Button>
-                      <Plus className="size-4" />
-                      Create Your First Request
-                    </Button>
-                  </Link>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {requests.map((request) => (
-                <div key={request.id} className="border rounded-lg p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center space-x-3">
-                      <Calendar className="h-5 w-5 text-gray-400" />
-                      <div>
-                        <h3 className="font-semibold">
-                          {request.serviceDay?.name}
-                        </h3>
-                        <p className="text-sm">
-                          {formatDate(new Date(request.requestDate))} at{" "}
-                          {request.serviceDay?.time
-                            ? formatTime(request.serviceDay.time)
-                            : "N/A"}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          {request.isPickUp && (
-                            <Badge className="bg-lime-700">
-                              <CarFront className="size-4" />
-                              PickUp
-                            </Badge>
-                          )}
-                          {request.isDropOff && (
-                            <Badge className="bg-cyan-700">
-                              <CarBack className="size-4" />
-                              DropOff
-                            </Badge>
-                          )}
-
-                          {request.isGroupRide && (
-                            <Badge className="bg-sky-300">
-                              <Users /> Group {request?.numberOfGroup}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <Badge className={getStatusColor(request.status)}>
-                      {request.status.toLowerCase()}
-                    </Badge>
+                {/* Service */}
+                {!isUser && (
+                  <div className="flex-1">
+                    <Label className="text-sm font-medium mb-2 block">
+                      Service
+                    </Label>
+                    <Select
+                      value={serviceDay}
+                      onValueChange={(value) =>
+                        setParams({ ...params, serviceDay: value, page: 1 })
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="w-full">
+                        {allServices.map((service) => (
+                          <SelectItem key={service} value={service}>
+                            {service === "ALL" ? "All Services" : service}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
+                )}
+                {/* Request Date */}
+                <div className={cn(!isUser && "flex-1")}>
+                  <CustomDateCalendar
+                    label="Request Date"
+                    setRequestDateFilter={(date) => {
+                      setParams({
+                        ...params,
+                        requestDate: date ? date.toISOString() : "",
+                        page: 1,
+                      });
+                    }}
+                    requestDateFilter={
+                      requestDate ? new Date(requestDate) : undefined
+                    }
+                  />
+                </div>
+              </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    {!isUser && request.user && (
-                      <div className="flex items-center space-x-2">
-                        <User className="h-4 w-4 text-gray-400" />
+              {/* Name Filter */}
+              {!isUser && (
+                <div className="flex-[25%]">
+                  <Label className="text-sm font-medium mb-2 block">Name</Label>
+                  <Input
+                    placeholder="Filter by member's name..."
+                    value={nameInput}
+                    onChange={handleNameFilterChange}
+                  />
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Requests List */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">
+              {status === "ALL" && type === "ALL" && !requestDate
+                ? "All Requests"
+                : `${status !== "ALL" ? capitalize(status) + " " : " "}` +
+                  `${type !== "ALL" ? capitalize(String(type)) + " " : ""}` +
+                  `Requests` +
+                  `${requestDate ? " on " + formatFilterDate(new Date(requestDate)) : ""}`}
+            </CardTitle>
+            <CardDescription>
+              {status === "PENDING" && "Requests waiting for driver assignment"}
+              {status === "ACCEPTED" && "Requests accepted by drivers"}
+              {status === "COMPLETED" && "Successfully completed rides"}
+              {status === "CANCELLED" && "Cancelled requests"}
+              {status === "ALL" && "Complete history of pickup requests"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-4">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="animate-pulse p-6 border rounded-lg">
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                  </div>
+                ))}
+              </div>
+            ) : requests.length === 0 ? (
+              <div className="text-center py-8">
+                <Car className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">
+                  No requests found
+                </h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  {isUser
+                    ? "You haven't made any pickup requests yet."
+                    : "No requests match your current filters."}
+                </p>
+                {isUser && (
+                  <div className="mt-6">
+                    <Link href="/requests/new">
+                      <Button>
+                        <Plus className="size-4" />
+                        Create Your First Request
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {requests.map((request) => (
+                  <div key={request.id} className="border rounded-lg p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex items-center space-x-3">
+                        <Calendar className="h-5 w-5 text-gray-400" />
                         <div>
-                          <p className="text-sm font-medium">Requested by</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-300">
-                            {request.user.name}
+                          <h3 className="font-semibold">
+                            {request.serviceDay?.name}
+                          </h3>
+                          <p className="text-sm">
+                            {formatDate(new Date(request.requestDate))} at{" "}
+                            {request.serviceDay?.time
+                              ? formatTime(request.serviceDay.time)
+                              : "N/A"}
                           </p>
-                          {request.user.phoneNumber && (
-                            <p className="text-xs text-gray-500 dark:text-gray-200 flex items-center">
-                              <Phone className="size-3 mr-1" />
-                              {request.user.phoneNumber}
-                            </p>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {request.isPickUp && (
+                              <Badge className="bg-lime-700">
+                                <CarFront className="size-4" />
+                                PickUp
+                              </Badge>
+                            )}
+                            {request.isDropOff && (
+                              <Badge className="bg-cyan-700">
+                                <CarBack className="size-4" />
+                                DropOff
+                              </Badge>
+                            )}
+
+                            {request.isGroupRide && (
+                              <Badge className="bg-sky-300">
+                                <Users /> Group {request?.numberOfGroup}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    )}
-
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="h-4 w-4 text-gray-400" />
-                      <div>
-                        <p className="text-sm font-medium">Pickup Location</p>
-                        <p className="text-sm">
-                          {request.address
-                            ? `${request.address.street}, ${request.address.city}, ${request.address.province}`
-                            : "Address not available"}
-                        </p>
-                      </div>
+                      <Badge className={getStatusColor(request.status)}>
+                        {request.status.toLowerCase()}
+                      </Badge>
                     </div>
 
-                    {request.driver && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      {!isUser && request.user && (
+                        <div className="flex items-center space-x-2">
+                          <User className="h-4 w-4 text-gray-400" />
+                          <div>
+                            <p className="text-sm font-medium">Requested by</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">
+                              {request.user.name}
+                            </p>
+                            {request.user.phoneNumber && (
+                              <p className="text-xs text-gray-500 dark:text-gray-200 flex items-center">
+                                <Phone className="size-3 mr-1" />
+                                {request.user.phoneNumber}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                       <div className="flex items-center space-x-2">
-                        <Car className="size-4 text-gray-400" />
+                        <MapPin className="h-4 w-4 text-gray-400" />
                         <div>
-                          <p className="text-sm font-medium">Driver</p>
-                          <p className="text-sm">{request.driver.name}</p>
-                          {request.driver.phoneNumber && (
-                            <p className="text-xs text-blue-600 flex items-center">
-                              <Phone className="h-3 w-3 mr-1" />
-                              {request.driver.phoneNumber}
-                            </p>
-                          )}
+                          <p className="text-sm font-medium">Pickup Location</p>
+                          <p className="text-sm">
+                            {request.address
+                              ? `${request.address.street}, ${request.address.city}, ${request.address.province}`
+                              : "Address not available"}
+                          </p>
                         </div>
                       </div>
-                    )}
-                  </div>
 
-                  {request.notes && (
-                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                      <p className="text-sm font-medium text-gray-700">
-                        Notes:
-                      </p>
-                      <p className="text-sm text-gray-600">{request.notes}</p>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between items-center pt-4 border-t">
-                    <div className="text-sm flex h-5 items-center space-x-4">
-                      <span>
-                        Created: {formatDate(new Date(request.createdAt))}
-                      </span>
-                      {request.distance && (
-                        <>
-                          <Separator orientation="vertical" />
-                          <span>Distance: ~{request.distance} km</span>
-                        </>
+                      {request.driver && (
+                        <div className="flex items-center space-x-2">
+                          <Car className="size-4 text-gray-400" />
+                          <div>
+                            <p className="text-sm font-medium">Driver</p>
+                            <p className="text-sm">{request.driver.name}</p>
+                            {request.driver.phoneNumber && (
+                              <p className="text-xs text-blue-600 flex items-center">
+                                <Phone className="h-3 w-3 mr-1" />
+                                {request.driver.phoneNumber}
+                              </p>
+                            )}
+                          </div>
+                        </div>
                       )}
                     </div>
 
-                    <div className="space-x-1">
-                      <ButtonGroup>
-                        {/* Action buttons for users */}
-                        {(isUser || isAdmin) &&
-                          canCancelOrEditRequest(request) && (
-                            <>
-                              {/* Edit Button */}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                title="Edit Request"
-                                className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                                onClick={() => {
-                                  setSelectedRequest(request);
-                                  setEditDialogOpen(true);
-                                }}
-                              >
-                                <Pencil className="size-4" />
-                                <span className="max-sm:hidden">Edit</span>
-                              </Button>
+                    {request.notes && (
+                      <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                        <p className="text-sm font-medium text-gray-700">
+                          Notes:
+                        </p>
+                        <p className="text-sm text-gray-600">{request.notes}</p>
+                      </div>
+                    )}
 
-                              {/* Cancel Button */}
+                    <div className="flex justify-between items-center pt-4 border-t">
+                      <div className="text-sm flex h-5 items-center space-x-4">
+                        <span>
+                          Created: {formatDate(new Date(request.createdAt))}
+                        </span>
+                        {request.distance && (
+                          <>
+                            <Separator orientation="vertical" />
+                            <span>Distance: ~{request.distance} km</span>
+                          </>
+                        )}
+                      </div>
+
+                      <div className="space-x-1">
+                        <ButtonGroup>
+                          {/* Action buttons for users */}
+                          {(isUser || isAdmin) &&
+                            canCancelOrEditRequest(request) && (
+                              <>
+                                {/* Edit Button */}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  title="Edit Request"
+                                  className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                  onClick={() => {
+                                    setSelectedRequest(request);
+                                    setEditDialogOpen(true);
+                                  }}
+                                >
+                                  <Pencil className="size-4" />
+                                  <span className="max-sm:hidden">Edit</span>
+                                </Button>
+
+                                {/* Cancel Button */}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  title="Cancel Request"
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  onClick={() => {
+                                    setSelectedRequest(request);
+                                    setCancelDialogOpen(true);
+                                  }}
+                                >
+                                  <X className="size-4" />
+                                  <span className="max-sm:hidden">Cancel</span>
+                                </Button>
+                              </>
+                            )}
+
+                          {/* Action buttons for drivers */}
+                          {isTransportationMember &&
+                            canCancelPickup(request) && (
                               <Button
                                 variant="outline"
                                 size="sm"
-                                title="Cancel Request"
+                                title="Cancel Pickup"
                                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                 onClick={() => {
                                   setSelectedRequest(request);
-                                  setCancelDialogOpen(true);
+                                  setPickupCancelDialogOpen(true);
                                 }}
                               >
                                 <X className="size-4" />
-                                <span className="max-sm:hidden">Cancel</span>
+                                <span className="max-sm:hidden">
+                                  Cancel Pickup
+                                </span>
                               </Button>
-                            </>
-                          )}
+                            )}
 
-                        {/* Action buttons for drivers */}
-                        {isTransportationMember && canCancelPickup(request) && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            title="Cancel Pickup"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => {
-                              setSelectedRequest(request);
-                              setPickupCancelDialogOpen(true);
-                            }}
-                          >
-                            <X className="size-4" />
-                            <span className="max-sm:hidden">Cancel Pickup</span>
-                          </Button>
-                        )}
-
-                        {(request.status === "PENDING" ||
-                          request.status === "ACCEPTED") &&
-                          isAdmin && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              title={
-                                openAccordions[request.id]
-                                  ? "Hide Drivers"
-                                  : "Show Drivers"
-                              }
-                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                              onClick={() => {
-                                toggleAccordion(request.id);
-                              }}
-                            >
-                              <UserSquareIcon className="size-4" />
-                              <span className="max-sm:hidden">
-                                {openAccordions[request.id]
-                                  ? "Hide Drivers"
-                                  : "Show Drivers"}
-                              </span>
-                            </Button>
-                          )}
-                      </ButtonGroup>
+                          {(request.status === "PENDING" ||
+                            request.status === "ACCEPTED") &&
+                            isAdmin && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                title={
+                                  openAccordions[request.id]
+                                    ? "Hide Drivers"
+                                    : "Show Drivers"
+                                }
+                                className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                onClick={() => {
+                                  toggleAccordion(request.id);
+                                }}
+                              >
+                                <UserSquareIcon className="size-4" />
+                                <span className="max-sm:hidden">
+                                  {openAccordions[request.id]
+                                    ? "Hide Drivers"
+                                    : "Show Drivers"}
+                                </span>
+                              </Button>
+                            )}
+                        </ButtonGroup>
+                      </div>
                     </div>
+
+                    {/* Assigning drivers - Only admin can assign drivers */}
+                    {(request.status === "PENDING" ||
+                      request.status === "ACCEPTED") &&
+                      isAdmin &&
+                      openAccordions[request.id] && (
+                        <>
+                          <Separator className="my-4" />
+                          <Accordion
+                            type="single"
+                            collapsible
+                            className="w-full"
+                            defaultValue={request.id}
+                          >
+                            <AccordionItem value={request.id}>
+                              <AccordionContent className="flex flex-col gap-4 ">
+                                <h4 className="font-bold text-lg">
+                                  Available Drivers for Assignment
+                                </h4>
+                                <p>
+                                  Distance calculations are based on each
+                                  driver&apos;s default address and the pickup
+                                  location. Click &quot;Assign Request&quot; to
+                                  notify the selected driver of this request.
+                                </p>
+
+                                <DataTable
+                                  columns={columns}
+                                  data={drivers
+                                    .filter((d) => {
+                                      // Always exclude the current user
+                                      const isNotCurrentUser =
+                                        d.id !== request.userId;
+
+                                      // If request is accepted, also exclude the assigned driver
+                                      const isNotAssignedDriver =
+                                        request.status !== "ACCEPTED" ||
+                                        d.id !== request.driverId;
+
+                                      return (
+                                        isNotCurrentUser && isNotAssignedDriver
+                                      );
+                                    })
+                                    .map((d) => {
+                                      const driverAddress = d.addresses?.find(
+                                        (a) => a.isDefault
+                                      );
+
+                                      const lat1 = driverAddress?.latitude;
+                                      const lon1 = driverAddress?.longitude;
+                                      const lat2 = request.address?.latitude;
+                                      const lon2 = request.address?.longitude;
+
+                                      const hasValidCoordinates =
+                                        lat1 != null &&
+                                        lon1 != null &&
+                                        lat2 != null &&
+                                        lon2 != null;
+
+                                      return {
+                                        ...d,
+                                        name: `${d.name}`,
+                                        requestDistance: hasValidCoordinates
+                                          ? calculateDistance(
+                                              lat1,
+                                              lon1,
+                                              lat2,
+                                              lon2
+                                            )
+                                          : null,
+                                        request,
+                                      };
+                                    })}
+                                />
+                              </AccordionContent>
+                            </AccordionItem>
+                          </Accordion>
+                        </>
+                      )}
                   </div>
+                ))}
 
-                  {/* Assigning drivers - Only admin can assign drivers */}
-                  {(request.status === "PENDING" ||
-                    request.status === "ACCEPTED") &&
-                    isAdmin &&
-                    openAccordions[request.id] && (
-                      <>
-                        <Separator className="my-4" />
-                        <Accordion
-                          type="single"
-                          collapsible
-                          className="w-full"
-                          defaultValue={request.id}
-                        >
-                          <AccordionItem value={request.id}>
-                            <AccordionContent className="flex flex-col gap-4 ">
-                              <h4 className="font-bold text-lg">
-                                Available Drivers for Assignment
-                              </h4>
-                              <p>
-                                Distance calculations are based on each
-                                driver&apos;s default address and the pickup
-                                location. Click &quot;Assign Request&quot; to
-                                notify the selected driver of this request.
-                              </p>
-
-                              <DataTable
-                                columns={columns}
-                                data={drivers
-                                  .filter((d) => {
-                                    // Always exclude the current user
-                                    const isNotCurrentUser =
-                                      d.id !== request.userId;
-
-                                    // If request is accepted, also exclude the assigned driver
-                                    const isNotAssignedDriver =
-                                      request.status !== "ACCEPTED" ||
-                                      d.id !== request.driverId;
-
-                                    return (
-                                      isNotCurrentUser && isNotAssignedDriver
-                                    );
-                                  })
-                                  .map((d) => {
-                                    const driverAddress = d.addresses?.find(
-                                      (a) => a.isDefault
-                                    );
-
-                                    const lat1 = driverAddress?.latitude;
-                                    const lon1 = driverAddress?.longitude;
-                                    const lat2 = request.address?.latitude;
-                                    const lon2 = request.address?.longitude;
-
-                                    const hasValidCoordinates =
-                                      lat1 != null &&
-                                      lon1 != null &&
-                                      lat2 != null &&
-                                      lon2 != null;
-
-                                    return {
-                                      ...d,
-                                      name: `${d.name}`,
-                                      requestDistance: hasValidCoordinates
-                                        ? calculateDistance(
-                                            lat1,
-                                            lon1,
-                                            lat2,
-                                            lon2
-                                          )
-                                        : null,
-                                      request,
-                                    };
-                                  })}
-                              />
-                            </AccordionContent>
-                          </AccordionItem>
-                        </Accordion>
-                      </>
-                    )}
-                </div>
-              ))}
-
-              {/* Pagination */}
-              <CustomPagination
-                currentPage={page}
-                totalItems={totalCount}
-                itemsPerPage={pageSize}
-                onPageChange={(newPage) =>
-                  setParams({ ...params, page: newPage })
-                }
-                onItemsPerPageChange={(newPageSize) => {
-                  setParams({ ...params, pageSize: newPageSize, page: 1 });
-                }}
-                itemName="requests"
-                totalPages={totalPages}
-                hasNextPage={hasNextPage}
-                hasPreviousPage={hasPreviousPage}
-              />
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                {/* Pagination */}
+                <CustomPagination
+                  currentPage={page}
+                  totalItems={totalCount}
+                  itemsPerPage={pageSize}
+                  onPageChange={(newPage) =>
+                    setParams({ ...params, page: newPage })
+                  }
+                  onItemsPerPageChange={(newPageSize) => {
+                    setParams({ ...params, pageSize: newPageSize, page: 1 });
+                  }}
+                  itemName="requests"
+                  totalPages={totalPages}
+                  hasNextPage={hasNextPage}
+                  hasPreviousPage={hasPreviousPage}
+                />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Edit Request Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="p-0">
           <DialogHeader>
             <DialogTitle className="sr-only">
               <div className="flex items-center text-amber-600 font-medium">
-                <Pencil className="h-5 w-5 mr-2" />
+                <Pencil className="size-5 mr-2" />
                 Edit Pickup Request
               </div>
             </DialogTitle>
@@ -916,7 +927,7 @@ export const RequestHistory = () => {
           </DialogHeader>
           {selectedRequest &&
             (isUser ? (
-              <ScrollArea className="h-[520px] rounded-md p-4">
+              <ScrollArea className="h-[520px] rounded p-4">
                 <NewRequestForm
                   newRequestData={{
                     requestId: selectedRequest.id as string,
@@ -936,7 +947,7 @@ export const RequestHistory = () => {
                 />
               </ScrollArea>
             ) : (
-              <ScrollArea className="h-[540px] rounded-md py-4">
+              <ScrollArea className="h-[540px] rounded-md p-4">
                 <AdminNewUserRequest
                   isNewUser={false}
                   isGroupRequest={selectedRequest.isGroupRide}
@@ -1150,6 +1161,6 @@ export const RequestHistory = () => {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 };

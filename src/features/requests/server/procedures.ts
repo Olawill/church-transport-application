@@ -257,7 +257,7 @@ export const userRequestRouter = createTRPCRouter({
       }
 
       // Optimization: Parallel validation queries instead of sequential
-      const parts = serviceDayOfWeek.split("-");
+      const parts = (serviceDayOfWeek ?? "").split("-");
 
       if (parts.length < 2 || isNaN(Number(parts[0]))) {
         throw new TRPCError({
@@ -517,7 +517,7 @@ export const userRequestRouter = createTRPCRouter({
       }
 
       // Optimization: Parallel validation queries instead of sequential
-      const parts = serviceDayOfWeek.split("-");
+      const parts = (serviceDayOfWeek ?? "").split("-");
 
       if (parts.length < 2 || isNaN(Number(parts[0]))) {
         throw new TRPCError({

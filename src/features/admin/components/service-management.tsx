@@ -57,10 +57,6 @@ type FormSchema =
   | OnetimeMultiDaySchema
   | FrequentMultiDaySchema;
 
-type PropertyError = {
-  errors: string[];
-};
-
 export const ServiceManagement = () => {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
@@ -313,11 +309,6 @@ export const ServiceManagement = () => {
 
         const validatedData = validated.data;
 
-        // Parse dayOfWeek - convert to array if it's a string, or parse strings to ints if array
-        const dayOfWeek = Array.isArray(validatedData.dayOfWeek)
-          ? validatedData.dayOfWeek
-          : validatedData.dayOfWeek;
-
         if (editingService) {
           await editService.mutateAsync({
             id: editingService.id,
@@ -349,6 +340,8 @@ export const ServiceManagement = () => {
     },
     [form, getDefaultValues]
   );
+
+  const formLoading = addService.isPending || editService.isPending;
 
   return (
     <div className="space-y-6 w-full">
@@ -416,7 +409,7 @@ export const ServiceManagement = () => {
                     form={form as UseFormReturn<RecurringSchema>}
                     onSubmit={handleSubmit}
                     onCancel={resetForm}
-                    loading={loading}
+                    loading={loading || formLoading}
                     service={editingService}
                   />
                 </TabsContent>
@@ -425,7 +418,7 @@ export const ServiceManagement = () => {
                     form={form as UseFormReturn<OnetimeOneDaySchema>}
                     onSubmit={handleSubmit}
                     onCancel={resetForm}
-                    loading={loading}
+                    loading={loading || formLoading}
                     service={editingService}
                   />
                 </TabsContent>
@@ -434,7 +427,7 @@ export const ServiceManagement = () => {
                     form={form as UseFormReturn<OnetimeMultiDaySchema>}
                     onSubmit={handleSubmit}
                     onCancel={resetForm}
-                    loading={loading}
+                    loading={loading || formLoading}
                     service={editingService}
                   />
                 </TabsContent>
@@ -443,7 +436,7 @@ export const ServiceManagement = () => {
                     form={form as UseFormReturn<FrequentMultiDaySchema>}
                     onSubmit={handleSubmit}
                     onCancel={resetForm}
-                    loading={loading}
+                    loading={loading || formLoading}
                     service={editingService}
                   />
                 </TabsContent>

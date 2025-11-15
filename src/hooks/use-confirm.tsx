@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-type ConfirmResult = "cancel" | "primary" | "secondary" | "confirm";
+export type ConfirmResult = "cancel" | "primary" | "secondary" | "confirm";
 
 export const useConfirm = (
   title: string,

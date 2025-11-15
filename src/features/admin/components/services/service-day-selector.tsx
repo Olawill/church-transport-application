@@ -99,7 +99,7 @@ export const ServiceDaySelector = <T extends ServiceDayFormFields>({
                   <SelectValue placeholder="Select which day you need pickup" />
                 </SelectTrigger>
               </FormControl>
-              <SelectContent>
+              <SelectContent className="w-full">
                 {dayOptions.map((option) => {
                   const optionIndex = Number(option.value.split("-")[1]);
                   const optionDate = occurrences[optionIndex - 1];
