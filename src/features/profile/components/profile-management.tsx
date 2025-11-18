@@ -17,13 +17,7 @@ import { toast } from "sonner";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import {
-  addBranch,
-  deleteBranch,
-  setHeadquarter,
-  updateBranch,
-} from "@/actions/getOrgInfo";
-import { SystemBranchInfo, SystemConfig } from "@/generated/prisma";
+import { Organization, OrganizationBranchInfo } from "@/generated/prisma";
 import { useConfirm } from "@/hooks/use-confirm";
 import {
   AddressUpdateSchema,
@@ -74,8 +68,10 @@ export interface UserProfile {
   phoneVerified?: Date;
 }
 
-export type OrgInfo = SystemConfig & { systemBranchInfos: SystemBranchInfo[] };
-export type BranchAddress = SystemBranchInfo;
+export type OrgInfo = Organization & {
+  systemBranchInfos: OrganizationBranchInfo[];
+};
+export type BranchAddress = OrganizationBranchInfo;
 
 export const ProfileManagement = () => {
   const trpc = useTRPC();
@@ -416,7 +412,7 @@ export const ProfileManagement = () => {
 
     await updateBranchAddress.mutateAsync({
       addressId: selectedBranchAddress.id,
-      organizationId: selectedBranchAddress.systemConfigId,
+      organizationId: selectedBranchAddress.organizationId,
       values: {
         ...validatedFields.data,
       },
@@ -426,7 +422,7 @@ export const ProfileManagement = () => {
   const handleSetHeadquarterAddress = async (addressId: string) => {
     await setOrganizationHeadquarter.mutateAsync({
       addressId,
-      organizationId: selectedBranchAddress?.systemConfigId,
+      organizationId: selectedBranchAddress?.organizationId,
     });
   };
 
@@ -437,7 +433,7 @@ export const ProfileManagement = () => {
 
     await deleteBranchAddress.mutateAsync({
       addressId,
-      organizationId: selectedBranchAddress?.systemConfigId as string,
+      organizationId: selectedBranchAddress?.organizationId as string,
     });
   };
 

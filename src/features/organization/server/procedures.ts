@@ -19,10 +19,10 @@ export const organizationRouter = createTRPCRouter({
 
       // TODO: Check if user is owner, show all branch
       // TODO: Check if user is admin, show only branch attached to admin
-      const organization = await prisma.systemConfig.findUniqueOrThrow({
+      const organization = await prisma.organization.findUniqueOrThrow({
         where: { id: organizationId ?? testId },
         include: {
-          systemBranchInfos: true,
+          organizationBranches: true,
         },
       });
 
@@ -48,7 +48,7 @@ export const organizationRouter = createTRPCRouter({
 
       const result = await prisma.$transaction(async (tx) => {
         // Check if the branch exists
-        const existingBranch = await tx.systemBranchInfo.findUnique({
+        const existingBranch = await tx.organizationBranch.findUnique({
           where: { id: addressId },
         });
 
@@ -60,7 +60,7 @@ export const organizationRouter = createTRPCRouter({
         }
 
         // Verify ownership
-        if (existingBranch.systemConfigId !== (organizationId ?? testId)) {
+        if (existingBranch.organizationId !== (organizationId ?? testId)) {
           throw new TRPCError({
             code: "FORBIDDEN",
             message: "Branch does not belong to this organization.",
@@ -73,9 +73,10 @@ export const organizationRouter = createTRPCRouter({
         }
 
         // Otherwise, demote current headquarter (if any)
-        await tx.systemBranchInfo.updateMany({
+        await tx.organizationBranch.update({
           where: {
-            systemConfigId: organizationId ?? testId,
+            id: existingBranch.id,
+            organizationId: organizationId ?? testId,
             branchCategory: "HEADQUARTER",
           },
           data: {
@@ -84,7 +85,7 @@ export const organizationRouter = createTRPCRouter({
         });
 
         // Promote the selected branch to headquarter
-        const updatedBranch = await tx.systemBranchInfo.update({
+        const updatedBranch = await tx.organizationBranch.update({
           where: { id: addressId },
           data: {
             branchCategory: "HEADQUARTER",
@@ -118,7 +119,7 @@ export const organizationRouter = createTRPCRouter({
 
       const result = await prisma.$transaction(async (tx) => {
         // Check that the organization exists
-        const organization = await tx.systemConfig.findUnique({
+        const organization = await tx.organization.findUnique({
           where: { id: organizationId ?? testId },
         });
 
@@ -130,9 +131,9 @@ export const organizationRouter = createTRPCRouter({
         }
 
         // Create the branch in the same transaction
-        const newBranch = await tx.systemBranchInfo.create({
+        const newBranch = await tx.organizationBranch.create({
           data: {
-            systemConfigId: organizationId ?? testId,
+            organizationId: organizationId ?? testId,
             ...values,
           },
         });
@@ -156,7 +157,7 @@ export const organizationRouter = createTRPCRouter({
 
       const updatedBranch = await prisma.$transaction(async (tx) => {
         // Check existence & ownership atomically
-        const existingBranch = await tx.systemBranchInfo.findUnique({
+        const existingBranch = await tx.organizationBranch.findUnique({
           where: { id: addressId },
         });
 
@@ -167,7 +168,7 @@ export const organizationRouter = createTRPCRouter({
           });
         }
 
-        if (existingBranch.systemConfigId !== (organizationId ?? testId)) {
+        if (existingBranch.organizationId !== (organizationId ?? testId)) {
           throw new TRPCError({
             code: "FORBIDDEN",
             message: "Branch does not belong to this organization.",
@@ -175,7 +176,7 @@ export const organizationRouter = createTRPCRouter({
         }
 
         // Update branch
-        const updated = await tx.systemBranchInfo.update({
+        const updated = await tx.organizationBranch.update({
           where: { id: addressId },
           data: { ...values },
         });
@@ -207,7 +208,7 @@ export const organizationRouter = createTRPCRouter({
 
       const deletedBranch = await prisma.$transaction(async (tx) => {
         // Validate branch existence & ownership
-        const existingBranch = await tx.systemBranchInfo.findUnique({
+        const existingBranch = await tx.organizationBranch.findUnique({
           where: { id: addressId },
         });
 
@@ -218,7 +219,7 @@ export const organizationRouter = createTRPCRouter({
           });
         }
 
-        if (existingBranch.systemConfigId !== (organizationId ?? testId)) {
+        if (existingBranch.organizationId !== (organizationId ?? testId)) {
           throw new TRPCError({
             code: "FORBIDDEN",
             message: "Branch does not belong to this organization.",
@@ -229,7 +230,7 @@ export const organizationRouter = createTRPCRouter({
         // TODO: add logic here if needed before deletion
 
         // Delete branch
-        await tx.systemBranchInfo.delete({
+        await tx.organizationBranch.delete({
           where: { id: addressId },
         });
 

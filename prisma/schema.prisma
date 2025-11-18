@@ -309,32 +309,33 @@ model DriverRequestCancel {
   @@map("driver_requests_cancel")
 }
 
-model SystemConfig {
-  id                  String            @id @default(cuid())
-  churchName          String            @unique
-  churchAcronym       String?           @unique       
-  churchLogo          String?       
+model Organization {
+  id                     String            @id @default(cuid())
+  churchName             String            @unique
+  churchAcronym          String?           @unique       
+  churchLogo             String?           @map("logo")
+  slug                   String
 
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
 
-  systemBranchInfos   SystemBranchInfo[]
+  organizationBranches   OrganizationBranch[]
 
-  @@map("system_config")
+  @@map("organization")
 }
 
-model SystemBranchInfo {
+model OrganizationBranch {
   id                  String            @id @default(cuid())
   branchName          String?
   branchCategory      BranchType        @default(BRANCH)
 
-  systemConfigId      String
+  organizationId      String
 
-  street       String
-  city          String
-  province      String
-  postalCode    String
-  country       String
+  street              String
+  city                String
+  province            String
+  postalCode          String
+  country             String
   churchPhone         String
   requestCutOffInHrs  String
   defaultMaxDistance  String
@@ -342,9 +343,9 @@ model SystemBranchInfo {
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
-  systemConfig        SystemConfig      @relation(fields: [systemConfigId], references: [id], onDelete: Cascade)
+  organization        Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  @@map("system_branch_infos")
+  @@map("organization_branch")
 }
 
 model OTP {

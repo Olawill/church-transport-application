@@ -28,10 +28,10 @@ export const getOrgInfo = async (orgId?: string) => {
   // TODO: Check if user is admin, show only branch attached to admin
 
   try {
-    const organization = await prisma.systemConfig.findFirst({
+    const organization = await prisma.organization.findFirst({
       where: { id: organizationId },
       include: {
-        systemBranchInfos: true,
+        organizationBranches: true,
       },
     });
 
@@ -75,7 +75,7 @@ export const setHeadquarter = async (addressId: string, orgId?: string) => {
   }
   try {
     // Check if address exist
-    const existingBranch = await prisma.systemBranchInfo.findUnique({
+    const existingBranch = await prisma.organizationBranchInfo.findUnique({
       where: { id: addressId },
     });
 
@@ -85,7 +85,7 @@ export const setHeadquarter = async (addressId: string, orgId?: string) => {
       };
     }
     // Check if address belongs to organization
-    if (existingBranch.systemConfigId !== organizationId) {
+    if (existingBranch.organizationId !== organizationId) {
       return {
         success: false,
         error: "Branch does not belong to this organization.",
@@ -93,9 +93,10 @@ export const setHeadquarter = async (addressId: string, orgId?: string) => {
     }
 
     // Get the current headquarter, if any and make branch
-    await prisma.systemBranchInfo.update({
+    await prisma.organizationBranchInfo.update({
       where: {
-        systemConfigId: organizationId,
+        id: existingBranch.id,
+        organizationId: organizationId,
         branchCategory: "HEADQUARTER",
       },
       data: {
@@ -103,7 +104,7 @@ export const setHeadquarter = async (addressId: string, orgId?: string) => {
       },
     });
     // Set address to headquarter
-    const updatedBranchInfo = await prisma.systemBranchInfo.update({
+    const updatedBranchInfo = await prisma.organizationBranchInfo.update({
       where: { id: addressId },
       data: {
         branchCategory: "HEADQUARTER",
