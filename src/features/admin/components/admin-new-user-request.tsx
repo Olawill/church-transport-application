@@ -9,6 +9,7 @@ import {
   Check,
   ChevronsUpDown,
   Clock,
+  Loader2Icon,
   MapPin,
   Pencil,
   Send,
@@ -84,7 +85,13 @@ import {
   NewAdminRequestSchema,
 } from "@/schemas/newRequestSchema";
 import { useTRPC } from "@/trpc/client";
-import { skipToken, useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  skipToken,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { GetServiceType } from "../types";
 import { ServiceDaySelector } from "./services/service-day-selector";
 
@@ -111,8 +118,7 @@ const AdminNewUserRequest = ({
 }: AdminNewUserRequestProps) => {
   const router = useRouter();
   const trpc = useTRPC();
-
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
 
   const [usersOpen, setUsersOpen] = useState(false);
   const [userAddressesOpen, setUserAddressesOpen] = useState(false);
@@ -131,8 +137,8 @@ const AdminNewUserRequest = ({
   const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
 
   const [SeriesUpdateDialog, confirmSeriesUpdate] = useConfirm(
-    "Update Series",
-    "Do you want to update the entire occurrence?",
+    "Update Series/Occurrence",
+    "Do you want to update the entire ride request series or just this ride occurrence?",
     true,
     "Update occurrence",
     "Update series"
@@ -248,7 +254,7 @@ const AdminNewUserRequest = ({
   });
 
   useEffect(() => {
-    if (newServiceDayId && serviceDays.length > 0) {
+    if (!newRequestData && newServiceDayId && serviceDays.length > 0) {
       const service = serviceDays.find((s) => s.id === newServiceDayId);
       setSelectedService(service || null);
 
@@ -324,43 +330,73 @@ const AdminNewUserRequest = ({
     }
   }, [userId, users]);
 
+  const createRequest = useMutation(
+    trpc.userRequests.createUserRequest.mutationOptions({
+      onSuccess: (data) => {
+        toast.success(
+          data.length > 1
+            ? "Request series was created successfully"
+            : "Request was created successfully"
+        );
+
+        queryClient.invalidateQueries(
+          trpc.userRequests.getUserRequests.queryOptions({})
+        );
+
+        router.push("/requests");
+      },
+      onError: (error) => {
+        toast.error(error.message || `Failed to create request`);
+      },
+    })
+  );
+
+  const updateRequest = useMutation(
+    trpc.userRequests.updateUserRequest.mutationOptions({
+      onSuccess: (data) => {
+        toast.success(
+          data.length === 1
+            ? `Request was updated successfully.`
+            : `${data.length} request in the series was updated successfully.`
+        );
+
+        queryClient.invalidateQueries(
+          trpc.userRequests.getUserRequests.queryOptions({})
+        );
+
+        setShowDialog?.(false);
+
+        router.push("/requests");
+      },
+      onError: (error) => {
+        toast.error(error.message || `Failed to update request`);
+      },
+    })
+  );
+
   const handleSubmit = async (values: NewAdminRequestSchema) => {
     const validatedFields = await newAdminRequestSchema.safeParseAsync(values);
 
     if (!validatedFields.success) {
-      toast.error("Please fill in all required fields");
+      toast.error(
+        validatedFields.error.message || "Please fill in all required fields"
+      );
       return;
     }
-    setLoading(true);
 
-    try {
-      const response = await fetch("/api/pickup-requests", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(validatedFields.data),
-      });
-      if (response.ok) {
-        toast.success("Pickup request created successfully!");
-        router.push("/requests");
-      } else {
-        const errorData = await response.json();
-        toast.error(errorData.error || "Failed to create request");
-      }
-    } catch (error) {
-      console.error("Error creating request:", error);
-      toast.error("An error occurred while creating the request");
-    } finally {
-      setLoading(false);
-    }
+    await createRequest.mutateAsync(validatedFields.data);
   };
 
   const handleUpdate = async (values: NewAdminRequestSchema) => {
-    const validatedFields = await newAdminRequestSchema.safeParseAsync(values);
+    const validatedFields = await newAdminRequestSchema.safeParseAsync({
+      ...values,
+      serviceDayOfWeek: `${newRequestData?.serviceDayOfWeek}-1` || "",
+    });
 
     if (!validatedFields.success) {
-      toast.error("Please fill in all required fields");
+      toast.error(
+        validatedFields.error.message || "Please fill in all required fields"
+      );
       return;
     }
 
@@ -382,43 +418,18 @@ const AdminNewUserRequest = ({
       }
     }
 
-    setLoading(true);
-
-    try {
-      const response = await fetch("/api/pickup-requests", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          requestId: newRequestData?.requestId,
-          ...validatedFields.data,
-          updateSeries,
-        }),
-      });
-      if (response.ok) {
-        toast.success(
-          updateSeries
-            ? "Request series updated successfully!"
-            : "Pickup request updated successfully!"
-        );
-        setShowDialog?.(false);
-        router.push("/requests");
-      } else {
-        const errorData = await response.json();
-        toast.error(errorData.error || "Failed to update request");
-      }
-    } catch (error) {
-      console.error("Error updating request:", error);
-      toast.error("An error occurred while updating the request");
-    } finally {
-      setLoading(false);
-    }
+    await updateRequest.mutateAsync({
+      requestId: newRequestData?.requestId,
+      ...validatedFields.data,
+      updateSeries,
+    });
   };
 
   const isGroupRequestNewForm = newRequestForm.watch("isGroupRide");
   const isRecurringRequestNewForm = newRequestForm.watch("isRecurring");
   const newFormRequestDate = newRequestForm.watch("requestDate");
+
+  const isLoading = createRequest.isPending || updateRequest.isPending;
 
   return (
     <>
@@ -433,10 +444,7 @@ const AdminNewUserRequest = ({
               return (
                 <FormItem className="space-y-2">
                   <CustomFormLabel title="Church Service" />
-                  <Select
-                    defaultValue={field.value}
-                    onValueChange={field.onChange}
-                  >
+                  <Select value={field.value} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select a service" />
@@ -446,7 +454,7 @@ const AdminNewUserRequest = ({
                       {serviceDays.map((service) => (
                         <SelectItem key={service.id} value={service.id}>
                           <div className="flex items-center space-x-2">
-                            <CalendarIcon className="h-4 w-4" />
+                            <CalendarIcon className="size-4" />
                             <span>
                               {service.name} - {formatTime(service.time)}
                             </span>
@@ -458,7 +466,7 @@ const AdminNewUserRequest = ({
                   {selectedService && selectedDayOfWeek != null && (
                     <FormDescription className="mt-2 p-3 bg-blue-50 rounded-lg">
                       <span className="flex items-center space-x-2 text-sm text-blue-700">
-                        <Clock className="h-4 w-4" />
+                        <Clock className="size-4" />
                         <span>
                           Service starts at {formatTime(selectedService.time)}{" "}
                           every {getDayNameFromNumber(selectedDayOfWeek)}
@@ -513,7 +521,7 @@ const AdminNewUserRequest = ({
                           ) : (
                             <span>Select a date</span>
                           )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          <CalendarIcon className="ml-auto size-4 opacity-50" />
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
@@ -673,7 +681,7 @@ const AdminNewUserRequest = ({
                               ) : (
                                 <span>Select a date</span>
                               )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              <CalendarIcon className="ml-auto size-4 opacity-50" />
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
@@ -762,7 +770,11 @@ const AdminNewUserRequest = ({
                       <FormItem className="space-y-2">
                         <CustomFormLabel title="On Behalf of" />
                         <Popover open={usersOpen} onOpenChange={setUsersOpen}>
-                          <PopoverTrigger asChild className="w-full">
+                          <PopoverTrigger
+                            asChild
+                            className="w-full"
+                            disabled={isLoading}
+                          >
                             <FormControl>
                               <Button
                                 variant="outline"
@@ -781,7 +793,7 @@ const AdminNewUserRequest = ({
                                         ?.name
                                     : "Select a user"}
                                 </span>
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
                               </Button>
                             </FormControl>
                           </PopoverTrigger>
@@ -868,7 +880,11 @@ const AdminNewUserRequest = ({
                           open={userAddressesOpen}
                           onOpenChange={setUserAddressesOpen}
                         >
-                          <PopoverTrigger asChild className="w-full">
+                          <PopoverTrigger
+                            asChild
+                            className="w-full"
+                            disabled={isLoading}
+                          >
                             <FormControl>
                               <Button
                                 variant="outline"
@@ -894,7 +910,7 @@ const AdminNewUserRequest = ({
                                       })()
                                     : "Select a service"}
                                 </span>
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
                               </Button>
                             </FormControl>
                           </PopoverTrigger>
@@ -941,7 +957,7 @@ const AdminNewUserRequest = ({
                         {selectedService && selectedDayOfWeek != null && (
                           <FormDescription className="mt-2 p-3 bg-blue-50 rounded-lg">
                             <span className="flex items-center space-x-2 text-sm text-blue-700">
-                              <Clock className="h-4 w-4" />
+                              <Clock className="size-4" />
                               <span>
                                 Service starts at{" "}
                                 {formatTime(selectedService.time)} every{" "}
@@ -964,6 +980,7 @@ const AdminNewUserRequest = ({
                       selectedService={selectedService}
                       dayOptions={dayOptions}
                       setSelectedDayOfWeek={setSelectedDayOfWeek}
+                      isLoading={isLoading}
                     />
                   )}
 
@@ -979,7 +996,11 @@ const AdminNewUserRequest = ({
                         <FormItem className="space-y-2">
                           <CustomFormLabel title="Service Date" />
                           <Popover>
-                            <PopoverTrigger asChild className="w-full">
+                            <PopoverTrigger
+                              asChild
+                              className="w-full"
+                              disabled={isLoading}
+                            >
                               <FormControl>
                                 <Button
                                   variant={"outline"}
@@ -998,7 +1019,7 @@ const AdminNewUserRequest = ({
                                   ) : (
                                     <span>Select a date</span>
                                   )}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                  <CalendarIcon className="ml-auto size-4 opacity-50" />
                                 </Button>
                               </FormControl>
                             </PopoverTrigger>
@@ -1037,7 +1058,7 @@ const AdminNewUserRequest = ({
                       <FormItem className="space-y-2">
                         <CustomFormLabel title="Pickup Address" />
                         <Select
-                          defaultValue={field.value}
+                          value={field.value}
                           onValueChange={field.onChange}
                           disabled={
                             !selectedUser ||
@@ -1052,6 +1073,7 @@ const AdminNewUserRequest = ({
                                   ? "w-full"
                                   : "max-w-[min(calc(100vw-4rem),430px)]"
                               )}
+                              disabled={isLoading}
                             >
                               <SelectValue placeholder="Select pickup address" />
                             </SelectTrigger>
@@ -1123,6 +1145,7 @@ const AdminNewUserRequest = ({
                                 );
                                 field.onChange(checked);
                               }}
+                              disabled={isLoading}
                             />
                           </FormControl>
                         </FormItem>
@@ -1151,6 +1174,7 @@ const AdminNewUserRequest = ({
                                     val === "" ? null : parseInt(val, 10)
                                   );
                                 }}
+                                disabled={isLoading}
                               />
                             </FormControl>
                             <div className="min-h-[1.25rem]">
@@ -1194,7 +1218,7 @@ const AdminNewUserRequest = ({
                                   );
                                   field.onChange(checked);
                                 }}
-                                disabled={!newFormRequestDate}
+                                disabled={!newFormRequestDate || isLoading}
                               />
                             </FormControl>
                           </FormItem>
@@ -1219,7 +1243,11 @@ const AdminNewUserRequest = ({
                               <FormItem className="space-y-2">
                                 <CustomFormLabel title="End Date" />
                                 <Popover>
-                                  <PopoverTrigger asChild className="w-full">
+                                  <PopoverTrigger
+                                    asChild
+                                    className="w-full"
+                                    disabled={isLoading}
+                                  >
                                     <FormControl>
                                       <Button
                                         variant={"outline"}
@@ -1239,7 +1267,7 @@ const AdminNewUserRequest = ({
                                         ) : (
                                           <span>Select a date</span>
                                         )}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                        <CalendarIcon className="ml-auto size-4 opacity-50" />
                                       </Button>
                                     </FormControl>
                                   </PopoverTrigger>
@@ -1296,6 +1324,7 @@ const AdminNewUserRequest = ({
                             placeholder="Any special instructions or requirements..."
                             className="resize-none w-full"
                             rows={5}
+                            disabled={isLoading}
                           />
                         </FormControl>
                         <FormDescription className="text-xs text-gray-500 dark:text-gray-200">
@@ -1353,9 +1382,12 @@ const AdminNewUserRequest = ({
                     )}
                     <Button
                       type="submit"
-                      disabled={loading || !newRequestForm.formState.isDirty}
+                      disabled={isLoading || !newRequestForm.formState.isDirty}
                     >
-                      {loading ? (
+                      {isLoading && (
+                        <Loader2Icon className="size-4 animate-spin" />
+                      )}
+                      {isLoading ? (
                         newRequestData ? (
                           "Updating Request..."
                         ) : (

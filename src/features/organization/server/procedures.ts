@@ -43,7 +43,7 @@ export const organizationRouter = createTRPCRouter({
         addressId: z.string(),
       })
     )
-    .query(async ({ input }) => {
+    .mutation(async ({ input }) => {
       const { organizationId, addressId } = input;
 
       const result = await prisma.$transaction(async (tx) => {
@@ -103,11 +103,11 @@ export const organizationRouter = createTRPCRouter({
         organizationId: z.string().optional(),
         branchName: z.string().nullish(),
         branchCategory: z.enum(["HEADQUARTER", "BRANCH"]),
-        churchAddress: z.string(),
-        churchCity: z.string(),
-        churchProvince: z.string(),
-        churchPostalCode: z.string(),
-        churchCountry: z.string(),
+        street: z.string(),
+        city: z.string(),
+        province: z.string(),
+        postalCode: z.string(),
+        country: z.string(),
         churchPhone: z.string(),
         requestCutOffInHrs: z.string(),
         defaultMaxDistance: z.enum(["10", "20", "30", "50"]),

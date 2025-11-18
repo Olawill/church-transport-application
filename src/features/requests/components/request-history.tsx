@@ -8,6 +8,7 @@ import {
   CheckCircle,
   Clock,
   Filter,
+  Loader2Icon,
   MapPin,
   Pencil,
   Phone,
@@ -80,7 +81,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { PAGINATION } from "@/config/constants";
 import { useSession } from "@/lib/auth-client";
 import { useTRPC } from "@/trpc/client";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { useRequestsParams } from "../hooks/use-requests-params";
 import { GetUserRequestsType } from "../server/types";
 
@@ -89,6 +94,7 @@ type Type = RequestType | "ALL";
 export const RequestHistory = () => {
   const { data: session } = useSession();
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
 
   const [params, setParams] = useRequestsParams();
   const { page, pageSize, search, status, type, requestDate, serviceDay } =
@@ -147,6 +153,44 @@ export const RequestHistory = () => {
   const hasNextPage = requestData?.hasNextPage || false;
   const hasPreviousPage = requestData?.hasPreviousPage || false;
 
+  const cancelRequest = useMutation(
+    trpc.requests.cancelRequest.mutationOptions({
+      onSuccess: (data) => {
+        toast.success(data.message);
+
+        queryClient.invalidateQueries(
+          trpc.userRequests.getUserRequests.queryOptions({})
+        );
+
+        setCancelDialogOpen(false);
+        setCancelReason("");
+        setSelectedRequest(null);
+      },
+      onError: (error) => {
+        toast.error(error.message || `Error cancelling request`);
+      },
+    })
+  );
+
+  const cancelPickup = useMutation(
+    trpc.driverRequests.driverCancelRequest.mutationOptions({
+      onSuccess: (data) => {
+        toast.success(data.message || "Pickup cancelled successfully");
+
+        queryClient.invalidateQueries(
+          trpc.userRequests.getUserRequests.queryOptions({})
+        );
+
+        setPickupCancelDialogOpen(false);
+        setCancelReason("");
+        setSelectedRequest(null);
+      },
+      onError: (error) => {
+        toast.error(error.message || `Error cancelling pickup`);
+      },
+    })
+  );
+
   const handleNameFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setNameInput(val); // Immediate input update
@@ -165,30 +209,10 @@ export const RequestHistory = () => {
       return;
     }
 
-    try {
-      const response = await fetch(
-        `/api/pickup-requests/${selectedRequest.id}/cancel`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reason: cancelReason.trim() }),
-        }
-      );
-
-      if (response.ok) {
-        // await fetchRequests();
-        setCancelDialogOpen(false);
-        setCancelReason("");
-        setSelectedRequest(null);
-        toast.success("Pickup request cancelled successfully");
-      } else {
-        const error = await response.json();
-        toast.error(error.message || "Failed to cancel request");
-      }
-    } catch (error) {
-      console.error("Error cancel request:", error);
-      toast.error("Error cancelling request");
-    }
+    await cancelRequest.mutateAsync({
+      id: selectedRequest.id,
+      reason: cancelReason,
+    });
   };
 
   const handlePickupCancelRequest = async () => {
@@ -202,30 +226,11 @@ export const RequestHistory = () => {
       return;
     }
 
-    try {
-      const response = await fetch(
-        `/api/pickup-requests/${selectedRequest.id}/cancel/${session.user.id}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reason: cancelReason.trim() }),
-        }
-      );
-
-      if (response.ok) {
-        // await fetchRequests();
-        setPickupCancelDialogOpen(false);
-        setCancelReason("");
-        setSelectedRequest(null);
-        toast.success("Pickup cancelled successfully");
-      } else {
-        const error = await response.json();
-        toast.error(error.message || "Failed to cancel pickup");
-      }
-    } catch (error) {
-      console.error("Error cancel pickup:", error);
-      toast.error("Error cancelling pickup");
-    }
+    await cancelPickup.mutateAsync({
+      id: selectedRequest.id,
+      driverId: session?.user.id,
+      reason: cancelReason,
+    });
   };
 
   const handleEditDialog = (value: boolean) => {
@@ -248,19 +253,28 @@ export const RequestHistory = () => {
     const twoHoursBefore = new Date(
       serviceDateTime.getTime() - 2 * 60 * 60 * 1000
     );
+
     return (
-      request.status === "PENDING" ||
-      (request.status === "ACCEPTED" &&
-        now.getTime() > twoHoursBefore.getTime())
+      (request.status === "PENDING" || request.status === "ACCEPTED") &&
+      now.getTime() < twoHoursBefore.getTime()
     ); // 2 hours before
   };
 
   const canCancelPickup = (request: GetUserRequestsType): boolean => {
-    // Drivers can cancel their accepted pickup
-    return (
-      request.status === "ACCEPTED" &&
-      new Date(request.requestDate).getTime() > Date.now() + 2 * 60 * 60 * 1000
-    ); // 2 hours before
+    if (request.status !== "ACCEPTED") return false;
+
+    const serviceTime = request.serviceDay?.time as string; // "HH:MM"
+    const [hours, minutes] = serviceTime.split(":").map(Number);
+
+    const serviceDateTime = new Date(request.requestDate);
+    serviceDateTime.setHours(hours, minutes, 0, 0);
+
+    const now = new Date();
+    const twoHoursBefore = new Date(
+      serviceDateTime.getTime() - 2 * 60 * 60 * 1000
+    );
+
+    return now < twoHoursBefore;
   };
 
   const getStatusColor = (status: string) => {
@@ -299,15 +313,11 @@ export const RequestHistory = () => {
   };
 
   // Statistics calculations
-  const pendingRequests = requests.filter((r) => r.status === "PENDING").length;
-  const acceptedRequests = requests.filter(
-    (r) => r.status === "ACCEPTED"
-  ).length;
-  const completedRequests = requests.filter(
-    (r) => r.status === "COMPLETED"
-  ).length;
-  const dropOffRequest = requests.filter((r) => r.isDropOff === true).length;
-  const pickUpRequest = requests.filter((r) => r.isPickUp === true).length;
+  const pendingRequests = requestData?.stats.totalPending || 0;
+  const acceptedRequests = requestData?.stats.totalAccepted || 0;
+  const completedRequests = requestData?.stats.totalCompleted || 0;
+  const dropOffRequest = requestData?.stats.totalDropOff || 0;
+  const pickUpRequest = requestData?.stats.totalPickUp || 0;
 
   const isFiltered =
     status !== "ALL" ||
@@ -357,7 +367,7 @@ export const RequestHistory = () => {
                   <p className="text-2xl font-bold">{pendingRequests}</p>
                 </div>
                 <div className="p-3 rounded-full bg-yellow-100 text-yellow-600">
-                  <Clock className="h-6 w-6" />
+                  <Clock className="size-6" />
                 </div>
               </div>
             </CardContent>
@@ -372,7 +382,7 @@ export const RequestHistory = () => {
                   <p className="text-2xl font-bold">{acceptedRequests}</p>
                 </div>
                 <div className="p-3 rounded-full bg-blue-100 text-blue-600">
-                  <Car className="h-6 w-6" />
+                  <Car className="size-6" />
                 </div>
               </div>
             </CardContent>
@@ -387,7 +397,7 @@ export const RequestHistory = () => {
                   <p className="text-2xl font-bold">{completedRequests}</p>
                 </div>
                 <div className="p-3 rounded-full bg-green-100 text-green-600">
-                  <CheckCircle className="h-6 w-6" />
+                  <CheckCircle className="size-6" />
                 </div>
               </div>
             </CardContent>
@@ -445,10 +455,10 @@ export const RequestHistory = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col sm:flex-row justify-between gap-8">
-              <div className="flex-[70%] flex flex-col sm:flex-row justify-between gap-2">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Status */}
-                <div className="">
+                <div>
                   <Label className="text-sm font-medium mb-2 block">
                     Status
                   </Label>
@@ -476,7 +486,7 @@ export const RequestHistory = () => {
                 </div>
 
                 {/* Type */}
-                <div className="">
+                <div>
                   <Label className="text-sm font-medium mb-2 block">
                     Request Type
                   </Label>
@@ -499,7 +509,7 @@ export const RequestHistory = () => {
 
                 {/* Service */}
                 {!isUser && (
-                  <div className="flex-1">
+                  <div>
                     <Label className="text-sm font-medium mb-2 block">
                       Service
                     </Label>
@@ -522,8 +532,9 @@ export const RequestHistory = () => {
                     </Select>
                   </div>
                 )}
+
                 {/* Request Date */}
-                <div className={cn(!isUser && "flex-1")}>
+                <div>
                   <CustomDateCalendar
                     label="Request Date"
                     setRequestDateFilter={(date) => {
@@ -542,7 +553,7 @@ export const RequestHistory = () => {
 
               {/* Name Filter */}
               {!isUser && (
-                <div className="flex-[25%]">
+                <div className="flex-1">
                   <Label className="text-sm font-medium mb-2 block">Name</Label>
                   <Input
                     placeholder="Filter by member's name..."
@@ -587,7 +598,7 @@ export const RequestHistory = () => {
               </div>
             ) : requests.length === 0 ? (
               <div className="text-center py-8">
-                <Car className="mx-auto h-12 w-12 text-gray-400" />
+                <Car className="mx-auto size-12 text-gray-400" />
                 <h3 className="mt-2 text-sm font-medium text-gray-900">
                   No requests found
                 </h3>
@@ -613,7 +624,7 @@ export const RequestHistory = () => {
                   <div key={request.id} className="border rounded-lg p-6">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex items-center space-x-3">
-                        <Calendar className="h-5 w-5 text-gray-400" />
+                        <Calendar className="size-5 text-gray-400" />
                         <div>
                           <h3 className="font-semibold">
                             {request.serviceDay?.name}
@@ -654,7 +665,7 @@ export const RequestHistory = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                       {!isUser && request.user && (
                         <div className="flex items-center space-x-2">
-                          <User className="h-4 w-4 text-gray-400" />
+                          <User className="size-4 text-gray-400" />
                           <div>
                             <p className="text-sm font-medium">Requested by</p>
                             <p className="text-sm text-gray-600 dark:text-gray-300">
@@ -671,7 +682,7 @@ export const RequestHistory = () => {
                       )}
 
                       <div className="flex items-center space-x-2">
-                        <MapPin className="h-4 w-4 text-gray-400" />
+                        <MapPin className="size-4 text-gray-400" />
                         <div>
                           <p className="text-sm font-medium">Pickup Location</p>
                           <p className="text-sm">
@@ -690,7 +701,7 @@ export const RequestHistory = () => {
                             <p className="text-sm">{request.driver.name}</p>
                             {request.driver.phoneNumber && (
                               <p className="text-xs text-blue-600 flex items-center">
-                                <Phone className="h-3 w-3 mr-1" />
+                                <Phone className="size-3 mr-1" />
                                 {request.driver.phoneNumber}
                               </p>
                             )}
@@ -932,6 +943,9 @@ export const RequestHistory = () => {
                   newRequestData={{
                     requestId: selectedRequest.id as string,
                     serviceDayId: selectedRequest.serviceDayId as string,
+                    serviceDayOfWeek: String(
+                      selectedRequest.serviceWeekday.dayOfWeek
+                    ),
                     requestDate: selectedRequest.requestDate as Date,
                     addressId: selectedRequest.addressId as string,
                     notes: selectedRequest.notes as string,
@@ -939,7 +953,7 @@ export const RequestHistory = () => {
                     isDropOff: selectedRequest.isDropOff as boolean,
                     isGroupRide: selectedRequest.isGroupRide as boolean,
                     numberOfGroup: selectedRequest.numberOfGroup ?? null,
-                    isRecurring: Boolean(selectedRequest.seriesId),
+                    isRecurring: false,
                     endDate: selectedRequest.serviceDay.endDate ?? undefined,
                     seriesId: selectedRequest.seriesId ?? null,
                   }}
@@ -957,6 +971,9 @@ export const RequestHistory = () => {
                     requestId: selectedRequest.id as string,
                     userId: selectedRequest.userId as string,
                     serviceDayId: selectedRequest.serviceDayId as string,
+                    serviceDayOfWeek: String(
+                      selectedRequest.serviceWeekday.dayOfWeek
+                    ),
                     requestDate: selectedRequest.requestDate as Date,
                     addressId: selectedRequest.addressId as string,
                     notes: selectedRequest.notes as string,
@@ -964,7 +981,7 @@ export const RequestHistory = () => {
                     isDropOff: selectedRequest.isDropOff as boolean,
                     isGroupRide: selectedRequest.isGroupRide as boolean,
                     numberOfGroup: selectedRequest.numberOfGroup ?? null,
-                    isRecurring: Boolean(selectedRequest.seriesId),
+                    isRecurring: false,
                     endDate: selectedRequest.serviceDay.endDate ?? undefined,
                     seriesId: selectedRequest.seriesId ?? null,
                   }}
@@ -980,7 +997,7 @@ export const RequestHistory = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center text-red-600 font-medium">
-              <AlertTriangle className="h-5 w-5 mr-2" />
+              <AlertTriangle className="size-5 mr-2" />
               Cancel Pickup Request
             </DialogTitle>
             <DialogDescription className="sr-only">
@@ -1033,12 +1050,13 @@ export const RequestHistory = () => {
 
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
               <div className="flex items-start">
-                <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 mr-2" />
+                <AlertTriangle className="size-4 text-yellow-600 mt-0.5 mr-2" />
                 <div className="text-sm">
                   <p className="font-medium text-yellow-800">Important:</p>
                   <p className="text-yellow-700">
                     Cancelling this request will notify your assigned driver (if
-                    any) and free up the pickup slot for other members.
+                    any) and free up the pickup slot for other members and
+                    drivers.
                   </p>
                 </div>
               </div>
@@ -1058,8 +1076,11 @@ export const RequestHistory = () => {
               <Button
                 variant="destructive"
                 onClick={handleCancelRequest}
-                disabled={!cancelReason.trim()}
+                disabled={!cancelReason.trim() || cancelRequest.isPending}
               >
+                {cancelRequest.isPending && (
+                  <Loader2Icon className="size-4 animate-spin" />
+                )}
                 Cancel Request
               </Button>
             </div>
@@ -1075,7 +1096,7 @@ export const RequestHistory = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center text-red-600 font-medium">
-              <AlertTriangle className="h-5 w-5 mr-2" />
+              <AlertTriangle className="size-5 mr-2" />
               Cancel Pickup Request - Driver
             </DialogTitle>
             <DialogDescription className="sr-only">
@@ -1129,7 +1150,7 @@ export const RequestHistory = () => {
 
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
               <div className="flex items-start">
-                <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 mr-2" />
+                <AlertTriangle className="size-4 text-yellow-600 mt-0.5 mr-2" />
                 <div className="text-sm">
                   <p className="font-medium text-yellow-800">Important:</p>
                   <p className="text-yellow-700">
@@ -1153,8 +1174,11 @@ export const RequestHistory = () => {
               <Button
                 variant="destructive"
                 onClick={handlePickupCancelRequest}
-                disabled={!cancelReason.trim()}
+                disabled={!cancelReason.trim() || cancelPickup.isPending}
               >
+                {cancelPickup.isPending && (
+                  <Loader2Icon className="size-4 animate-spin" />
+                )}
                 Cancel Pickup
               </Button>
             </div>

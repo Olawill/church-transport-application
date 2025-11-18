@@ -42,6 +42,7 @@ export const adminUserRequestRouter = createTRPCRouter({
         city,
         province,
         postalCode,
+        country,
         serviceDayId,
         serviceDayOfWeek,
         requestDate,
@@ -158,7 +159,7 @@ export const adminUserRequestRouter = createTRPCRouter({
           city,
           province,
           postalCode,
-          country: "Canada",
+          country,
         }),
       ]);
 
@@ -186,19 +187,36 @@ export const adminUserRequestRouter = createTRPCRouter({
       // Single comprehensive transaction for ALL operations
       const { newUser, newAddress, allRequests, seriesId } =
         await prisma.$transaction(async (tx) => {
+          const accountId = authCtx.generateId({ model: "account" });
+
+          if (!accountId) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "User account cannot be created",
+            });
+          }
           // Create user
           const newUser = await tx.user.create({
             data: {
               name: `${firstName} ${lastName}`,
               email,
-              phoneNumber: phone,
+              phoneNumber: phone || null,
               // password: hashedPassword,
               role: "USER",
               status: "APPROVED",
+              isAdminCreated: true,
             },
           });
 
-          // TODO: Do we need to create an account for them as well?
+          // Create account for user
+          await tx.account.create({
+            data: {
+              userId: newUser.id,
+              providerId: "credential",
+              accountId,
+              password: hashedPassword || null,
+            },
+          });
 
           // Create default address
           const newAddress = await tx.address.create({
@@ -209,7 +227,7 @@ export const adminUserRequestRouter = createTRPCRouter({
               city,
               province,
               postalCode,
-              country: "Canada",
+              country,
               latitude: coordinates.latitude,
               longitude: coordinates.longitude,
               isDefault: true,

@@ -7,12 +7,12 @@ import {
   ChevronsUpDown,
   Eye,
   EyeClosed,
-  Loader,
+  Loader2Icon,
   UserPlus,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FieldValues,
   Path,
@@ -423,12 +423,12 @@ export const SignupForm = () => {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? (
                 <>
-                  <Loader className="h-4 w-4" />
+                  <Loader2Icon className="size-4 animate-spin" />
                   Creating account...
                 </>
               ) : (
                 <>
-                  <UserPlus className="h-4 w-4" />
+                  <UserPlus className="size-4" />
                   Create Account
                 </>
               )}
@@ -463,6 +463,10 @@ export const AddressFields = <T extends AddressFormFields>({
 
   const selectedCountry = form.watch("country" as Path<T>);
   const selectedState = form.watch("province" as Path<T>);
+
+  // Track previous country to reset state/city only if country actually changed
+  const prevCountryRef = useRef<string | undefined>(undefined);
+  const prevStateRef = useRef<string | undefined>(undefined);
 
   // Fetch countries (will use server-prefetched data)
   const { data: countriesByContinent } = useSuspenseQuery(
@@ -512,31 +516,48 @@ export const AddressFields = <T extends AddressFormFields>({
 
   // Set Canada as default on mount
   useEffect(() => {
-    const currentCountry = form.getValues("country" as Path<T>);
-    if (!currentCountry) {
+    const { country, province, city, postalCode } = form.getValues();
+
+    if (!country) {
       form.setValue("country" as Path<T>, "CA" as PathValue<T, Path<T>>);
+    }
+
+    if (province) {
+      form.setValue("province" as Path<T>, province as PathValue<T, Path<T>>);
+    }
+
+    if (city) {
+      form.setValue("city" as Path<T>, city as PathValue<T, Path<T>>);
+    }
+
+    if (postalCode) {
+      form.setValue(
+        "postalCode" as Path<T>,
+        postalCode as PathValue<T, Path<T>>
+      );
     }
   }, [form]);
 
   // Reset state and city when country changes
   useEffect(() => {
     // Only reset if we actually changed countries
-    const currentState = form.getValues("province" as Path<T>);
-    const currentCity = form.getValues("city" as Path<T>);
+    const prevCountry = prevCountryRef.current;
 
-    if (selectedCountry && (currentState || currentCity)) {
+    if (prevCountry && selectedCountry && prevCountry !== selectedCountry) {
       form.setValue("province" as Path<T>, "" as PathValue<T, Path<T>>);
       form.setValue("city" as Path<T>, "" as PathValue<T, Path<T>>);
     }
+    prevCountryRef.current = selectedCountry;
   }, [selectedCountry, form]);
 
   // Reset city when state changes
   useEffect(() => {
-    const currentCity = form.getValues("city" as Path<T>);
+    const prevState = prevStateRef.current;
 
-    if (selectedState && currentCity) {
+    if (prevState && selectedState && prevState !== selectedState) {
       form.setValue("city" as Path<T>, "" as PathValue<T, Path<T>>);
     }
+    prevStateRef.current = selectedState;
   }, [selectedState, form]);
 
   // Get all countries in a flat array for easier searching
@@ -619,7 +640,7 @@ export const AddressFields = <T extends AddressFormFields>({
                       ) : (
                         "Select country"
                       )}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
                     </Button>
                   </FormControl>
                 </PopoverTrigger>
@@ -634,18 +655,18 @@ export const AddressFields = <T extends AddressFormFields>({
                             {countries.map((country) => (
                               <CommandItem
                                 key={country.value}
-                                value={country.label}
-                                onSelect={() => {
+                                value={country.value}
+                                onSelect={(value) => {
                                   form.setValue(
                                     "country" as Path<T>,
-                                    country.value as PathValue<T, Path<T>>
+                                    value as PathValue<T, Path<T>>
                                   );
                                   setCountryOpen(false);
                                 }}
                               >
                                 <Check
                                   className={cn(
-                                    "mr-2 h-4 w-4",
+                                    "mr-2 size-4",
                                     field.value === country.value
                                       ? "opacity-100"
                                       : "opacity-0"
@@ -695,7 +716,7 @@ export const AddressFields = <T extends AddressFormFields>({
                         {field.value
                           ? states.find((s) => s.value === field.value)?.label
                           : "Select province/state"}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
@@ -708,18 +729,18 @@ export const AddressFields = <T extends AddressFormFields>({
                           {states.map((state) => (
                             <CommandItem
                               key={state.value}
-                              value={state.label}
-                              onSelect={() => {
+                              value={state.value}
+                              onSelect={(value) => {
                                 form.setValue(
                                   "province" as Path<T>,
-                                  state.value as PathValue<T, Path<T>>
+                                  value as PathValue<T, Path<T>>
                                 );
                                 setStateOpen(false);
                               }}
                             >
                               <Check
                                 className={cn(
-                                  "mr-2 h-4 w-4",
+                                  "mr-2 size-4",
                                   field.value === state.value
                                     ? "opacity-100"
                                     : "opacity-0"
@@ -773,7 +794,7 @@ export const AddressFields = <T extends AddressFormFields>({
                         )}
                       >
                         {field.value || "Select city"}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
@@ -786,18 +807,18 @@ export const AddressFields = <T extends AddressFormFields>({
                           {cities.map((city) => (
                             <CommandItem
                               key={city.value}
-                              value={city.label}
-                              onSelect={() => {
+                              value={city.value}
+                              onSelect={(value) => {
                                 form.setValue(
                                   "city" as Path<T>,
-                                  city.value as PathValue<T, Path<T>>
+                                  value as PathValue<T, Path<T>>
                                 );
                                 setCityOpen(false);
                               }}
                             >
                               <Check
                                 className={cn(
-                                  "mr-2 h-4 w-4",
+                                  "mr-2 size-4",
                                   field.value === city.value
                                     ? "opacity-100"
                                     : "opacity-0"
@@ -862,12 +883,12 @@ export const SignupFormSkeleton = () => {
           {/* Name Fields */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Skeleton className="h-4 w-24" /> {/* Label */}
+              <Skeleton className="size-24" /> {/* Label */}
               <Skeleton className="h-10 w-full" /> {/* Input */}
               <div className="min-h-[1.25rem]" />
             </div>
             <div className="space-y-2">
-              <Skeleton className="h-4 w-24" />
+              <Skeleton className="size-24" />
               <Skeleton className="h-10 w-full" />
               <div className="min-h-[1.25rem]" />
             </div>

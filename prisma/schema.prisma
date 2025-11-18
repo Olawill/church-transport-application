@@ -152,6 +152,8 @@ model User {
   bannedAt            DateTime?
   bannedBy            String?
   banReason           String?
+
+  isAdminCreated      Boolean       @default(false)
   
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
@@ -328,11 +330,11 @@ model SystemBranchInfo {
 
   systemConfigId      String
 
-  churchAddress       String
-  churchCity          String
-  churchProvince      String
-  churchPostalCode    String
-  churchCountry       String
+  street       String
+  city          String
+  province      String
+  postalCode    String
+  country       String
   churchPhone         String
   requestCutOffInHrs  String
   defaultMaxDistance  String

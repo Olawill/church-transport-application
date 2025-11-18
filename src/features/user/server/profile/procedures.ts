@@ -6,14 +6,6 @@ import { AnalyticsService } from "@/lib/analytics";
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
 
-interface UpdatedDataType {
-  name: string;
-  username: string | null;
-  phoneNumber: string | null;
-  whatsappNumber: string | null;
-  image?: string | undefined;
-}
-
 export const userProfileRouter = createTRPCRouter({
   getUserProfile: protectedProcedure.query(async ({ ctx }) => {
     const user = await prisma.user.findUnique({
@@ -51,17 +43,19 @@ export const userProfileRouter = createTRPCRouter({
   updateUserProfile: protectedProcedure
     .input(
       z.object({
-        firstName: z.string(),
-        lastName: z.string(),
-        userName: z.string(),
-        phone: z.string(),
-        whatsappNumber: z.string(),
-        image: z.string(),
+        name: z.string(),
+        email: z.string(),
+        userName: z.string().optional(),
+        phoneNumber: z.string(),
+        whatsappNumber: z.string().optional(),
+        image: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { firstName, lastName, userName, phone, whatsappNumber, image } =
+      const { name, email, userName, phoneNumber, whatsappNumber, image } =
         input;
+
+      const updateData: Record<string, string> = {};
 
       // Validate username uniqueness if provided
       if (userName) {
@@ -78,14 +72,26 @@ export const userProfileRouter = createTRPCRouter({
             message: "Username already taken",
           });
         }
+
+        updateData.username = userName;
       }
 
-      const updateData: UpdatedDataType = {
-        name: `${firstName} ${lastName}`,
-        username: userName || null,
-        phoneNumber: phone || null,
-        whatsappNumber: whatsappNumber || null,
-      };
+      // Update name only if fields are provided
+      if (name !== undefined) {
+        const current = await prisma.user.findUnique({
+          where: { id: ctx.auth.user.id },
+          select: { name: true },
+        });
+
+        const currName = current?.name ?? "";
+
+        updateData.name = `${name ?? currName}`;
+      }
+
+      if (email !== undefined) updateData.email = email;
+      if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+      if (whatsappNumber !== undefined)
+        updateData.whatsappNumber = whatsappNumber;
 
       // Handle image upload if provided
       //   if (image && image.size > 0) {

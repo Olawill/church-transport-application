@@ -2,7 +2,13 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Icon } from "@iconify-icon/react";
-import { Eye, EyeClosed, Loader, LogIn, OctagonAlertIcon } from "lucide-react";
+import {
+  EyeIcon,
+  EyeClosedIcon,
+  Loader2Icon,
+  LogInIcon,
+  OctagonAlertIcon,
+} from "lucide-react";
 import { Route } from "next";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -127,7 +133,7 @@ export const LoginForm = () => {
           >
             {oauthLoading === "google" ? (
               <>
-                <Loader className="absolute left-3 size-5 animate-spin" />
+                <Loader2Icon className="absolute left-3 size-5 animate-spin" />
                 Connecting to Google
               </>
             ) : (
@@ -147,7 +153,7 @@ export const LoginForm = () => {
           >
             {oauthLoading === "facebook" ? (
               <>
-                <Loader className="absolute left-3 size-5 animate-spin" />
+                <Loader2Icon className="absolute left-3 size-5 animate-spin" />
                 Connecting to Facebook
               </>
             ) : (
@@ -244,9 +250,9 @@ export const LoginForm = () => {
                         disabled={login.isPending || !form.watch("password")}
                       >
                         {showPassword ? (
-                          <Eye className="h-4 w-4" />
+                          <EyeIcon className="size-4" />
                         ) : (
-                          <EyeClosed className="h-4 w-4" />
+                          <EyeClosedIcon className="size-4" />
                         )}
                       </Button>
                     </div>
@@ -265,12 +271,12 @@ export const LoginForm = () => {
             >
               {login.isPending ? (
                 <>
-                  <Loader className="h-4 w-4" />
+                  <Loader2Icon className="size-4 animate-spin" />
                   Signing in...
                 </>
               ) : (
                 <>
-                  <LogIn className="h-4 w-4" />
+                  <LogInIcon className="size-4" />
                   Sign In
                 </>
               )}

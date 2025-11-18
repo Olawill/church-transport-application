@@ -161,7 +161,7 @@ export const CustomPagination = ({
           disabled={!canGoPrevious}
           title="First page"
         >
-          <ChevronsLeft className="h-4 w-4" />
+          <ChevronsLeft className="size-4" />
         </Button>
 
         {/* Previous page */}
@@ -172,7 +172,7 @@ export const CustomPagination = ({
           disabled={!canGoPrevious}
           title="Previous page"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="size-4" />
         </Button>
 
         {/* Page numbers */}
@@ -213,7 +213,7 @@ export const CustomPagination = ({
           disabled={!canGoNext}
           title="Next page"
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="size-4" />
         </Button>
 
         {/* Last page */}
@@ -224,7 +224,7 @@ export const CustomPagination = ({
           disabled={!canGoNext}
           title="Last page"
         >
-          <ChevronsRight className="h-4 w-4" />
+          <ChevronsRight className="size-4" />
         </Button>
       </div>
     </div>

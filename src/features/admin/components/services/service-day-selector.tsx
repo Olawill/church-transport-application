@@ -35,6 +35,7 @@ interface ServiceDaySelectorProps<T extends ServiceDayFormFields> {
   selectedService: GetServiceType | null;
   dayOptions: Array<{ value: string; label: string; dayOfWeek: number }>;
   setSelectedDayOfWeek: (val: number) => void;
+  isLoading?: boolean;
 }
 
 export const ServiceDaySelector = <T extends ServiceDayFormFields>({
@@ -42,6 +43,7 @@ export const ServiceDaySelector = <T extends ServiceDayFormFields>({
   selectedService,
   dayOptions,
   setSelectedDayOfWeek,
+  isLoading,
 }: ServiceDaySelectorProps<T>) => {
   return (
     <FormField
@@ -95,7 +97,7 @@ export const ServiceDaySelector = <T extends ServiceDayFormFields>({
               }}
             >
               <FormControl>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full" disabled={isLoading}>
                   <SelectValue placeholder="Select which day you need pickup" />
                 </SelectTrigger>
               </FormControl>

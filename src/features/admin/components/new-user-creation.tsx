@@ -1,10 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Key, UserPlus2Icon } from "lucide-react";
+import { ArrowLeft, Key, Loader2Icon, UserPlus2Icon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -36,11 +35,13 @@ import {
   newUserSchema,
   NewUserSchema,
 } from "@/schemas/adminCreateNewUserSchema";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTRPC } from "@/trpc/client";
 
 export const NewUserCreationForm = () => {
   const router = useRouter();
-
-  const [loading, setLoading] = useState(false);
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
 
   const form = useForm<NewUserSchema>({
     resolver: zodResolver(newUserSchema),
@@ -91,6 +92,49 @@ export const NewUserCreationForm = () => {
     form.setValue("password", temp);
   };
 
+  const adminCreateUser = useMutation(
+    trpc.adminUsers.createUser.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(trpc.adminUsers.getUsers.queryOptions());
+        toast.success("User Created Successfully!");
+        router.push("/admin/users");
+      },
+      onError: (error) => {
+        toast.error(error.message || "Failed to create user");
+      },
+    })
+  );
+
+  const adminCreateUserAndRequest = useMutation(
+    trpc.adminRequest.createUserRequest.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(trpc.adminUsers.getUsers.queryOptions());
+        queryClient.invalidateQueries(
+          trpc.adminAnalytics.getAnalytics.queryOptions()
+        );
+        queryClient.invalidateQueries(
+          trpc.driverRequests.getRequestStats.queryOptions()
+        );
+        queryClient.invalidateQueries(trpc.users.getUsers.queryOptions({}));
+        queryClient.invalidateQueries(
+          trpc.users.getPaginatedUsers.queryOptions({})
+        );
+        queryClient.invalidateQueries(
+          trpc.userRequests.getUserRequests.queryOptions({})
+        );
+
+        toast.success("User and ride request(s) created Successfully!");
+        router.push("/admin/users");
+      },
+      onError: (error) => {
+        toast.error(error.message || "Failed to create user and request");
+      },
+    })
+  );
+
+  const loading =
+    adminCreateUser.isPending || adminCreateUserAndRequest.isPending;
+
   const onSubmit = async (values: NewUserSchema) => {
     const validatedFields = await newUserSchema.safeParseAsync(values);
 
@@ -98,45 +142,23 @@ export const NewUserCreationForm = () => {
       toast.error("Please fill in all required fields");
       return;
     }
-    setLoading(true);
+    if (!validatedFields.data.createPickUpRequest) {
+      await adminCreateUser.mutateAsync(validatedFields.data);
+    } else {
+      const { serviceDayId, serviceDayOfWeek, requestDate } =
+        validatedFields.data;
 
-    try {
-      if (!values.createPickUpRequest) {
-        const response = await fetch("/api/admin/users", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(validatedFields.data),
-        });
-        if (response.ok) {
-          toast.success("User Created Successfully!");
-          router.push("/admin/users");
-        } else {
-          const errorData = await response.json();
-          toast.error(errorData.error || "Failed to create user");
-        }
-      } else {
-        const response = await fetch("/api/admin/users/pickup-request", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(validatedFields.data),
-        });
-        if (response.ok) {
-          toast.success("User Created Successfully!");
-          router.push("/admin/users");
-        } else {
-          const errorData = await response.json();
-          toast.error(errorData.error || "Failed to create user");
-        }
+      if (!serviceDayId || !serviceDayOfWeek || !requestDate) {
+        toast.error("Missing required pickup request fields");
+        return;
       }
-    } catch (error) {
-      console.error("Error creating user:", error);
-      toast.error("An error occurred while creating user");
-    } finally {
-      setLoading(false);
+
+      await adminCreateUserAndRequest.mutateAsync({
+        ...validatedFields.data,
+        serviceDayId,
+        serviceDayOfWeek,
+        requestDate,
+      });
     }
   };
 
@@ -317,6 +339,7 @@ export const NewUserCreationForm = () => {
                             />
                             <Button
                               className="absolute right-1 top-1 h-7 px-3 shadow-none"
+                              type="button"
                               onClick={generatePassword}
                               disabled={loading}
                             >
@@ -384,6 +407,7 @@ export const NewUserCreationForm = () => {
                 </Link>
                 {createPickUpRequest ? (
                   <Button type="submit" disabled={loading}>
+                    {loading && <Loader2Icon className="size-4 animate-spin" />}
                     {loading ? (
                       "Creating User and Request..."
                     ) : (

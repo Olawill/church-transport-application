@@ -135,22 +135,6 @@ export const ServiceList = ({
     if (result !== "confirm") return;
 
     await deleteService.mutateAsync({ id: serviceId });
-
-    // try {
-    //   const response = await fetch(`/api/service-days?id=${serviceId}`, {
-    //     method: "DELETE",
-    //   });
-
-    //   if (response.ok) {
-    //     toast.success("Service deleted successfully");
-    //     // onDelete(); Invalidate service Days
-    //   } else {
-    //     toast.error("Failed to delete service");
-    //   }
-    // } catch (error) {
-    //   console.error("Error deleting service:", error);
-    //   toast.error("An error occurred");
-    // }
   };
 
   const handleArchive = async (serviceId: string, currentStatus: boolean) => {
@@ -243,7 +227,7 @@ export const ServiceList = ({
             </div>
           ) : serviceDays.length === 0 ? (
             <div className="text-center py-8">
-              <CalendarIcon className="mx-auto h-12 w-12 text-gray-400" />
+              <CalendarIcon className="mx-auto size-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium">
                 No services configured
               </h3>
@@ -252,7 +236,7 @@ export const ServiceList = ({
               </p>
               <div className="mt-6">
                 <Button onClick={onShowForm}>
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="mr-2 size-4" />
                   Add First Service
                 </Button>
               </div>
@@ -272,7 +256,7 @@ export const ServiceList = ({
                         </h3>
                         <div className="flex flex-wrap items-center gap-2 mt-2 text-sm text-muted-foreground">
                           <div className="flex items-center">
-                            <CalendarIcon className="h-4 w-4 mr-1" />
+                            <CalendarIcon className="size-4 mr-1" />
                             {service.weekdays &&
                             service.weekdays.length === 1 ? (
                               <span>
@@ -286,7 +270,7 @@ export const ServiceList = ({
                             )}
                           </div>
                           <div className="flex items-center">
-                            <Clock className="h-4 w-4 mr-1" />
+                            <Clock className="size-4 mr-1" />
                             <span>{formatTime(service.time)}</span>
                           </div>
                         </div>

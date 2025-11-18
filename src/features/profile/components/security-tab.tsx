@@ -28,14 +28,14 @@ interface SecurityTabProps {
       | "whatsAppNotifications",
     currentValue: boolean
   ) => Promise<void>;
-  handleSecuritySubmit: (values: SecurityUpdateSchema) => Promise<void>;
+  handleChangePassword: (values: SecurityUpdateSchema) => Promise<void>;
 }
 
 export const SecurityTab = ({
   securityForm,
   profile,
   toggleUserSettings,
-  handleSecuritySubmit,
+  handleChangePassword,
 }: SecurityTabProps) => {
   return (
     <div className="space-y-6">
@@ -78,7 +78,7 @@ export const SecurityTab = ({
           <Form {...securityForm}>
             <form
               className="space-y-4"
-              onSubmit={securityForm.handleSubmit(handleSecuritySubmit)}
+              onSubmit={securityForm.handleSubmit(handleChangePassword)}
             >
               {/* Current Password */}
               <FormField

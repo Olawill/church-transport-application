@@ -26,8 +26,8 @@ const ProfilePage = async () => {
       <ErrorBoundary
         fallback={
           <ErrorState
-            title="New User Form Failed to Load"
-            description="An error occurred while loading new users form. Please try again or contact support if the issue continues."
+            title="Profile Failed to Load"
+            description="An error occurred while loading your profile. Please try again or contact support if the issue continues."
           />
         }
       >

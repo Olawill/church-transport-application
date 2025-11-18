@@ -28,7 +28,7 @@ import { DAYS_OF_WEEK, frequencyOptions } from "@/lib/types";
 import { cn, formatDate } from "@/lib/utils";
 import { OnetimeMultiDaySchema } from "@/schemas/serviceDaySchema";
 import { addMonths, format } from "date-fns";
-import { CalendarIcon, CheckCircle, X } from "lucide-react";
+import { CalendarIcon, CheckCircle, Loader2Icon, X } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
 import { canRestore } from "../../utils";
 import { GetServiceType } from "../../types";
@@ -122,7 +122,7 @@ export const OnetimeMultiDayForm = ({
                       {selectedDays.length > 0
                         ? `${selectedDays.length} day${selectedDays.length > 1 ? "s" : ""} selected`
                         : "Select days"}
-                      <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      <CalendarIcon className="ml-2 size-4 shrink-0 opacity-50" />
                     </Button>
                   </FormControl>
                 </PopoverTrigger>
@@ -140,7 +140,7 @@ export const OnetimeMultiDayForm = ({
                       >
                         <div
                           className={cn(
-                            "h-4 w-4 border rounded-sm flex items-center justify-center",
+                            "size-4 border rounded-sm flex items-center justify-center",
                             selectedDays.includes(day.value.toString()) &&
                               "bg-primary border-primary"
                           )}
@@ -306,7 +306,7 @@ export const OnetimeMultiDayForm = ({
                         ) : (
                           <span>Select a date</span>
                         )}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        <CalendarIcon className="ml-auto size-4 opacity-50" />
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
@@ -366,7 +366,7 @@ export const OnetimeMultiDayForm = ({
                         ) : (
                           <span>Select a date</span>
                         )}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        <CalendarIcon className="ml-auto size-4 opacity-50" />
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
@@ -433,7 +433,11 @@ export const OnetimeMultiDayForm = ({
           Cancel
         </Button>
         <Button type="submit" disabled={loading || !form.formState.isDirty}>
-          <CheckCircle className="h-4 w-4 mr-2" />
+          {loading ? (
+            <Loader2Icon className="size-4 animate-spin" />
+          ) : (
+            <CheckCircle className="size-4" />
+          )}
           {isEditing ? "Update Service" : "Create Service"}
         </Button>
       </div>

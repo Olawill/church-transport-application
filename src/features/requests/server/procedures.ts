@@ -81,6 +81,7 @@ export const userRequestRouter = createTRPCRouter({
       } = input;
 
       const where: Prisma.PickupRequestWhereInput = {};
+      const baseWhere: Prisma.PickupRequestWhereInput = {};
 
       const filter = () => {
         if (status && status !== "ALL") {
@@ -127,6 +128,7 @@ export const userRequestRouter = createTRPCRouter({
       // Filter based on user role
       if (ctx.auth.user.role === UserRole.USER) {
         where.userId = ctx.auth.user.id;
+        baseWhere.userId = ctx.auth.user.id;
         filter();
       } else if (ctx.auth.user.role === UserRole.TRANSPORTATION_TEAM) {
         // For drivers, show requests within their preferred distance
@@ -135,7 +137,7 @@ export const userRequestRouter = createTRPCRouter({
         filter();
       }
 
-      const [requests, totalCount] = await Promise.all([
+      const [requests, totalCount, allRequests] = await Promise.all([
         prisma.pickupRequest.findMany({
           skip: (page - 1) * pageSize,
           take: pageSize,
@@ -165,7 +167,31 @@ export const userRequestRouter = createTRPCRouter({
         prisma.pickupRequest.count({
           where,
         }),
+        prisma.pickupRequest.findMany({
+          where: baseWhere,
+          select: {
+            status: true,
+            isPickUp: true,
+            isDropOff: true,
+            driverId: true,
+          },
+        }),
       ]);
+
+      // Calculate stats from all requests (not filtered)
+      const totalPending = allRequests.filter(
+        (r) => r.status === "PENDING"
+      ).length;
+      const totalAccepted = allRequests.filter(
+        (r) => r.status === "ACCEPTED"
+      ).length;
+      const totalCompleted = allRequests.filter(
+        (r) => r.status === "COMPLETED"
+      ).length;
+      const totalPickUp = allRequests.filter((r) => r.isPickUp === true).length;
+      const totalDropOff = allRequests.filter(
+        (r) => r.isDropOff === true
+      ).length;
 
       const totalPages = Math.ceil(totalCount / pageSize);
       const hasNextPage = page < totalPages;
@@ -206,6 +232,13 @@ export const userRequestRouter = createTRPCRouter({
           const hasNextPageFiltered = page < totalFilteredPages;
           const hasPreviousPageFiltered = page > 1;
 
+          const myAcceptedRequests = allRequests.filter(
+            (r) => r.status === "ACCEPTED" && r.driverId === ctx.auth.user.id
+          ).length;
+          const totalCompletedRequests = allRequests.filter(
+            (r) => r.status === "COMPLETED" && r.driverId === ctx.auth.user.id
+          ).length;
+
           return {
             requests: filteredRequests,
             page,
@@ -214,6 +247,11 @@ export const userRequestRouter = createTRPCRouter({
             totalPages: totalFilteredPages,
             hasNextPage: hasNextPageFiltered,
             hasPreviousPage: hasPreviousPageFiltered,
+            stats: {
+              myAcceptedRequests,
+              availableRequests: totalPending,
+              totalCompletedRequests,
+            },
           };
         }
       }
@@ -225,10 +263,22 @@ export const userRequestRouter = createTRPCRouter({
         totalPages,
         hasNextPage,
         hasPreviousPage,
+        stats: {
+          totalPending,
+          totalAccepted,
+          totalCompleted,
+          totalPickUp,
+          totalDropOff,
+          totalAll: allRequests.length,
+        },
       };
     }),
 
-  createUserRequest: protectedRoleProcedure([UserRole.ADMIN, UserRole.USER])
+  createUserRequest: protectedRoleProcedure([
+    UserRole.ADMIN,
+    UserRole.OWNER,
+    UserRole.USER,
+  ])
     .input(userPayloadSchema)
     .mutation(async ({ ctx, input }) => {
       const {
@@ -488,7 +538,11 @@ export const userRequestRouter = createTRPCRouter({
       return allRequests;
     }),
 
-  updateUserRequest: protectedRoleProcedure([UserRole.ADMIN, UserRole.USER])
+  updateUserRequest: protectedRoleProcedure([
+    UserRole.ADMIN,
+    UserRole.OWNER,
+    UserRole.USER,
+  ])
     .input(userPayloadSchema)
     .mutation(async ({ ctx, input }) => {
       const {
@@ -505,7 +559,6 @@ export const userRequestRouter = createTRPCRouter({
         notes,
         updateSeries,
       } = input;
-
       const isAdmin = ctx.auth.user.role === UserRole.ADMIN;
       const targetUserId = isAdmin ? userId : ctx.auth.user.id;
 
@@ -519,7 +572,7 @@ export const userRequestRouter = createTRPCRouter({
       // Optimization: Parallel validation queries instead of sequential
       const parts = (serviceDayOfWeek ?? "").split("-");
 
-      if (parts.length < 2 || isNaN(Number(parts[0]))) {
+      if (!serviceDayOfWeek) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Invalid service day of week",
@@ -591,6 +644,7 @@ export const userRequestRouter = createTRPCRouter({
         serviceDay,
         normalizedRequestDate
       );
+      console.log({ timingValidation });
       if (!timingValidation.valid) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -600,6 +654,7 @@ export const userRequestRouter = createTRPCRouter({
 
       // Validate requestDate has the same day of week
       const dayValidation = validateDayOfWeek(dayOfWeek, normalizedRequestDate);
+      console.log({ dayValidation });
       if (!dayValidation.valid) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -860,7 +915,7 @@ export const userRequestRouter = createTRPCRouter({
       }
 
       let distance = null;
-      const driverId = requestDriverId ?? existingRequest.driverId;
+      const driverId = requestDriverId || existingRequest.driverId;
 
       if (!driverId) {
         // Handle missing driver (skip query or throw an error)
@@ -947,6 +1002,6 @@ export const userRequestRouter = createTRPCRouter({
         );
       }
 
-      return updatedRequest;
+      return { status, updatedRequest };
     }),
 });

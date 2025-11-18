@@ -227,7 +227,7 @@ export const OTPInput = ({
         </div>
 
         <Alert>
-          <Shield className="h-4 w-4" />
+          <Shield className="size-4" />
           <AlertDescription>
             For security purposes, this code will expire in{" "}
             {formatTime(timeLeft)}. If you don&apos;t receive the code, check

@@ -27,7 +27,7 @@ import { DAYS_OF_WEEK } from "@/lib/types";
 import { cn, formatDate } from "@/lib/utils";
 import { OnetimeOneDaySchema } from "@/schemas/serviceDaySchema";
 import { addMonths, format } from "date-fns";
-import { CalendarIcon, CheckCircle } from "lucide-react";
+import { CalendarIcon, CheckCircle, Loader2Icon } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
 import { GetServiceType } from "../../types";
 import { canRestore } from "../../utils";
@@ -164,7 +164,7 @@ export const OnetimeOneDayForm = ({
                         ) : (
                           <span>Select a date</span>
                         )}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        <CalendarIcon className="ml-auto size-4 opacity-50" />
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
@@ -231,7 +231,11 @@ export const OnetimeOneDayForm = ({
           Cancel
         </Button>
         <Button type="submit" disabled={loading || !form.formState.isDirty}>
-          <CheckCircle className="h-4 w-4 mr-2" />
+          {loading ? (
+            <Loader2Icon className="size-4 animate-spin" />
+          ) : (
+            <CheckCircle className="size-4" />
+          )}
           {isEditing ? "Update Service" : "Create Service"}
         </Button>
       </div>

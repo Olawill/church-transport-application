@@ -8,27 +8,29 @@ import { createTRPCRouter, protectedRoleProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
 
 export const adminUsersRouter = createTRPCRouter({
-  getUsers: protectedRoleProcedure(UserRole.ADMIN).query(async () => {
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        status: true,
-        createdAt: true,
-        bannedAt: true,
-        banReason: true,
-        isActive: true,
-      },
-      orderBy: [
-        { status: "asc" }, // Pending first
-        { createdAt: "desc" },
-      ],
-    });
+  getUsers: protectedRoleProcedure([UserRole.ADMIN, UserRole.OWNER]).query(
+    async () => {
+      const users = await prisma.user.findMany({
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          status: true,
+          createdAt: true,
+          bannedAt: true,
+          banReason: true,
+          isActive: true,
+        },
+        orderBy: [
+          { status: "asc" }, // Pending first
+          { createdAt: "desc" },
+        ],
+      });
 
-    return users;
-  }),
+      return users;
+    }
+  ),
 
   createUser: protectedRoleProcedure([UserRole.ADMIN, UserRole.OWNER])
     .input(newUserSchema)
@@ -44,6 +46,7 @@ export const adminUsersRouter = createTRPCRouter({
         city,
         province,
         postalCode,
+        country,
       } = input;
 
       // Check if user already exist
@@ -60,6 +63,7 @@ export const adminUsersRouter = createTRPCRouter({
 
       //Hash password
       let hashedPassword: string | null = null;
+      const authCtx = await auth.$context;
       if (isLoginRequired) {
         if (!password || password.length < 8) {
           throw new TRPCError({
@@ -68,8 +72,7 @@ export const adminUsersRouter = createTRPCRouter({
           });
         }
 
-        const ctx = await auth.$context;
-        hashedPassword = await ctx.password.hash(password);
+        hashedPassword = await authCtx.password.hash(password);
       }
 
       // Get coordinates for addresses
@@ -78,13 +81,22 @@ export const adminUsersRouter = createTRPCRouter({
         city,
         province,
         postalCode,
-        country: "Canada",
+        country,
       });
 
       if (coordinates === null) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Invalid address information",
+        });
+      }
+
+      const accountId = authCtx.generateId({ model: "account" });
+
+      if (!accountId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "User account cannot be created",
         });
       }
 
@@ -95,21 +107,17 @@ export const adminUsersRouter = createTRPCRouter({
           phoneNumber: phone || null,
           role: "USER",
           status: "APPROVED",
-        },
-        include: {
-          accounts: {
-            select: { id: true },
-          },
+          isAdminCreated: true,
         },
       });
 
       // Update password if login is required
-      if (isLoginRequired && hashedPassword) {
-        await prisma.account.update({
-          where: { id: newUser.accounts[0].id, userId: newUser.id },
-          data: { password: hashedPassword },
-        });
-      }
+      await authCtx.internalAdapter.createAccount({
+        userId: newUser.id,
+        providerId: "credential",
+        accountId,
+        password: hashedPassword || null,
+      });
 
       // Create default address
       await prisma.address.create({
@@ -120,7 +128,7 @@ export const adminUsersRouter = createTRPCRouter({
           city,
           province,
           postalCode,
-          country: "Canada",
+          country,
           latitude: coordinates?.latitude || null,
           longitude: coordinates?.longitude || null,
           isDefault: true,

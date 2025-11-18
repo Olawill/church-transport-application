@@ -330,7 +330,7 @@ export const AdminDashboard = () => {
                     <div
                       className={`p-3 rounded-full bg-gray-100 ${stat.color}`}
                     >
-                      <stat.icon className="h-6 w-6" />
+                      <stat.icon className="size-6" />
                     </div>
                   </div>
                   <p className="text-xs text-gray-500 dark:text-gray-300 mt-2">
@@ -484,7 +484,7 @@ export const AdminDashboard = () => {
               <CardHeader className="flex flex-col items-stretch border-b !p-0 sm:flex-row">
                 <div className="flex flex-1 flex-col justify-start gap-1 px-6 pb-3 sm:pb-0">
                   <CardTitle className="flex items-center">
-                    <TrendingUp className="h-5 w-5 mr-2" />
+                    <TrendingUp className="size-5 mr-2" />
                     User Registrations (Last 30 Days)
                   </CardTitle>
                 </div>
@@ -583,7 +583,7 @@ export const AdminDashboard = () => {
               <CardHeader className="flex flex-col items-stretch border-b !p-0 sm:flex-row">
                 <div className="flex flex-1 flex-col justify-start gap-1 px-6 pb-3 sm:pb-0">
                   <CardTitle className="flex items-center">
-                    <Activity className="h-5 w-5 mr-2" />
+                    <Activity className="size-5 mr-2" />
                     Pickup Requests (Last 30 Days)
                   </CardTitle>
                 </div>

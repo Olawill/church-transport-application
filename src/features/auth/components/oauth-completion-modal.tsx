@@ -338,7 +338,7 @@ export const OauthCompletionModal = ({
                           <FormLabel>Address Name</FormLabel>
                           <Select
                             onValueChange={field.onChange}
-                            defaultValue={field.value}
+                            value={field.value}
                           >
                             <FormControl>
                               <SelectTrigger className="w-full">
@@ -415,7 +415,7 @@ export const OauthCompletionModal = ({
                             <FormLabel>Province</FormLabel>
                             <Select
                               onValueChange={field.onChange}
-                              defaultValue={field.value}
+                              value={field.value}
                             >
                               <FormControl>
                                 <SelectTrigger

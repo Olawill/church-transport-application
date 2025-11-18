@@ -4,7 +4,13 @@ import { useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { useTRPC } from "@/trpc/client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { skipToken, useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  skipToken,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -73,6 +79,7 @@ export type BranchAddress = SystemBranchInfo;
 
 export const ProfileManagement = () => {
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
 
   const { data: session } = useSession();
 
@@ -112,7 +119,8 @@ export const ProfileManagement = () => {
 
   const [DeleteAddressDialog, confirmDeleteAddress] = useConfirm(
     "Delete Address",
-    "Are you sure you want to delete this address? This is irreversible."
+    "Are you sure you want to delete this address? This action is irreversible.",
+    false
   );
 
   const profileForm = useForm({
@@ -152,11 +160,11 @@ export const ProfileManagement = () => {
     values: {
       branchName: selectedBranchAddress?.branchName || "",
       branchCategory: selectedBranchAddress?.branchCategory || "BRANCH",
-      street: selectedBranchAddress?.churchAddress || "",
-      city: selectedBranchAddress?.churchCity || "",
-      province: selectedBranchAddress?.churchProvince || "",
-      postalCode: selectedBranchAddress?.churchPostalCode || "",
-      country: selectedBranchAddress?.churchCountry || "",
+      street: selectedBranchAddress?.street || "",
+      city: selectedBranchAddress?.city || "",
+      province: selectedBranchAddress?.province || "",
+      postalCode: selectedBranchAddress?.postalCode || "",
+      country: selectedBranchAddress?.country || "",
       churchPhone: selectedBranchAddress?.churchPhone || "",
       requestCutOffInHrs: selectedBranchAddress?.requestCutOffInHrs || "",
       defaultMaxDistance:
@@ -174,32 +182,161 @@ export const ProfileManagement = () => {
     },
   });
 
+  // User profile mutation
+  const updateUserProfile = useMutation(
+    trpc.userProfile.updateUserProfile.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          trpc.userProfile.getUserProfile.queryOptions()
+        );
+        setIsProfileEditing(false);
+        setImagePreview("");
+        toast.success("Profile updated successfully");
+      },
+      onError: (error) => {
+        toast.error(error.message || "Failed to update profile");
+      },
+    })
+  );
+
+  // User address mutations
+  const addUserAddress = useMutation(
+    trpc.userAddresses.createUserAddress.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          trpc.userAddresses.getUserAddresses.queryOptions()
+        );
+        setAddressDialogOpen(false);
+        addressForm.reset();
+        toast.success("Address added successfully");
+      },
+      onError: (error) => {
+        toast.error(error.message || "Failed to add address");
+      },
+    })
+  );
+
+  const updateUserAddress = useMutation(
+    trpc.userAddress.updateUserAddress.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          trpc.userAddresses.getUserAddresses.queryOptions()
+        );
+        setAddressDialogOpen(false);
+        setEditingAddress(null);
+        addressForm.reset();
+        toast.success("Address updated successfully");
+      },
+      onError: (error) => {
+        toast.error(error.message || "Failed to update address");
+      },
+    })
+  );
+
+  const deleteUserAddress = useMutation(
+    trpc.userAddress.deleteUserAddress.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          trpc.userAddresses.getUserAddresses.queryOptions()
+        );
+
+        toast.success("Address deleted successfully");
+      },
+      onError: (error) => {
+        toast.error(error.message || "Failed to delete address");
+      },
+    })
+  );
+
+  const setDefaultUserAddress = useMutation(
+    trpc.userAddress.setDefaultAddress.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          trpc.userAddresses.getUserAddresses.queryOptions()
+        );
+
+        toast.success("Default address updated successfully");
+      },
+      onError: (error) => {
+        toast.error(error.message || "Failed to set default address");
+      },
+    })
+  );
+
+  // Organization address mutations
+  const addBranchAddress = useMutation(
+    trpc.organization.addBranch.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          trpc.organization.getOrganizationData.queryOptions({})
+        );
+        setBranchAddressDialogOpen(false);
+        churchContactInfoForm.reset();
+        toast.success("Branch Added Successfully");
+      },
+      onError: (error) => {
+        toast.error(error.message || "Failed to add branch");
+      },
+    })
+  );
+
+  const updateBranchAddress = useMutation(
+    trpc.organization.updateBranch.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          trpc.organization.getOrganizationData.queryOptions({})
+        );
+        setBranchAddressDialogOpen(false);
+        setSelectedBranchAddress(null);
+        churchContactInfoForm.reset();
+        toast.success("Branch information updated successfully");
+      },
+      onError: (error) => {
+        toast.error(error.message || "Failed to update branch information");
+      },
+    })
+  );
+
+  const setOrganizationHeadquarter = useMutation(
+    trpc.organization.setHeadquarter.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          trpc.organization.getOrganizationData.queryOptions({})
+        );
+        setSelectedBranchAddress(null);
+        toast.success("Headquarter address set");
+      },
+      onError: (error) => {
+        toast.error(error.message || "Failed to set headquarters");
+      },
+    })
+  );
+
+  const deleteBranchAddress = useMutation(
+    trpc.organization.deleteBranch.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          trpc.organization.getOrganizationData.queryOptions({})
+        );
+        setSelectedBranchAddress(null);
+        toast.success("Branch deleted successfully");
+      },
+      onError: (error) => {
+        toast.error(error.message || "Failed to delete branch");
+      },
+    })
+  );
+
+  // User address handlers
   const handleProfileUpdate = async (values: ProfileUpdateSchema) => {
     const validatedFields = profileUpdateSchema.safeParse(values);
 
     if (!validatedFields.success) {
       toast.error("Please correct the errors in the form");
+      return;
     }
-    try {
-      const response = await fetch("/api/user/profile", {
-        method: "PUT",
-        body: JSON.stringify(validatedFields.data),
-      });
 
-      if (response.ok) {
-        const updatedProfile = await response.json();
-        // setProfile(updatedProfile);
-        setIsProfileEditing(false);
-        setImagePreview("");
-        toast.success("Profile updated successfully");
-      } else {
-        const error = await response.json();
-        toast.error(error.message || "Failed to update profile");
-      }
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      toast.error("Failed to update profile");
-    }
+    await updateUserProfile.mutateAsync(validatedFields.data);
   };
 
   const handleAddAddress = async (values: AddressUpdateSchema) => {
@@ -210,26 +347,7 @@ export const ProfileManagement = () => {
       return;
     }
 
-    try {
-      const response = await fetch("/api/user/addresses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(validatedFields.data),
-      });
-
-      if (response.ok) {
-        // await fetchAddresses();
-        setAddressDialogOpen(false);
-        addressForm.reset();
-        toast.success("Address added successfully");
-      } else {
-        const error = await response.json();
-        toast.error(error.message || "Failed to add address");
-      }
-    } catch (error) {
-      console.error("Error adding address:", error);
-      toast.error("Failed to add address");
-    }
+    await addUserAddress.mutateAsync(validatedFields.data);
   };
 
   const handleUpdateAddress = async (values: AddressUpdateSchema) => {
@@ -245,29 +363,25 @@ export const ProfileManagement = () => {
       return;
     }
 
-    try {
-      const response = await fetch(`/api/user/addresses/${editingAddress.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(validatedFields.data),
-      });
-
-      if (response.ok) {
-        // await fetchAddresses();
-        setAddressDialogOpen(false);
-        setEditingAddress(null);
-        addressForm.reset();
-        toast.success("Address updated successfully");
-      } else {
-        const error = await response.json();
-        toast.error(error.message || "Failed to update address");
-      }
-    } catch (error) {
-      console.error("Error updating address:", error);
-      toast.error("Failed to update address");
-    }
+    await updateUserAddress.mutateAsync({
+      ...validatedFields.data,
+      id: editingAddress.id,
+    });
   };
 
+  const handleSetDefaultAddress = async (addressId: string) => {
+    await setDefaultUserAddress.mutateAsync({ id: addressId });
+  };
+
+  const handleDeleteAddress = async (addressId: string) => {
+    const result = await confirmDeleteAddress();
+
+    if (result !== "confirm") return;
+
+    await deleteUserAddress.mutateAsync({ id: addressId });
+  };
+
+  // Organization address handlers
   const handleAddBranchAddress = async (
     values: ChurchBranchContactInfoUpdateSchema
   ) => {
@@ -279,21 +393,9 @@ export const ProfileManagement = () => {
       return;
     }
 
-    try {
-      const response = await addBranch(validatedFields.data);
-      if (response.success) {
-        // await fetchOrganization();
-        setBranchAddressDialogOpen(false);
-        churchContactInfoForm.reset();
-        toast.success("Branch Added Successfully");
-      } else {
-        const error = response.error;
-        toast.error(error || "Failed to add branch");
-      }
-    } catch (error) {
-      console.error("Error adding branch:", error);
-      toast.error("Failed to add branch");
-    }
+    await addBranchAddress.mutateAsync({
+      ...validatedFields.data,
+    });
   };
 
   const handleUpdateBranchAddress = async (
@@ -312,27 +414,34 @@ export const ProfileManagement = () => {
       return;
     }
 
-    try {
-      const response = await updateBranch(
-        selectedBranchAddress.id,
-        validatedFields.data
-      );
-
-      if (response.success) {
-        // await fetchOrganization();
-        setBranchAddressDialogOpen(false);
-        setSelectedBranchAddress(null);
-        churchContactInfoForm.reset();
-      } else {
-        const error = response.error;
-        toast.error(error || "Failed to update branch");
-      }
-    } catch (error) {
-      console.error("Error updating branch:", error);
-      toast.error("Failed to update branch");
-    }
+    await updateBranchAddress.mutateAsync({
+      addressId: selectedBranchAddress.id,
+      organizationId: selectedBranchAddress.systemConfigId,
+      values: {
+        ...validatedFields.data,
+      },
+    });
   };
 
+  const handleSetHeadquarterAddress = async (addressId: string) => {
+    await setOrganizationHeadquarter.mutateAsync({
+      addressId,
+      organizationId: selectedBranchAddress?.systemConfigId,
+    });
+  };
+
+  const handleDeleteBranchAddress = async (addressId: string) => {
+    const result = await confirmDeleteAddress();
+
+    if (result !== "confirm") return;
+
+    await deleteBranchAddress.mutateAsync({
+      addressId,
+      organizationId: selectedBranchAddress?.systemConfigId as string,
+    });
+  };
+
+  // Handlers to open form and dialogs
   const handleAddressEdit = (address: GetUserAddress) => {
     setEditingAddress(address);
     setIsAddressEditing(true);
@@ -354,11 +463,11 @@ export const ProfileManagement = () => {
     churchContactInfoForm.reset({
       branchName: address.branchName,
       branchCategory: address.branchCategory,
-      street: address.churchAddress,
-      city: address.churchCity,
-      province: address.churchProvince,
-      postalCode: address.churchPostalCode,
-      country: address.churchCountry,
+      street: address.street,
+      city: address.city,
+      province: address.province,
+      postalCode: address.postalCode,
+      country: address.country,
       churchPhone: address.churchPhone,
       requestCutOffInHrs: address.requestCutOffInHrs,
       defaultMaxDistance:
@@ -366,82 +475,8 @@ export const ProfileManagement = () => {
     });
   };
 
-  const handleSetDefaultAddress = async (addressId: string) => {
-    try {
-      const response = await fetch(
-        `/api/user/addresses/${addressId}/set-default`,
-        {
-          method: "PUT",
-        }
-      );
-
-      if (response.ok) {
-        // await fetchAddresses();
-        toast.success("Default address updated");
-      }
-    } catch (error) {
-      console.error("Failed to set default address:", error);
-      toast.error("Failed to set default address");
-    }
-  };
-
-  const handleSetHeadquarterAddress = async (addressId: string) => {
-    try {
-      const response = await setHeadquarter(addressId);
-
-      if (response.success) {
-        // await fetchOrganization();
-        toast.success("Headquarter address set");
-      } else {
-        toast.error(response.error || "Failed to set headquarters");
-      }
-    } catch (error) {
-      console.error("Failed to set headquarters:", error);
-      toast.error("Failed to set headquarters");
-    }
-  };
-
-  const handleDeleteAddress = async (addressId: string) => {
-    const result = await confirmDeleteAddress();
-
-    if (result !== "confirm") return;
-
-    try {
-      const response = await fetch(`/api/user/addresses/${addressId}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        // await fetchAddresses();
-        toast.success("Address deleted");
-      }
-    } catch (error) {
-      console.error("Failed to delete address:", error);
-      toast.error("Failed to delete address");
-    }
-  };
-
-  const handleDeleteBranchAddress = async (addressId: string) => {
-    const result = await confirmDeleteAddress();
-
-    if (result !== "confirm") return;
-
-    try {
-      const response = await deleteBranch(addressId);
-
-      if (response.success) {
-        // await fetchOrganization();
-        toast.success("Branch deleted");
-      } else {
-        toast.error(response.error || "Failed to delete branch");
-      }
-    } catch (error) {
-      console.error("Failed to delete branch:", error);
-      toast.error("Failed to delete branch");
-    }
-  };
-
-  const handleSecuritySubmit = async (values: SecurityUpdateSchema) => {
+  // Security tab handlers
+  const handleChangePassword = async (values: SecurityUpdateSchema) => {
     const validatedFields = securityUpdateSchema.safeParse(values);
 
     if (!validatedFields.success) {
@@ -469,15 +504,6 @@ export const ProfileManagement = () => {
     } catch (error) {
       console.error("Error updating password:", error);
       toast.error("Failed to update password");
-    }
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => setImagePreview(e.target?.result as string);
-      reader.readAsDataURL(file);
     }
   };
 
@@ -510,6 +536,26 @@ export const ProfileManagement = () => {
       toast.error(`Failed to toggle ${field}`);
     }
   };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => setImagePreview(e.target?.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const isLoading =
+    updateUserProfile.isPending ||
+    addUserAddress.isPending ||
+    updateUserAddress.isPending ||
+    deleteUserAddress.isPending ||
+    setDefaultUserAddress.isPending ||
+    addBranchAddress.isPending ||
+    updateBranchAddress.isPending ||
+    deleteBranchAddress.isPending ||
+    setOrganizationHeadquarter.isPending;
 
   if (loading)
     return <ProfileManagementSkeleton isAdminOrOwner={isAdminOrOwner} />;
@@ -547,6 +593,7 @@ export const ProfileManagement = () => {
           <TabsContent value="profile">
             <ProfileTab
               isProfileEditing={isProfileEditing}
+              isLoading={isLoading}
               setIsProfileEditing={setIsProfileEditing}
               profileForm={profileForm}
               handleProfileUpdate={handleProfileUpdate}
@@ -571,7 +618,7 @@ export const ProfileManagement = () => {
               handleDeleteAddress={handleDeleteAddress}
               handleSetDefaultAddress={handleSetDefaultAddress}
               addresses={addresses}
-              loading={loading}
+              loading={isLoading}
             />
           </TabsContent>
 
@@ -580,7 +627,7 @@ export const ProfileManagement = () => {
               securityForm={securityForm}
               profile={profile}
               toggleUserSettings={toggleUserSettings}
-              handleSecuritySubmit={handleSecuritySubmit}
+              handleChangePassword={handleChangePassword}
             />
           </TabsContent>
 
@@ -607,7 +654,7 @@ export const ProfileManagement = () => {
                 handleSetHeadquarterAddress={handleSetHeadquarterAddress}
                 handleBranchAddressEdit={handleBranchAddressEdit}
                 handleDeleteBranchAddress={handleDeleteBranchAddress}
-                loading={organizationLoading}
+                loading={organizationLoading || isLoading}
               />
             </TabsContent>
           )}

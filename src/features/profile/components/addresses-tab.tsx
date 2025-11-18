@@ -1,4 +1,4 @@
-import { Edit, MapPin, Plus, Star, Trash2 } from "lucide-react";
+import { Edit, Loader2Icon, MapPin, Plus, Star, Trash2 } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
 
 import { Badge } from "@/components/ui/badge";
@@ -107,7 +107,7 @@ export const AddressesTab = ({
           <Dialog open={addressDialogOpen} onOpenChange={setAddressDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={handleAddAddressClick}>
-                <Plus className="w-4 h-4" />
+                <Plus className="size-4" />
                 Add Address
               </Button>
             </DialogTrigger>
@@ -142,10 +142,13 @@ export const AddressesTab = ({
                         <CustomFormLabel title="Address Name" />
                         <Select
                           onValueChange={field.onChange}
-                          defaultValue={field.value}
+                          value={field.value}
                         >
                           <FormControl>
-                            <SelectTrigger className="w-full">
+                            <SelectTrigger
+                              className="w-full"
+                              disabled={loading}
+                            >
                               <SelectValue placeholder="Select address type" />
                             </SelectTrigger>
                           </FormControl>
@@ -164,7 +167,12 @@ export const AddressesTab = ({
                   {/* Address */}
                   <AddressFields form={addressForm} loading={loading} />
 
-                  <Button type="submit" className="w-full">
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={!addressForm.formState.isDirty || loading}
+                  >
+                    {loading && <Loader2Icon className="size-4 animate-spin" />}
                     {editingAddress ? "Update Address" : "Add Address"}
                   </Button>
                 </form>

@@ -40,12 +40,17 @@ import { useRequestsTransportParams } from "@/features/requests/hooks/use-reques
 import { DISTANCE_OPTIONS } from "@/lib/types";
 import { formatDate, formatTime } from "@/lib/utils";
 import { useTRPC } from "@/trpc/client";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { useState } from "react";
 
 // Detailed operational dashboard for the dedicated /transportation route
 export const TransportationDashboard = () => {
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
 
   const [params, setParams] = useRequestsTransportParams();
   const {
@@ -88,54 +93,36 @@ export const TransportationDashboard = () => {
   const hasNextPage = requestData?.hasNextPage || false;
   const hasPreviousPage = requestData?.hasPreviousPage || false;
 
-  const handleAcceptRequest = async (requestId: string) => {
-    try {
-      const response = await fetch("/api/pickup-requests", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          id: requestId,
-          status: "ACCEPTED",
-        }),
-      });
+  const updateRequest = useMutation(
+    trpc.userRequests.updateRequestStatus.mutationOptions({
+      onSuccess: (data) => {
+        queryClient.invalidateQueries(
+          trpc.userRequests.getUserRequests.queryOptions({})
+        );
+        toast.success(
+          data.status === "PENDING"
+            ? "Request is pending"
+            : `Request ${data.status.toLowerCase()} successfully`
+        );
+      },
+      onError: (error) => {
+        toast.error(error.message || `Failed to update the request status`);
+      },
+    })
+  );
 
-      if (response.ok) {
-        toast.success("Request accepted successfully");
-        // fetchRequests();
-      } else {
-        toast.error("Failed to accept request");
-      }
-    } catch (error) {
-      console.error("Error accepting request:", error);
-      toast.error("An error occurred");
-    }
+  const handleAcceptRequest = async (requestId: string) => {
+    await updateRequest.mutateAsync({
+      id: requestId,
+      status: "ACCEPTED",
+    });
   };
 
   const handleCompleteRequest = async (requestId: string) => {
-    try {
-      const response = await fetch("/api/pickup-requests", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          id: requestId,
-          status: "COMPLETED",
-        }),
-      });
-
-      if (response.ok) {
-        toast.success("Request marked as completed");
-        // fetchRequests();
-      } else {
-        toast.error("Failed to complete request");
-      }
-    } catch (error) {
-      console.error("Error completing request:", error);
-      toast.error("An error occurred");
-    }
+    await updateRequest.mutateAsync({
+      id: requestId,
+      status: "COMPLETED",
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -151,8 +138,9 @@ export const TransportationDashboard = () => {
     }
   };
 
-  const myAcceptedRequests = requests.filter((r) => r.status === "ACCEPTED");
-  const availableRequests = requests.filter((r) => r.status === "PENDING");
+  const myAcceptedRequests = requestData?.stats.myAcceptedRequests;
+  const availableRequests = requestData?.stats.availableRequests;
+  const totalCompletedRequests = requestData?.stats.totalCompletedRequests;
 
   const handleNameFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -203,13 +191,11 @@ export const TransportationDashboard = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">My Accepted Requests</p>
-                <p className="text-2xl font-bold">
-                  {myAcceptedRequests.length}
-                </p>
+                <p className="text-sm font-medium">Accepted Requests</p>
+                <p className="text-2xl font-bold">{myAcceptedRequests}</p>
               </div>
               <div className="p-3 rounded-full bg-blue-100 text-blue-600">
-                <Car className="h-6 w-6" />
+                <Car className="size-6" />
               </div>
             </div>
           </CardContent>
@@ -220,10 +206,10 @@ export const TransportationDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium">Available Requests</p>
-                <p className="text-2xl font-bold">{availableRequests.length}</p>
+                <p className="text-2xl font-bold">{availableRequests}</p>
               </div>
               <div className="p-3 rounded-full bg-green-100 text-green-600">
-                <Clock className="h-6 w-6" />
+                <Clock className="size-6" />
               </div>
             </div>
           </CardContent>
@@ -234,12 +220,10 @@ export const TransportationDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium">Total Completed</p>
-                <p className="text-2xl font-bold">
-                  {requests.filter((r) => r.status === "COMPLETED").length}
-                </p>
+                <p className="text-2xl font-bold">{totalCompletedRequests}</p>
               </div>
               <div className="p-3 rounded-full bg-purple-100 text-purple-600">
-                <User className="h-6 w-6" />
+                <User className="size-6" />
               </div>
             </div>
           </CardContent>
@@ -267,16 +251,16 @@ export const TransportationDashboard = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <label className="text-sm font-medium mb-2 block">Distance</label>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Distance</Label>
               <Select
                 value={maxDistance}
                 onValueChange={(value) =>
                   setParams({ ...params, maxDistance: value, page: 1 })
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -292,17 +276,15 @@ export const TransportationDashboard = () => {
               </Select>
             </div>
 
-            <div className="flex-1">
-              <label className="text-sm font-medium mb-2 block">
-                Status Filter
-              </label>
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Status</Label>
               <Select
                 value={status}
                 onValueChange={(value) =>
                   setParams({ ...params, status: value, page: 1 })
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -315,7 +297,7 @@ export const TransportationDashboard = () => {
             </div>
 
             {/* Type */}
-            <div className="">
+            <div>
               <Label className="text-sm font-medium mb-2 block">
                 Request Type
               </Label>
@@ -337,7 +319,7 @@ export const TransportationDashboard = () => {
             </div>
 
             {/* Name Filter */}
-            <div className="flex-[25%]">
+            <div>
               <Label className="text-sm font-medium mb-2 block">Name</Label>
               <Input
                 placeholder="Filter by member's name..."
@@ -374,7 +356,7 @@ export const TransportationDashboard = () => {
             </div>
           ) : requests.length === 0 ? (
             <div className="text-center py-8">
-              <Car className="mx-auto h-12 w-12 text-gray-400" />
+              <Car className="mx-auto size-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium">No requests found</h3>
               <p className="mt-1 text-sm text-gray-500">
                 Try adjusting your filters or check back later.
@@ -389,12 +371,12 @@ export const TransportationDashboard = () => {
                 >
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center space-x-3">
-                      <User className="h-5 w-5 text-gray-400" />
+                      <User className="size-5 text-gray-400" />
                       <div>
                         <h3 className="font-semibold">{request.user?.name}</h3>
                         {request.user?.phoneNumber && (
                           <p className="text-sm flex items-center mt-1">
-                            <Phone className="h-4 w-4 mr-1" />
+                            <Phone className="size-4 mr-1" />
                             {request.user.phoneNumber}
                           </p>
                         )}
@@ -407,7 +389,7 @@ export const TransportationDashboard = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div className="flex items-center space-x-2">
-                      <Clock className="h-4 w-4 text-gray-400" />
+                      <Clock className="size-4 text-gray-400" />
                       <div>
                         <p className="text-sm font-medium">
                           {request.serviceDay?.name}
@@ -421,7 +403,7 @@ export const TransportationDashboard = () => {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <MapPin className="h-4 w-4 text-gray-400" />
+                      <MapPin className="size-4 text-gray-400" />
                       <div>
                         <p className="text-sm font-medium">Pickup Location</p>
                         <p className="text-sm">
@@ -523,7 +505,7 @@ export function TransportationTeamDashboard() {
                 </p>
               </div>
               <div className="p-3 rounded-full bg-blue-100 text-blue-600">
-                <Car className="h-6 w-6" />
+                <Car className="size-6" />
               </div>
             </div>
           </CardContent>
@@ -539,7 +521,7 @@ export function TransportationTeamDashboard() {
                 </p>
               </div>
               <div className="p-3 rounded-full bg-green-100 text-green-600">
-                <Clock className="h-6 w-6" />
+                <Clock className="size-6" />
               </div>
             </div>
           </CardContent>
@@ -555,7 +537,7 @@ export function TransportationTeamDashboard() {
                 </p>
               </div>
               <div className="p-3 rounded-full bg-purple-100 text-purple-600">
-                <TrendingUp className="h-6 w-6" />
+                <TrendingUp className="size-6" />
               </div>
             </div>
           </CardContent>
@@ -571,7 +553,7 @@ export function TransportationTeamDashboard() {
                 </p>
               </div>
               <div className="p-3 rounded-full bg-orange-100 text-orange-600">
-                <BarChart3 className="h-6 w-6" />
+                <BarChart3 className="size-6" />
               </div>
             </div>
           </CardContent>
@@ -594,7 +576,7 @@ export function TransportationTeamDashboard() {
                 variant="outline"
               >
                 <div className="flex items-center space-x-3">
-                  <Car className="h-8 w-8 text-blue-600" />
+                  <Car className="size-8 text-blue-600" />
                   <div>
                     <p className="font-semibold">Manage Requests</p>
                     <p className="text-sm">View and manage pickup requests</p>
@@ -609,7 +591,7 @@ export function TransportationTeamDashboard() {
                 variant="outline"
               >
                 <div className="flex items-center space-x-3">
-                  <Clock className="h-8 w-8 text-green-600" />
+                  <Clock className="size-8 text-green-600" />
                   <div>
                     <p className="font-semibold">Request History</p>
                     <p className="text-sm">View your ride history</p>
@@ -633,7 +615,7 @@ export function TransportationTeamDashboard() {
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
               <div className="flex items-center space-x-3">
-                <Car className="h-5 w-5 text-blue-600" />
+                <Car className="size-5 text-blue-600" />
                 <span className="text-sm font-medium dark:text-secondary">
                   Active Rides
                 </span>
@@ -645,7 +627,7 @@ export function TransportationTeamDashboard() {
 
             <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
               <div className="flex items-center space-x-3">
-                <Clock className="h-5 w-5 text-green-600" />
+                <Clock className="size-5 text-green-600" />
                 <span className="text-sm font-medium dark:text-secondary">
                   Available for Pickup
                 </span>
@@ -657,7 +639,7 @@ export function TransportationTeamDashboard() {
 
             <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
               <div className="flex items-center space-x-3">
-                <TrendingUp className="h-5 w-5 text-purple-600" />
+                <TrendingUp className="size-5 text-purple-600" />
                 <span className="text-sm font-medium dark:text-secondary">
                   Completed Today
                 </span>

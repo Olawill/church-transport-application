@@ -337,16 +337,18 @@ export const adminPayloadSchema = z
     city: z.string().min(1),
     province: z.string().min(1),
     postalCode: z.string().min(1),
+    country: z.string().min(1, "Country is required"),
     serviceDayId: z.string().min(1),
     serviceDayOfWeek: z.string().min(1),
-    requestDate: z.string(),
+    requestDate: z.date(),
     notes: z.string().optional(),
     isPickUp: z.boolean(),
     isDropOff: z.boolean(),
     isGroupRide: z.boolean(),
     numberOfGroup: z.number().int().min(2).max(10).nullable(),
     isRecurring: z.boolean(),
-    endDate: z.string().optional(),
+    endDate: z.date().optional(),
+    createPickUpRequest: z.boolean(),
   })
   .superRefine(serverValidateRequest);
 

@@ -254,7 +254,7 @@ export const UserManagement = () => {
                   <p className="text-2xl font-bold">{pendingUsers}</p>
                 </div>
                 <div className="p-3 rounded-full bg-yellow-100 text-yellow-600">
-                  <Users className="h-6 w-6" />
+                  <Users className="size-6" />
                 </div>
               </div>
             </CardContent>
@@ -268,7 +268,7 @@ export const UserManagement = () => {
                   <p className="text-2xl font-bold">{approvedUsers}</p>
                 </div>
                 <div className="p-3 rounded-full bg-green-100 text-green-600">
-                  <CheckCircle className="h-6 w-6" />
+                  <CheckCircle className="size-6" />
                 </div>
               </div>
             </CardContent>
@@ -282,7 +282,7 @@ export const UserManagement = () => {
                   <p className="text-2xl font-bold">{transportationMembers}</p>
                 </div>
                 <div className="p-3 rounded-full bg-blue-100 text-blue-600">
-                  <Users className="h-6 w-6" />
+                  <Users className="size-6" />
                 </div>
               </div>
             </CardContent>
@@ -309,9 +309,9 @@ export const UserManagement = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {/* Role filter */}
-              <div className="flex-1">
+              <div>
                 <Label className="text-sm font-medium mb-2 block">Role</Label>
                 <Select
                   value={role}
@@ -319,7 +319,7 @@ export const UserManagement = () => {
                     setParams({ ...params, role: value, page: 1 })
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -334,7 +334,7 @@ export const UserManagement = () => {
               </div>
 
               {/* Status Filter */}
-              <div className="flex-1">
+              <div>
                 <Label className="text-sm font-medium mb-2 block">Status</Label>
                 <Select
                   value={status}
@@ -342,7 +342,7 @@ export const UserManagement = () => {
                     setParams({ ...params, status: value, page: 1 })
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -355,7 +355,7 @@ export const UserManagement = () => {
               </div>
 
               {/* Name Filter */}
-              <div className="flex-1">
+              <div>
                 <Label className="text-sm font-medium mb-2 block">Name</Label>
                 <Input
                   placeholder="Filter by member's name..."
@@ -439,21 +439,21 @@ export const UserManagement = () => {
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <h3 className="text-lg font-semibold">{user.name}</h3>
-                        <div className="flex items-center space-x-4 mt-2 text-sm">
-                          <div className="flex items-center space-x-1">
-                            <Mail className="h-4 w-4" />
-                            <span>{user.email}</span>
+                        <div className="flex flex-col md:flex-row md:items-center gap-2 mt-2 text-sm">
+                          <div className="flex items-center space-x-1 overflow-hidden">
+                            <Mail className="size-4" />
+                            <span className="truncate">{user.email}</span>
                           </div>
                           {user.phoneNumber && (
                             <div className="flex items-center space-x-1">
-                              <Phone className="h-4 w-4" />
+                              <Phone className="size-4" />
                               <span>{user.phoneNumber}</span>
                             </div>
                           )}
                         </div>
                         {user.addresses && user.addresses[0] && (
                           <div className="flex items-center space-x-1 mt-1 text-sm">
-                            <MapPin className="h-4 w-4" />
+                            <MapPin className="size-4" />
                             <span>
                               {user.addresses[0].street},{" "}
                               {user.addresses[0].city},{" "}
@@ -485,7 +485,7 @@ export const UserManagement = () => {
                               }
                               size="sm"
                             >
-                              <CheckCircle className="h-4 w-4 mr-1" />
+                              <CheckCircle className="size-4 mr-1" />
                               Approve
                             </Button>
                             <Button
@@ -495,7 +495,7 @@ export const UserManagement = () => {
                               size="sm"
                               variant="outline"
                             >
-                              <XCircle className="h-4 w-4 mr-1" />
+                              <XCircle className="size-4 mr-1" />
                               Reject
                             </Button>
                           </>

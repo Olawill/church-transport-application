@@ -77,7 +77,7 @@ export const UserDashboard = () => {
                 <p className="text-2xl font-bold">{upcomingRequests.length}</p>
               </div>
               <div className="p-3 rounded-full bg-blue-100 text-blue-600">
-                <Car className="h-6 w-6" />
+                <Car className="size-6" />
               </div>
             </div>
           </CardContent>
@@ -91,7 +91,7 @@ export const UserDashboard = () => {
                 <p className="text-2xl font-bold">{requests.length}</p>
               </div>
               <div className="p-3 rounded-full bg-green-100 text-green-600">
-                <Calendar className="h-6 w-6" />
+                <Calendar className="size-6" />
               </div>
             </div>
           </CardContent>
@@ -107,7 +107,7 @@ export const UserDashboard = () => {
                 </p>
               </div>
               <div className="p-3 rounded-full bg-purple-100 text-purple-600">
-                <Clock className="h-6 w-6" />
+                <Clock className="size-6" />
               </div>
             </div>
           </CardContent>
@@ -129,7 +129,7 @@ export const UserDashboard = () => {
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:text-gray-900"
                 >
                   <div className="flex items-center space-x-4">
-                    <Calendar className="h-5 w-5 text-gray-400" />
+                    <Calendar className="size-5 text-gray-400" />
                     <div>
                       <p className="font-medium">{request.serviceDay?.name}</p>
                       <p className="text-sm text-gray-600">
@@ -149,7 +149,7 @@ export const UserDashboard = () => {
                     <Badge className={getStatusColor(request.status)}>
                       {request.status.toLowerCase()}
                     </Badge>
-                    <MapPin className="h-4 w-4 text-gray-400" />
+                    <MapPin className="size-4 text-gray-400" />
                   </div>
                 </div>
               ))}
@@ -187,7 +187,7 @@ export const UserDashboard = () => {
             </div>
           ) : recentRequests.length === 0 ? (
             <div className="text-center py-8">
-              <Car className="mx-auto h-12 w-12 text-gray-400" />
+              <Car className="mx-auto size-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">
                 No requests yet
               </h3>

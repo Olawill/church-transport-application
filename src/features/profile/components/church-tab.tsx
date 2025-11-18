@@ -1,6 +1,7 @@
 import {
   Building2Icon,
   Edit,
+  Loader2Icon,
   MapPin,
   Phone,
   Plus,
@@ -216,6 +217,7 @@ export const ChurchTab = ({
                                 value={field.value ?? ""}
                                 onChange={(e) => field.onChange(e)}
                                 placeholder="Our Calgary Location (optional)"
+                                disabled={loading}
                               />
                             </FormControl>
                             <div className="min-h-[1.25rem]">
@@ -233,10 +235,13 @@ export const ChurchTab = ({
                             <CustomFormLabel title="Category" />
                             <Select
                               onValueChange={field.onChange}
-                              defaultValue={field.value}
+                              value={field.value}
                             >
                               <FormControl>
-                                <SelectTrigger className="w-full">
+                                <SelectTrigger
+                                  className="w-full"
+                                  disabled={loading}
+                                >
                                   <SelectValue placeholder="Select branch type" />
                                 </SelectTrigger>
                               </FormControl>
@@ -277,9 +282,7 @@ export const ChurchTab = ({
                                 onChange={field.onChange}
                                 onBlur={field.onBlur}
                                 error={fieldState.error}
-                                disabled={
-                                  churchContactInfoForm.formState.isSubmitting
-                                }
+                                disabled={loading}
                               />
                             </FormControl>
                             <div className="min-h-[1.25rem]">
@@ -304,6 +307,7 @@ export const ChurchTab = ({
                                 onChange={field.onChange}
                                 placeholder="Enter the number of hours before service request can be placed"
                                 min={1}
+                                disabled={loading}
                               />
                             </FormControl>
                             <div className="min-h-[1.25rem]">
@@ -322,10 +326,13 @@ export const ChurchTab = ({
                             <CustomFormLabel title="Max Distance" />
                             <Select
                               onValueChange={field.onChange}
-                              defaultValue={field.value}
+                              value={field.value}
                             >
                               <FormControl>
-                                <SelectTrigger className="w-full">
+                                <SelectTrigger
+                                  className="w-full"
+                                  disabled={loading}
+                                >
                                   <SelectValue placeholder="Select max distance for drivers" />
                                 </SelectTrigger>
                               </FormControl>
@@ -344,7 +351,16 @@ export const ChurchTab = ({
                       />
                     </div>
 
-                    <Button type="submit" className="w-full">
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={
+                        churchContactInfoForm.formState.isDirty || loading
+                      }
+                    >
+                      {loading && (
+                        <Loader2Icon className="size-4 animate-spin" />
+                      )}
                       {selectedBranchAddress ? "Update Address" : "Add Address"}
                     </Button>
                   </form>
@@ -361,7 +377,7 @@ export const ChurchTab = ({
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-2">
                       <h3 className="font-semibold">
-                        {address.branchName ?? `${address.churchCity} Branch`}
+                        {address.branchName ?? `${address.city} Branch`}
                       </h3>
                       <Badge
                         variant={
@@ -385,12 +401,11 @@ export const ChurchTab = ({
                       <p className="text-xs">
                         <span className="font-semibold text-sm">Address</span>
                         <br />
-                        {address.churchAddress}
+                        {address.street}
                         <br />
-                        {address.churchCity}, {address.churchProvince}{" "}
-                        {address.churchPostalCode}
+                        {address.city}, {address.province} {address.postalCode}
                         <br />
-                        {address.churchCountry}
+                        {address.country}
                       </p>
                     </div>
 
@@ -434,9 +449,10 @@ export const ChurchTab = ({
                             variant="outline"
                             size="sm"
                             className="mr-4"
-                            onClick={() =>
-                              handleSetHeadquarterAddress(address.id)
-                            }
+                            onClick={() => {
+                              setSelectedBranchAddress(address);
+                              handleSetHeadquarterAddress(address.id);
+                            }}
                           >
                             Set Headquarter
                           </Button>
@@ -472,6 +488,7 @@ export const ChurchTab = ({
                             size="sm"
                             onClick={() => {
                               // address.branchCategory === "HEADQUARTER"
+                              setSelectedBranchAddress(address);
                               handleDeleteBranchAddress(address.id);
                             }}
                             className="text-red-600 hover:text-red-700"

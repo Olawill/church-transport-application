@@ -1,4 +1,4 @@
-import { Upload } from "lucide-react";
+import { Loader2Icon, Upload } from "lucide-react";
 import { ChangeEvent } from "react";
 import { UseFormReturn } from "react-hook-form";
 
@@ -22,6 +22,7 @@ import { ProfileUpdateSchema } from "@/schemas/adminCreateNewUserSchema";
 
 interface ProfileTabProps {
   isProfileEditing: boolean;
+  isLoading: boolean;
   setIsProfileEditing: (val: boolean) => void;
   profileForm: UseFormReturn<ProfileUpdateSchema>;
   handleProfileUpdate: (val: ProfileUpdateSchema) => Promise<void>;
@@ -33,6 +34,7 @@ interface ProfileTabProps {
 export const ProfileTab = ({
   isProfileEditing,
   setIsProfileEditing,
+  isLoading,
   profileForm,
   handleProfileUpdate,
   profile,
@@ -88,6 +90,7 @@ export const ProfileTab = ({
                           accept="image/*"
                           className="hidden"
                           onChange={handleImageChange}
+                          disabled={isLoading}
                         />
                       </FormControl>
                     </FormItem>
@@ -109,7 +112,7 @@ export const ProfileTab = ({
                         type="text"
                         name="Name"
                         onChange={(e) => field.onChange(e)}
-                        disabled={!isProfileEditing}
+                        disabled={!isProfileEditing || isLoading}
                       />
                     </FormControl>
                     <div className="min-h-[1.25rem]">
@@ -134,7 +137,7 @@ export const ProfileTab = ({
                         name="userName"
                         placeholder="Choose a unique username"
                         onChange={(e) => field.onChange(e)}
-                        disabled={!isProfileEditing}
+                        disabled={!isProfileEditing || isLoading}
                       />
                     </FormControl>
                     <div className="min-h-[1.25rem]">
@@ -157,7 +160,7 @@ export const ProfileTab = ({
                         type="email"
                         name="email"
                         onChange={(e) => field.onChange(e)}
-                        disabled={!isProfileEditing}
+                        disabled={!isProfileEditing || isLoading}
                       />
                     </FormControl>
                     <div className="min-h-[1.25rem]">
@@ -182,7 +185,7 @@ export const ProfileTab = ({
                         onChange={field.onChange}
                         onBlur={field.onBlur}
                         error={fieldState.error}
-                        disabled={!isProfileEditing}
+                        disabled={!isProfileEditing || isLoading}
                       />
                     </FormControl>
                     <div className="min-h-[1.25rem]">
@@ -207,7 +210,7 @@ export const ProfileTab = ({
                         onChange={field.onChange}
                         onBlur={field.onBlur}
                         error={fieldState.error}
-                        disabled={!isProfileEditing}
+                        disabled={!isProfileEditing || isLoading}
                       />
                     </FormControl>
                     <div className="min-h-[1.25rem]">
@@ -218,7 +221,12 @@ export const ProfileTab = ({
               />
             </div>
             {isProfileEditing && (
-              <Button type="submit" className="w-full">
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={!profileForm.formState.isDirty || isLoading}
+              >
+                {isLoading && <Loader2Icon className="size-4 animate-spin" />}
                 Save Changes
               </Button>
             )}

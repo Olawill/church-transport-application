@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   MailPlusIcon,
   MessageSquareTextIcon,
@@ -14,7 +14,6 @@ import {
   DriverEmailDialog,
   DriverWhatsAppDialog,
 } from "@/components/driver-notification";
-import { DriverAssignmentType } from "@/components/drivers/column";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -25,42 +24,39 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { useRequestStore } from "@/lib/store/useRequestStore";
+import { DriverAssignmentType } from "./column";
+import { useTRPC } from "@/trpc/client";
 
 export const DataTableAction = ({
   driverRequest,
 }: {
   driverRequest: DriverAssignmentType;
 }) => {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
   const [openEmail, setOpenEmail] = useState(false);
   const [openWhatsApp, setOpenWhatsApp] = useState(false);
 
-  const { fetchRequests } = useRequestStore();
+  const assignRequest = useMutation(
+    trpc.requests.adminAssign.mutationOptions({
+      onSuccess: (data) => {
+        toast.success(`Request has been assigned to ${data.driver?.name}`);
+        queryClient.invalidateQueries(
+          trpc.userRequests.getUserRequests.queryOptions({})
+        );
+      },
+      onError: (error) => {
+        toast.error(error.message || "Failed to assign request");
+      },
+    })
+  );
 
   const handleAssignRequest = async (requestId: string, driverId: string) => {
-    try {
-      const response = await fetch("/api/pickup-requests/assign", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          id: requestId,
-          driverId,
-          status: "ACCEPTED",
-        }),
-      });
-
-      if (response.ok) {
-        toast.success("Request assigned successfully");
-        await fetchRequests();
-      } else {
-        toast.error("Failed to assign request");
-      }
-    } catch (error) {
-      console.error("Error assigning request:", error);
-      toast.error("An error occurred");
-    }
+    await assignRequest.mutateAsync({
+      id: requestId,
+      driverId,
+      status: "ACCEPTED",
+    });
   };
 
   return (
