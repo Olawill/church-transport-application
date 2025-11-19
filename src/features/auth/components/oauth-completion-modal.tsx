@@ -35,6 +35,7 @@ import {
 
 import { CustomFormLabel } from "@/components/custom-form-label";
 import { CustomPhoneInput } from "@/components/custom-phone-input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/lib/auth-client";
 import {
   ProfileAddressSchema,
@@ -178,7 +179,7 @@ export const OauthCompletionModal = () => {
   const isLoading = updateUserProfile.isPending || createUserAddress.isPending;
 
   if (isPending) {
-    return null;
+    return <CompleteProfileSkeleton />;
   }
 
   return (
@@ -382,6 +383,78 @@ export const OauthCompletionModal = () => {
               administrator and you&apos;ll be able to request rides for church
               services.
             </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const CompleteProfileSkeleton = () => {
+  return (
+    <Card className="w-full lg:min-w-2xl">
+      <CardHeader>
+        <CardTitle className="text-xl">
+          <Skeleton className="h-7 w-64" />
+        </CardTitle>
+        <CardDescription>
+          <Skeleton className="h-4 w-full max-w-md mt-2" />
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="space-y-6">
+          {/* Progress Steps Skeleton */}
+          <div className="flex items-center justify-start">
+            {[1, 2].map((step, index) => (
+              <div key={step} className="flex items-center">
+                <Skeleton className="w-10 h-10 rounded-full" />
+                {index < 1 && <Skeleton className="w-24 h-0.5 mx-2" />}
+              </div>
+            ))}
+          </div>
+
+          {/* Current Step Content Skeleton */}
+          <Card className="shadow-none">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Skeleton className="w-5 h-5 mr-2 rounded" />
+                <Skeleton className="h-6 w-48" />
+              </CardTitle>
+              <CardDescription>
+                <Skeleton className="h-4 w-full mt-2" />
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Form Fields Skeleton */}
+              <div className="space-y-4">
+                {/* Field 1 */}
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-3 w-64" />
+                </div>
+
+                {/* Field 2 */}
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Navigation Buttons Skeleton */}
+          <div className="flex justify-between">
+            <Skeleton className="h-10 w-20" />
+            <Skeleton className="h-10 w-32" />
+          </div>
+
+          {/* Welcome Message Skeleton */}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <Skeleton className="h-5 w-48 mb-2" />
+            <Skeleton className="h-4 w-full mb-2" />
+            <Skeleton className="h-4 w-full mb-2" />
+            <Skeleton className="h-4 w-3/4" />
           </div>
         </div>
       </CardContent>

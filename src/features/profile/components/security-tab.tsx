@@ -489,7 +489,7 @@ const GetTotpURI = () => {
   );
 };
 
-const QRContent = ({ url }: { url: string }) => {
+export const QRContent = ({ url }: { url: string }) => {
   const [copied, setCopied] = useState(false);
   const { theme } = useTheme();
 

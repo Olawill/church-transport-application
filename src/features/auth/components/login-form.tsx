@@ -6,7 +6,7 @@ import { Eye, EyeClosed, Loader, LogIn, OctagonAlertIcon } from "lucide-react";
 import { Route } from "next";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { FcGoogle } from "react-icons/fc";
 import { toast } from "sonner";
@@ -30,7 +30,22 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 
+import { CustomFormLabel } from "@/components/custom-form-label";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { env } from "@/env/client";
+import { QRContent } from "@/features/profile/components/security-tab";
 import { useConfirmExtended } from "@/hooks/use-confirm-extended";
 import { requestPasswordReset, signIn } from "@/lib/auth-client";
 import {
@@ -41,29 +56,158 @@ import {
 } from "@/schemas/authSchemas";
 import { useTRPC } from "@/trpc/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import z from "zod";
+
+const otpTypeSchema = z.object({
+  type: z.enum(["TOTP", "OTP"]),
+});
+
+const codeSchema = z.object({
+  code: z.string().min(6, {
+    message: "Your one-time password must be 6 characters.",
+  }),
+});
+
+type OTPTypeValues = z.infer<typeof otpTypeSchema>;
+
+type CodeValues = z.infer<typeof codeSchema>;
 
 export const LoginForm = () => {
   const queryClient = useQueryClient();
   const trpc = useTRPC();
   const router = useRouter();
 
+  const otTypeForm = useForm<OTPTypeValues>({
+    resolver: zodResolver(otpTypeSchema),
+    defaultValues: { type: "OTP" },
+  });
+
+  const codeForm = useForm<CodeValues>({
+    resolver: zodResolver(codeSchema),
+    defaultValues: { code: "" },
+  });
+
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect") || "/dashboard";
   const passwordReset = searchParams.get("passwordReset");
+  const errorParams = searchParams.get("error");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  const [EnableTwoFactorDialog, confirmEnableTwoFactor] = useConfirmExtended({
-    title: "Enable 2FA",
+  useEffect(() => {
+    if (errorParams) {
+      const message =
+        errorParams === "account_status"
+          ? "Please check your account status"
+          : errorParams.split("_").join(" ");
+      setError(message);
+    }
+  }, [errorParams]);
+
+  const [EnableTwoFactorDialog, confirmEnableTwoFactor] =
+    useConfirmExtended<OTPTypeValues>({
+      title: "Enable 2FA",
+      message:
+        "Do you want to enable Two-Factor Authentication? This adds an extra layer of security to your account. Please select a type, default is OTP.",
+      update: true,
+      cancelText: "Skip",
+      primaryText: "Continue",
+      form: otTypeForm,
+      renderForm: (form) => (
+        <FormField
+          control={form.control}
+          name="type"
+          render={({ field }) => (
+            <FormItem>
+              <CustomFormLabel title="2FA Type" />
+              <Select value={field.value} onValueChange={field.onChange}>
+                <FormControl>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a type..." />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="TOTP">TOTP</SelectItem>
+                  <SelectItem value="OTP">OTP</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      ),
+    });
+
+  const [QrDialog, confirmQr] = useConfirmExtended<never, { url: string }>({
+    title: "Your TOTP QR Code",
     message:
-      "Do you want to enable Two-Factor Authentication? This adds an extra layer of security to your account.",
-    update: true,
-    cancelText: "Skip",
-    primaryText: "Enable 2FA",
+      "Scan this QR code with your authenticator app. Then enter code when you click confirm code.",
+    initialValue: { url: "" },
+    renderContent: ({ value }) => <QRContent url={value.url} />,
+    cancelText: "Close",
+    secondaryText: "Confirm Code",
   });
+
+  const [CodeDialog, confirmCode] = useConfirmExtended<CodeValues>({
+    title: "Enter verification code",
+    message: "We sent a 6-digit code to your email address",
+    form: codeForm,
+    renderForm: (form) => (
+      <FormField
+        control={form.control}
+        name="code"
+        render={({ field }) => (
+          <FormItem>
+            <CustomFormLabel title="Verification code" />
+            <FormControl>
+              <InputOTP
+                {...field}
+                maxLength={6}
+                id="otp"
+                required
+                containerClassName="gap-4"
+              >
+                <InputOTPGroup className="gap-2.5 *:data-[slot=input-otp-slot]:h-16 *:data-[slot=input-otp-slot]:w-12 *:data-[slot=input-otp-slot]:rounded-md *:data-[slot=input-otp-slot]:border *:data-[slot=input-otp-slot]:text-xl">
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                </InputOTPGroup>
+                <InputOTPSeparator />
+                <InputOTPGroup className="gap-2.5 *:data-[slot=input-otp-slot]:h-16 *:data-[slot=input-otp-slot]:w-12 *:data-[slot=input-otp-slot]:rounded-md *:data-[slot=input-otp-slot]:border *:data-[slot=input-otp-slot]:text-xl">
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    ),
+    secondaryText: "Enable 2FA",
+  });
+
+  const handleShowQr = async () => {
+    const result = await confirmQr();
+    if (result.action === "cancel") {
+      console.log("Dialog closed");
+      return;
+    }
+
+    await handleCode();
+  };
+
+  const handleCode = async () => {
+    const result = await confirmCode();
+    if (result.action === "cancel") {
+      console.log("Dialog closed");
+      return;
+    }
+  };
 
   const login = useMutation(
     trpc.auth.login.mutationOptions({
@@ -76,6 +220,15 @@ export const LoginForm = () => {
 
           if (result.action === "confirm") {
             console.log("Enable 2FA"); // TODO: Finish 2FA and also on profiles page (Also, add ability to regenerate backup codes.)
+            const formValues = result.formValues;
+
+            if (formValues) {
+              if (formValues.type === "TOTP") {
+                await handleShowQr();
+              } else {
+                await handleCode();
+              }
+            }
           }
         }
         // await queryClient.invalidateQueries(trpc.auth.session.queryOptions());
@@ -121,10 +274,11 @@ export const LoginForm = () => {
       {
         provider,
         callbackURL: "/",
+        // disableRedirect: true,
+        newUserCallbackURL: "/complete-profile",
       },
       {
-        onSuccess: (data) => {
-          console.log({ data });
+        onSuccess: () => {
           setLoading(false);
           setOauthLoading(null);
         },
@@ -143,11 +297,13 @@ export const LoginForm = () => {
     router.push(`?${params.toString()}`);
   };
 
-  const userPassword = form.watch("password");
+  // const userPassword = form.watch("password");
 
   return (
     <>
       <EnableTwoFactorDialog />
+      <QrDialog />
+      <CodeDialog />
 
       <Card className="w-full max-w-md mx-auto shadow-lg transition-all duration-300">
         <CardHeader className="text-center">
