@@ -18,7 +18,7 @@ const TermsPage = () => {
             </CardHeader>
             <CardContent className="prose max-w-none">
               <p className="leading-7 [&:not(:first-child)]:mt-6">
-                By accessing or using ChurchTranspo (&quot;Service&quot;), you
+                By accessing or using ActsOnWheels (&quot;Service&quot;), you
                 agree to be bound by these Terms of Service (&quot;Terms&quot;).
                 If you disagree with any part of these terms, you may not access
                 the Service.
@@ -32,7 +32,7 @@ const TermsPage = () => {
             </CardHeader>
             <CardContent className="prose max-w-none">
               <p className="leading-7 [&:not(:first-child)]:mt-6">
-                ChurchTranspo provides a multi-tenant platform for organizations
+                ActsOnWheels provides a multi-tenant platform for organizations
                 to manage transportation services including:
               </p>
               <ul className="my-6 ml-6 list-disc [&>li]:mt-2">
@@ -151,7 +151,7 @@ const TermsPage = () => {
             </CardHeader>
             <CardContent className="prose max-w-none">
               <p className="leading-7 [&:not(:first-child)]:mt-6">
-                ChurchTranspo shall not be liable for:
+                ActsOnWheels shall not be liable for:
               </p>
               <ul className="my-6 ml-6 list-disc [&>li]:mt-2">
                 <li>Indirect, incidental, or consequential damages</li>
@@ -200,10 +200,10 @@ const TermsPage = () => {
               </p>
               <div className="mt-4">
                 <p className="leading-7 [&:not(:first-child)]:mt-6">
-                  <strong>Email:</strong> legal@churchtranspo.com
+                  <strong>Email:</strong> legal@actsOnWheels.com
                 </p>
                 <p className="leading-7 [&:not(:first-child)]:mt-6">
-                  <strong>Address:</strong> ChurchTranspo Legal Team
+                  <strong>Address:</strong> ActsOnWheels Legal Team
                   <br />
                   123 Main Street
                   <br />

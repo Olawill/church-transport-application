@@ -11,10 +11,12 @@ import {
   Zap,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
+import { ScrollPathAnimation } from "@/components/hero/scroll-path";
+import { FlipCounter, NumberCounter } from "@/components/number-counter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +28,12 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BillingInterval } from "@/generated/prisma";
+import gsap from "gsap";
+import { ScrollToPlugin } from "gsap/ScrollToPlugin";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import SplitText from "gsap/SplitText";
+
+gsap.registerPlugin(ScrollToPlugin, SplitText, ScrollTrigger);
 
 const features = [
   {
@@ -111,7 +119,7 @@ const testimonials = [
     name: "Pastor John Smith",
     organization: "Grace Community Church",
     content:
-      "ChurchTranspo has revolutionized how we handle transportation. Our volunteer drivers love the simplicity, and our members appreciate the reliable service.",
+      "ActsOnWheels has revolutionized how we handle transportation. Our volunteer drivers love the simplicity, and our members appreciate the reliable service.",
     rating: 5,
   },
   {
@@ -131,6 +139,90 @@ const testimonials = [
 ];
 
 const LandingPage = () => {
+  const heroTextRef = useRef<HTMLHeadingElement>(null);
+  const sellRef = useRef<HTMLParagraphElement>(null);
+
+  // Scroll to hash if URL has one
+  useEffect(() => {
+    const hash = window.location.hash?.substring(1); // remove '#'
+    if (hash) {
+      const el = document.getElementById(hash);
+      if (el) {
+        gsap.to(window, {
+          duration: 1.2,
+          scrollTo: { y: el, offsetY: 80 },
+          ease: "power2.out",
+        });
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      ScrollTrigger.matchMedia({
+        // all viewport sizes
+        "(min-width: 0px)": () => {
+          /***********************************
+           * HERO TEXT
+           ***********************************/
+          if (heroTextRef.current) {
+            const splitHero = new SplitText(heroTextRef.current, {
+              type: "words",
+            });
+
+            gsap.set(heroTextRef.current, { opacity: 1 });
+
+            gsap.from(splitHero.words, {
+              y: 60,
+              opacity: 0,
+              stagger: 0.05,
+              duration: 1,
+              ease: "power3.out",
+              immediateRender: false, // ← IMPORTANT
+              scrollTrigger: {
+                trigger: heroTextRef.current,
+                start: "top 80%",
+                toggleActions: "play reset play reset", // ← ensures retrigger
+                markers: false,
+              },
+            });
+          }
+
+          /***********************************
+           * SELL TEXT
+           ***********************************/
+          if (sellRef.current) {
+            const splitSell = new SplitText(sellRef.current, {
+              type: "lines",
+            });
+
+            gsap.set(sellRef.current, { opacity: 1 });
+
+            gsap.from(splitSell.lines, {
+              rotationX: -90,
+              opacity: 0,
+              transformOrigin: "50% 50% -100px",
+              duration: 0.8,
+              stagger: 0.15,
+              ease: "power3.out",
+              immediateRender: false, // ← IMPORTANT
+              scrollTrigger: {
+                trigger: sellRef.current,
+                start: "top 80%",
+                toggleActions: "play reset play reset",
+                markers: false,
+              },
+            });
+          }
+        },
+      });
+
+      ScrollTrigger.refresh(); // ensure accuracy AFTER everything
+    });
+
+    return () => ctx.revert();
+  }, []);
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -148,14 +240,20 @@ const LandingPage = () => {
               {/* </span> */}
             </Badge>
 
-            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-gray-300 mb-6">
+            <h1
+              ref={heroTextRef}
+              className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-gray-300 mb-6 mantra"
+            >
               Transportation Management
               <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent block">
                 Made Simple
               </span>
             </h1>
 
-            <p className="text-xl text-gray-600 dark:text-gray-200 mb-8 max-w-3xl mx-auto">
+            <p
+              ref={sellRef}
+              className="text-xl text-gray-600 dark:text-gray-200 mb-8 max-w-3xl mx-auto"
+            >
               The complete platform for churches and organizations to manage
               their transportation services. Smart routing, real-time tracking,
               and seamless communication - all in one place.
@@ -189,14 +287,15 @@ const LandingPage = () => {
           <div className="mt-16">
             <div className="relative mx-auto max-w-5xl">
               <div className="rounded-2xl shadow-2xl bg-gradient-to-r from-blue-600 to-purple-600 p-1">
-                <div className="rounded-xl bg-white h-64 md:h-96 flex items-center justify-center">
+                {/* <div className="rounded-xl bg-white h-64 md:h-96 flex items-center justify-center">
                   <div className="text-center">
                     <div className="h-16 w-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center">
                       <MapPin className="h-8 w-8 text-white" />
                     </div>
                     <p className="text-gray-600">Platform Preview</p>
                   </div>
-                </div>
+                </div> */}
+                <ScrollPathAnimation />
               </div>
             </div>
           </div>
@@ -254,7 +353,7 @@ const LandingPage = () => {
 
           <div className="flex w-full flex-col gap-6 mb-10">
             <Tabs defaultValue="monthly" className="space-y-8">
-              <TabsList className="self-center">
+              <TabsList className="self-center [&_button]:cursor-pointer">
                 <TabsTrigger value="monthly">Monthly</TabsTrigger>
                 <TabsTrigger value="quarterly">Quarterly</TabsTrigger>
                 <TabsTrigger value="yearly">Yearly</TabsTrigger>
@@ -281,7 +380,7 @@ const LandingPage = () => {
               Trusted by organizations worldwide
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-200">
-              See what our customers are saying about ChurchTranspo
+              See what our customers are saying about ActsOnWheels
             </p>
           </div>
 
@@ -322,7 +421,7 @@ const LandingPage = () => {
             Ready to transform your transportation service?
           </h2>
           <p className="text-xl text-blue-100 mb-8">
-            Join hundreds of organizations already using ChurchTranspo to serve
+            Join hundreds of organizations already using ActsOnWheels to serve
             their communities better.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -391,6 +490,7 @@ const calculateIntervalPrice = ({
     intervalPrice: formattedIntervalPrice,
     annualPrice: formattedAnnualPrice,
     intervalDiscount,
+    intervalPriceNumber: intervalPrice,
   };
 };
 
@@ -405,9 +505,9 @@ const Pricing = ({ interval }: { interval: BillingInterval }) => {
         : "year";
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 perspective-dramatic">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:perspective-dramatic px-4">
       {plans.map((plan, index) => {
-        const { intervalPrice, annualPrice } = calculateIntervalPrice({
+        const { annualPrice, intervalPriceNumber } = calculateIntervalPrice({
           basePrice: plan.price,
           interval,
         });
@@ -437,9 +537,20 @@ const Pricing = ({ interval }: { interval: BillingInterval }) => {
             <CardHeader className="text-center">
               <CardTitle className="text-2xl">{plan.name}</CardTitle>
               <div className="mt-4">
-                <span className="text-4xl font-bold">{intervalPrice}</span>
+                <NumberCounter
+                  to={intervalPriceNumber}
+                  duration={1.5}
+                  formatCurrency
+                  decimals={2}
+                />
                 <span>/{priceSuffix}</span>
               </div>
+              <FlipCounter
+                to={15400}
+                duration={3}
+                formatCurrency
+                decimals={2}
+              />
               {priceSuffix !== "year" && (
                 <span className="text-xs">(Total Annually: {annualPrice})</span>
               )}

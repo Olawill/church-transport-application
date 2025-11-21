@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { CarBack } from "@/components/icons/car";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -97,15 +98,29 @@ const PlatformLoginPage = () => {
         <div className="max-w-md w-full space-y-8">
           <Card className="border-0 shadow-xl">
             <CardHeader className="text-center pb-6">
-              <div className="size-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <div className="size-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg" />
+              <div className="relative justify-center flex items-center w-full">
+                <CarBack
+                  size={48}
+                  patrolDistance={8} // pixels left/right
+                  duration={2} // seconds for one full patrol
+                  // className="absolute -top-2 left-1/2 -translate-x-1/2"
+                />
               </div>
               <CardTitle className="text-2xl">
-                <span className="font-bold">ChurchTranspo</span>
+                <div>
+                  <div className="font-bold tracking-tight">
+                    Acts
+                    <span className="text-blue-600">On</span>
+                    Wheels
+                  </div>
+                  <div className="text-[10px] text-gray-500 dark:text-gray-100 font-medium tracking-widest uppercase">
+                    Church Transportation
+                  </div>
+                </div>
               </CardTitle>
               <Separator className="my-2" />
               <CardDescription>
-                Sign in to the ChurchTranspo platform administration
+                Sign in to the ActsOnWheels platform administration
               </CardDescription>
             </CardHeader>
 
@@ -126,7 +141,7 @@ const PlatformLoginPage = () => {
                           email: e.target.value,
                         }))
                       }
-                      placeholder="admin@churchtranspo.com"
+                      placeholder="admin@actsOnWheels.com"
                       className="pl-10"
                       required
                     />

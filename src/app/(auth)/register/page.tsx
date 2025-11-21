@@ -1,5 +1,6 @@
 "use client";
 
+import { CarBack } from "@/components/icons/car";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +31,7 @@ import {
   MapPin,
   User,
 } from "lucide-react";
+import { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -214,7 +216,7 @@ export default function RegisterPage() {
           "Registration submitted successfully! We'll review your application and get back to you soon."
         );
         router.push(
-          `/registration-success?email=${encodeURIComponent(formData.ownerEmail)}`
+          `/registration-success?email=${encodeURIComponent(formData.ownerEmail)}` as Route
         );
       } else {
         toast.error(data.error || "Registration failed. Please try again.");
@@ -295,7 +297,7 @@ export default function RegisterPage() {
                 placeholder="grace-community"
               />
               <span className="flex items-center px-3 bg-gray-100 border border-l-0 rounded-r text-gray-600">
-                .churchtranspo.com
+                .actsOnWheels.com
               </span>
             </div>
           </div>
@@ -561,7 +563,7 @@ export default function RegisterPage() {
               {formData.organizationName}
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-200">
-              {formData.slug}.churchtranspo.com
+              {formData.slug}.actsOnWheels.com
             </p>
           </div>
 
@@ -647,8 +649,24 @@ export default function RegisterPage() {
               <span>Back to Home</span>
             </Link>
             <div className="flex items-center space-x-2">
-              <div className="size-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg"></div>
-              <span className="text-xl font-bold">ChurchTranspo</span>
+              <div className="size-8 relative">
+                <CarBack
+                  size={32}
+                  patrolDistance={8} // pixels left/right
+                  duration={2} // seconds for one full patrol
+                  className="absolute top-0 left-0"
+                />
+              </div>
+              <div>
+                <div className="text-xl font-bold tracking-tight">
+                  Acts
+                  <span className="text-blue-600">On</span>
+                  Wheels
+                </div>
+                <div className="text-[10px] text-gray-500 dark:text-gray-100 font-medium tracking-widest uppercase">
+                  Church Transportation
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -1,3 +1,4 @@
+import { CarBack } from "@/components/icons/car";
 import Link from "next/link";
 
 export const LandingFooter = () => {
@@ -9,8 +10,24 @@ export const LandingFooter = () => {
         <div className="grid md:grid-cols-4 gap-8">
           <div>
             <div className="flex items-center space-x-2 mb-4">
-              <div className="h-8 w-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg"></div>
-              <span className="text-xl font-bold">ChurchTranspo</span>
+              <div className="size-8 relative">
+                <CarBack
+                  size={32}
+                  patrolDistance={8} // pixels left/right
+                  duration={2} // seconds for one full patrol
+                  className="absolute top-0 left-0"
+                />
+              </div>
+              <div>
+                <div className="text-xl font-bold tracking-tight">
+                  Acts
+                  <span className="text-blue-600">On</span>
+                  Wheels
+                </div>
+                <div className="text-[10px] text-gray-200 dark:text-gray-100 font-medium tracking-widest uppercase">
+                  Church Transportation
+                </div>
+              </div>
             </div>
             <p className="text-gray-400">
               Empowering organizations to serve their communities through smart
@@ -110,7 +127,7 @@ export const LandingFooter = () => {
         </div>
 
         <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-          <p>&copy; {currentYear} ChurchTranspo. All rights reserved.</p>
+          <p>&copy; {currentYear} ActsOnWheels. All rights reserved.</p>
         </div>
       </div>
     </footer>

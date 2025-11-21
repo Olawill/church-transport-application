@@ -22,7 +22,7 @@ const PrivacyPage = () => {
                 Personal Information
               </h4>
               <p className="leading-7 [&:not(:first-child)]:mt-6">
-                When you register for ChurchTranspo, we collect:
+                When you register for ActsOnWheels, we collect:
               </p>
               <ul className="my-6 ml-6 list-disc [&>li]:mt-2">
                 <li>Name and contact information (email, phone number)</li>
@@ -144,8 +144,7 @@ const PrivacyPage = () => {
                 <li>Withdraw consent for location tracking</li>
               </ul>
               <p className="leading-7 [&:not(:first-child)]:mt-6">
-                To exercise these rights, contact us at
-                privacy@churchtranspo.com
+                To exercise these rights, contact us at privacy@actsOnWheels.com
               </p>
             </CardContent>
           </Card>
@@ -160,10 +159,10 @@ const PrivacyPage = () => {
               </p>
               <div className="mt-4">
                 <p className="leading-7 [&:not(:first-child)]:mt-6">
-                  <strong>Email:</strong> privacy@churchtranspo.com
+                  <strong>Email:</strong> privacy@actsOnWheels.com
                 </p>
                 <p className="leading-7 [&:not(:first-child)]:mt-6">
-                  <strong>Address:</strong> ChurchTranspo Privacy Team
+                  <strong>Address:</strong> ActsOnWheels Privacy Team
                   <br />
                   123 Main Street
                   <br />

@@ -27,7 +27,7 @@ const ContactPage = () => {
         <div className="max-w-4xl mx-auto text-center px-4">
           <h1 className="text-4xl font-bold mb-4">Contact Us</h1>
           <p className="text-xl opacity-90">
-            We&apos;re here to help you succeed with ChurchTranspo
+            We&apos;re here to help you succeed with ActsOnWheels
           </p>
         </div>
       </div>
@@ -100,7 +100,7 @@ const ContactPage = () => {
                   <div>
                     <p className="font-medium">Email</p>
                     <p className="text-gray-600 dark:text-gray-200">
-                      support@churchtranspo.com
+                      support@actsOnWheels.com
                     </p>
                   </div>
                 </div>

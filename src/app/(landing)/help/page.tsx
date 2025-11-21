@@ -24,7 +24,7 @@ const faqs = [
       {
         question: "What happens after approval?",
         answer:
-          "Once approved, you'll receive login credentials and access to your organization's subdomain (e.g., yourorg.churchtranspo.com).",
+          "Once approved, you'll receive login credentials and access to your organization's subdomain (e.g., yourorg.actsOnWheels.com).",
       },
       {
         question: "How do I add team members?",
@@ -94,7 +94,7 @@ const supportOptions = [
     title: "Email Support",
     description: "Get help via email (48h response)",
     icon: Mail,
-    href: "mailto:support@churchtranspo.com",
+    href: "mailto:support@actsOnWheels.com",
     badge: "All Plans",
   },
   {
@@ -122,7 +122,7 @@ export default function HelpPage() {
           <h1 className="text-4xl font-bold mb-4">How can we help you?</h1>
           <p className="text-xl mb-8 opacity-90">
             Find answers, get support, and learn how to make the most of
-            ChurchTranspo
+            ActsOnWheels
           </p>
 
           {/* Search */}

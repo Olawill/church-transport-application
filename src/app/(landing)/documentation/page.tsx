@@ -82,7 +82,7 @@ const DocumentationPage = () => {
         <div className="max-w-4xl mx-auto text-center px-4">
           <h1 className="text-4xl font-bold mb-4">Documentation</h1>
           <p className="text-xl mb-8 opacity-90">
-            Comprehensive guides to help you get the most out of ChurchTranspo
+            Comprehensive guides to help you get the most out of ActsOnWheels
           </p>
 
           {/* Search */}
@@ -212,7 +212,7 @@ const DocumentationPage = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600 mb-4">
-                  Connect with other ChurchTranspo users
+                  Connect with other ActsOnWheels users
                 </p>
                 <Link href="/community">
                   <Button variant="outline" size="sm">

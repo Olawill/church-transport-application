@@ -12,4 +12,4 @@ Can we also show a modern pricing page on the platform, where users can get star
 
 Organizations should only started from the platform where they can register and signup, before getting access to their tenant page
 
-After signing up, each organization should have its own domain, so like org1.churchtranspo.com, where users can then sign up to use their transportation service
+After signing up, each organization should have its own domain, so like org1.actsOnWheels.com, where users can then sign up to use their transportation service

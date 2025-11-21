@@ -215,7 +215,7 @@ const SecurityPage = () => {
                 </Button>
               </div>
               <p className="text-sm mt-4 opacity-75">
-                Email: security@churchtranspo.com
+                Email: security@actsOnWheels.com
               </p>
             </CardContent>
           </Card>

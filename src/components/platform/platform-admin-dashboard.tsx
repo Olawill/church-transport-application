@@ -489,7 +489,7 @@ export const PlatformAdminDashboard = () => {
                             )}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {org.slug}.churchtranspo.com
+                            {org.slug}.actsOnWheels.com
                           </div>
                         </div>
                       </TableCell>
@@ -614,7 +614,7 @@ export const PlatformAdminDashboard = () => {
                             {registration.organizationName}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {registration.slug}.churchtranspo.com
+                            {registration.slug}.actsOnWheels.com
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {registration.type}
