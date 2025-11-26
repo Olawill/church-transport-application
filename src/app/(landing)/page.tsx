@@ -16,7 +16,7 @@ import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 import { ScrollPathAnimation } from "@/components/hero/scroll-path";
-import { FlipCounter, NumberCounter } from "@/components/number-counter";
+import { NumberCounter } from "@/components/number-counter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -159,9 +159,12 @@ const LandingPage = () => {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      ScrollTrigger.matchMedia({
+      const mm = gsap.matchMedia();
+
+      mm.add(
         // all viewport sizes
-        "(min-width: 0px)": () => {
+        "(min-width: 0px)",
+        () => {
           /***********************************
            * HERO TEXT
            ***********************************/
@@ -214,8 +217,13 @@ const LandingPage = () => {
               },
             });
           }
-        },
-      });
+
+          // Return cleanup function for this media query
+          return () => {
+            // This cleanup runs when the media query no longer matches
+          };
+        }
+      );
 
       ScrollTrigger.refresh(); // ensure accuracy AFTER everything
     });
@@ -545,12 +553,6 @@ const Pricing = ({ interval }: { interval: BillingInterval }) => {
                 />
                 <span>/{priceSuffix}</span>
               </div>
-              <FlipCounter
-                to={15400}
-                duration={3}
-                formatCurrency
-                decimals={2}
-              />
               {priceSuffix !== "year" && (
                 <span className="text-xs">(Total Annually: {annualPrice})</span>
               )}
