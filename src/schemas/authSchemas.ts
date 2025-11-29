@@ -9,10 +9,56 @@ import {
 import z from "zod";
 import { addressUpdateSchema } from "./adminCreateNewUserSchema";
 
-export const loginSchema = z.object({
+export const passwordResetSchema = z.object({
   email: z.email({
     message: "Email is required",
   }),
+});
+
+export type PasswordResetValues = z.infer<typeof passwordResetSchema>;
+
+export const twoFactorToggleSchema = z.object({
+  password: z.string().min(1, {
+    message: "Password is required for authentication",
+  }),
+});
+
+export type TwoFactorToggleValues = z.infer<typeof twoFactorToggleSchema>;
+
+export const twoFactorFirstTimeToggleSchema = z.object({
+  password: z.string().min(1, {
+    message: "Password is required for authentication",
+  }),
+  type: z.enum(["TOTP", "OTP"]),
+});
+
+export type TwoFactorFirstTimeToggleValues = z.infer<
+  typeof twoFactorFirstTimeToggleSchema
+>;
+
+export const otpSchema = z.object({
+  code: z.string().min(6, {
+    message: "OTP code is required",
+  }),
+});
+
+export type OtpValues = z.infer<typeof otpSchema>;
+
+export const whatsAppNotificationSchema = z.object({
+  whatsappNumber: z
+    .string({ message: "WhatsApp number is required" })
+    .trim()
+    .min(1, "WhatsApp number is required")
+    .refine(isValidPhoneNumber, {
+      message: "Please enter a valid phone number",
+    }),
+});
+
+export type WhatsAppNotificationSchema = z.infer<
+  typeof whatsAppNotificationSchema
+>;
+
+export const loginSchema = passwordResetSchema.extend({
   password: z.string().min(1, {
     message: "Password is required for authentication",
   }),

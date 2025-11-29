@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "@/lib/auth-client";
+import { changePassword, useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { useTRPC } from "@/trpc/client";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,13 +11,13 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { Organization, OrganizationBranchInfo } from "@/generated/prisma";
+import { Organization, OrganizationBranch } from "@/generated/prisma/browser";
 import { useConfirm } from "@/hooks/use-confirm";
 import {
   AddressUpdateSchema,
@@ -69,13 +69,14 @@ export interface UserProfile {
 }
 
 export type OrgInfo = Organization & {
-  systemBranchInfos: OrganizationBranchInfo[];
+  organizationBranches: OrganizationBranch[];
 };
-export type BranchAddress = OrganizationBranchInfo;
+export type BranchAddress = OrganizationBranch;
 
 export const ProfileManagement = () => {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
+  const [isChangingPassword, startPasswordTransition] = useTransition();
 
   const { data: session } = useSession();
 
@@ -113,11 +114,11 @@ export const ProfileManagement = () => {
     )
   );
 
-  const [DeleteAddressDialog, confirmDeleteAddress] = useConfirm(
-    "Delete Address",
-    "Are you sure you want to delete this address? This action is irreversible.",
-    false
-  );
+  const [DeleteAddressDialog, confirmDeleteAddress] = useConfirm({
+    title: "Delete Address",
+    message:
+      "Are you sure you want to delete this address? This action is irreversible.",
+  });
 
   const profileForm = useForm({
     resolver: zodResolver(profileUpdateSchema),
@@ -372,7 +373,7 @@ export const ProfileManagement = () => {
   const handleDeleteAddress = async (addressId: string) => {
     const result = await confirmDeleteAddress();
 
-    if (result !== "confirm") return;
+    if (result.action !== "confirm") return;
 
     await deleteUserAddress.mutateAsync({ id: addressId });
   };
@@ -429,7 +430,7 @@ export const ProfileManagement = () => {
   const handleDeleteBranchAddress = async (addressId: string) => {
     const result = await confirmDeleteAddress();
 
-    if (result !== "confirm") return;
+    if (result.action !== "confirm") return;
 
     await deleteBranchAddress.mutateAsync({
       addressId,
@@ -472,65 +473,58 @@ export const ProfileManagement = () => {
   };
 
   // Security tab handlers
-  const handleChangePassword = async (values: SecurityUpdateSchema) => {
-    const validatedFields = securityUpdateSchema.safeParse(values);
+  const handleChangePassword = (values: SecurityUpdateSchema) => {
+    startPasswordTransition(async () => {
+      const validatedFields = securityUpdateSchema.safeParse(values);
 
-    if (!validatedFields.success) {
-      toast.error("Please correct the errors in the form");
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/user/change-password", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          currentPassword: validatedFields?.data?.currentPassword,
-          newPassword: validatedFields?.data?.newPassword,
-        }),
-      });
-
-      if (response.ok) {
-        securityForm.reset();
-        toast.success("Password updated successfully");
-      } else {
-        const error = await response.json();
-        toast.error(error.message || "Failed to update password");
+      if (!validatedFields.success) {
+        toast.error("Please correct the errors in the form");
+        return;
       }
-    } catch (error) {
-      console.error("Error updating password:", error);
-      toast.error("Failed to update password");
-    }
+
+      const { newPassword, currentPassword } = validatedFields.data;
+
+      changePassword(
+        {
+          newPassword,
+          currentPassword,
+          revokeOtherSessions: true,
+        },
+        {
+          onSuccess: () => {
+            securityForm.reset();
+            toast.success("Password updated successfully");
+          },
+          onError: ({ error }) => {
+            toast.error(error.message || "Failed to update password");
+          },
+        }
+      );
+    });
   };
 
+  // toggleSettings mutation
+  const toggleSettings = useMutation(
+    trpc.user.toggleSettings.mutationOptions({
+      onSuccess: (data) => {
+        toast.success(
+          `${data.field} ${data.value ? "enabled" : "disabled"} successfully`
+        );
+      },
+      onError: (error) => {
+        toast.error(error.message || `Failed to update setting`);
+      },
+    })
+  );
+
   const toggleUserSettings = async (
-    field:
-      | "twoFactorEnabled"
-      | "emailNotifications"
-      | "smsNotifications"
-      | "whatsAppNotifications",
+    field: "emailNotifications" | "smsNotifications" | "whatsAppNotifications",
     currentValue: boolean
   ) => {
-    try {
-      const response = await fetch("/api/user/toggle-setting", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ field, value: !currentValue }),
-      });
-
-      if (!response.ok) throw new Error("Failed to update setting");
-
-      const data = await response.json();
-
-      // setProfile((prev) => (prev ? { ...prev, [field]: data[field] } : prev));
-
-      toast.success(
-        `${field} ${!currentValue ? "enabled" : "disabled"} successfully`
-      );
-    } catch (error) {
-      console.error(`Failed to toggle ${field}:`, error);
-      toast.error(`Failed to toggle ${field}`);
-    }
+    await toggleSettings.mutateAsync({
+      field,
+      value: currentValue,
+    });
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -622,8 +616,8 @@ export const ProfileManagement = () => {
             <SecurityTab
               securityForm={securityForm}
               profile={profile}
-              toggleUserSettings={toggleUserSettings}
               handleChangePassword={handleChangePassword}
+              isChangingPassword={isChangingPassword}
             />
           </TabsContent>
 

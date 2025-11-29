@@ -1,7 +1,7 @@
 //api/admin/users/route.ts
 import { NextRequest, NextResponse } from "next/server";
 
-import { UserRole } from "@/generated/prisma";
+import { UserRole } from "@/generated/prisma/client";
 import { AnalyticsService } from "@/lib/analytics";
 import { prisma } from "@/lib/db";
 import { geocodeAddress } from "@/lib/geocoding";

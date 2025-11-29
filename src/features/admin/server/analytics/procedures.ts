@@ -1,4 +1,4 @@
-import { UserRole } from "@/generated/prisma";
+import { UserRole } from "@/generated/prisma/client";
 import { AnalyticsService } from "@/lib/analytics";
 import { createTRPCRouter, protectedRoleProcedure } from "@/trpc/init";
 

@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { ReactNode, useState } from "react";
+import { ReactNode, SetStateAction, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -10,99 +10,258 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FieldValues, UseFormReturn } from "react-hook-form";
+import { Form } from "@/components/ui/form";
 
-export type ConfirmResult = "cancel" | "primary" | "secondary" | "confirm";
+type ConfirmAction = "cancel" | "primary" | "secondary" | "confirm";
 
-export const useConfirm = (
-  title: string,
-  message: string,
-  update?: boolean,
-  primaryText?: string,
-  secondaryText?: string
-): [() => ReactNode, () => Promise<ConfirmResult>] => {
+export interface ConfirmResult<FieldValues, Extra = undefined> {
+  action: ConfirmAction;
+  formValues?: FieldValues;
+  extraValues?: Extra;
+}
+
+interface UseConfirmProps<T extends FieldValues, Extra> {
+  title: string;
+  message: string;
+  update?: boolean;
+  primaryText?: string;
+  secondaryText?: string;
+  cancelText?: string;
+
+  //Optional react hook form support
+  form?: UseFormReturn<T>;
+  renderForm?: (form: UseFormReturn<T>) => ReactNode;
+
+  // Optional custom typed content
+  initialValue?: Extra;
+  renderContent?: (props: {
+    value: Extra;
+    setValue: React.Dispatch<SetStateAction<Extra>>;
+  }) => ReactNode;
+}
+
+// Overload for exposeValue = true
+export function useConfirm<T extends FieldValues = never, Extra = undefined>(
+  props: UseConfirmProps<T, Extra> & { exposeValue: true }
+): [
+  Dialog: () => React.ReactNode,
+  confirm: () => Promise<ConfirmResult<T, Extra>>,
+  setValue: React.Dispatch<SetStateAction<Extra>>,
+];
+
+// Overload for exposeValue not true or undefined
+export function useConfirm<T extends FieldValues = never, Extra = undefined>(
+  props: UseConfirmProps<T, Extra> & { exposeValue?: false }
+): [
+  Dialog: () => React.ReactNode,
+  confirm: () => Promise<ConfirmResult<T, Extra>>,
+];
+
+export function useConfirm<T extends FieldValues = never, Extra = undefined>({
+  title,
+  message,
+  update,
+  primaryText,
+  secondaryText,
+  cancelText,
+  form,
+  renderForm,
+  initialValue,
+  renderContent,
+  exposeValue,
+}: UseConfirmProps<T, Extra> & {
+  exposeValue?: boolean;
+}) {
   const [promise, setPromise] = useState<{
-    resolve: (value: ConfirmResult) => void;
+    resolve: (value: ConfirmResult<FieldValues, Extra>) => void;
   } | null>(null);
 
-  const confirm = () => {
-    return new Promise<ConfirmResult>((resolve) => setPromise({ resolve }));
+  const [extraValue, setExtraValue] = useState<Extra>(
+    initialValue ?? ({} as Extra)
+  );
+
+  const confirm = (): Promise<ConfirmResult<FieldValues, Extra>> => {
+    return new Promise((resolve) => setPromise({ resolve }));
   };
 
   const handleClose = () => {
     setPromise(null);
   };
 
-  const handleCancel = () => {
-    promise?.resolve("cancel");
-    handleClose();
-  };
+  const handleAction = async (action: ConfirmAction) => {
+    if (!promise) return;
 
-  const handlePrimary = () => {
-    promise?.resolve("primary");
-    handleClose();
-  };
+    if (form) {
+      if (["confirm", "primary", "secondary"].includes(action)) {
+        const isValid = await form.trigger();
 
-  const handleSecondary = () => {
-    promise?.resolve("secondary");
-    handleClose();
-  };
+        if (!isValid) return; // Keep dialog open on validation error
 
-  const handleConfirm = () => {
-    promise?.resolve("confirm");
+        const formValues = form.getValues();
+
+        promise.resolve({ action, formValues, extraValues: extraValue });
+      } else {
+        promise.resolve({ action });
+      }
+    } else {
+      promise.resolve({ action, extraValues: extraValue });
+    }
+
     handleClose();
   };
 
   // Check if we're using the three-button mode
-  const isThreeButtonMode = !!(primaryText && secondaryText);
+  const isThreeButtonMode = Boolean(primaryText && secondaryText);
 
   const ConfirmDialog = () => (
-    <Dialog open={promise !== null} onOpenChange={handleCancel}>
-      <DialogContent className="mx-8">
+    <Dialog open={promise !== null} onOpenChange={handleClose}>
+      <DialogContent className="mx-8 max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{message}</DialogDescription>
         </DialogHeader>
-        <DialogFooter className="pt-2">
-          <Button variant="outline" onClick={handleCancel}>
-            Cancel
-          </Button>
+        {/* Render custom content */}
+        {renderContent && (
+          <div className="py-4">
+            {renderContent({
+              value: extraValue,
+              setValue: setExtraValue,
+            })}
+          </div>
+        )}
 
-          {isThreeButtonMode ? (
-            // Three-button mode: Cancel, Primary, Secondary
-            <>
-              <Button
-                variant="outline"
-                onClick={handlePrimary}
-                className="border-blue-500 text-blue-600 hover:bg-blue-50"
-              >
-                {primaryText}
-              </Button>
+        {form && renderForm ? (
+          <Form {...form}>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void handleAction("confirm");
+              }}
+              className="space-y-6"
+            >
+              {renderForm(form)}
+
+              <DialogFooter className="pt-2">
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={() => void handleAction("cancel")}
+                >
+                  {cancelText || "Cancel"}
+                </Button>
+
+                {isThreeButtonMode ? (
+                  // Three-button mode: Cancel, Primary, Secondary
+                  <>
+                    <Button
+                      variant="outline"
+                      type="button"
+                      onClick={() => void handleAction("primary")}
+                      className={cn(
+                        "border-blue-500 text-blue-600 hover:bg-blue-50 cursor-pointer",
+                        !update && "border-red-500 text-red-500 hover:bg-red-50"
+                      )}
+                    >
+                      {primaryText}
+                    </Button>
+                    <Button
+                      variant={update ? "default" : "destructive"}
+                      type="submit"
+                      className={cn(
+                        "cursor-pointer",
+                        update &&
+                          "bg-[#007A5A] hover:bg-[#007A5A]/80 text-white"
+                      )}
+                    >
+                      {secondaryText}
+                    </Button>
+                  </>
+                ) : (
+                  // Two-button mode: Cancel, Confirm (original behavior)
+                  <Button
+                    variant={update ? "default" : "destructive"}
+                    type="submit"
+                    className={cn(
+                      update && "bg-[#007A5A] hover:bg-[#007A5A]/80 text-white"
+                    )}
+                  >
+                    {secondaryText || primaryText || "Confirm"}
+                  </Button>
+                )}
+              </DialogFooter>
+            </form>
+          </Form>
+        ) : (
+          <DialogFooter className="pt-2">
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => void handleAction("cancel")}
+              className="cursor-pointer"
+            >
+              {cancelText || "Cancel"}
+            </Button>
+
+            {isThreeButtonMode ? (
+              // Three-button mode: Cancel, Primary, Secondary
+              <>
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={() => void handleAction("primary")}
+                  className={cn(
+                    "border-blue-500 text-blue-600 hover:bg-blue-50 cursor-pointer",
+                    !update && "border-red-500 text-red-500 hover:bg-red-50"
+                  )}
+                >
+                  {primaryText}
+                </Button>
+                <Button
+                  type="button"
+                  variant={update ? "default" : "destructive"}
+                  onClick={() => void handleAction("secondary")}
+                  className={cn(
+                    "cursor-pointer",
+                    update && "bg-[#007A5A] hover:bg-[#007A5A]/80 text-white"
+                  )}
+                >
+                  {secondaryText}
+                </Button>
+              </>
+            ) : (
+              // Two-button mode: Cancel, Confirm (original behavior)
               <Button
                 variant={update ? "default" : "destructive"}
-                onClick={handleSecondary}
+                type="button"
+                onClick={() => void handleAction("confirm")}
                 className={cn(
+                  "cursor-pointer",
                   update && "bg-[#007A5A] hover:bg-[#007A5A]/80 text-white"
                 )}
               >
-                {secondaryText}
+                {secondaryText || primaryText || "Confirm"}
               </Button>
-            </>
-          ) : (
-            // Two-button mode: Cancel, Confirm (original behavior)
-            <Button
-              variant={update ? "default" : "destructive"}
-              onClick={handleConfirm}
-              className={cn(
-                update && "bg-[#007A5A] hover:bg-[#007A5A]/80 text-white"
-              )}
-            >
-              {secondaryText || primaryText || "Confirm"}
-            </Button>
-          )}
-        </DialogFooter>
+            )}
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );
 
-  return [ConfirmDialog, confirm];
-};
+  // Return proper tuple based on overload
+  if (exposeValue) {
+    const tuple: [
+      () => React.ReactNode,
+      () => Promise<ConfirmResult<FieldValues, Extra>>,
+      React.Dispatch<SetStateAction<Extra>>,
+    ] = [ConfirmDialog, confirm, setExtraValue];
+    return tuple;
+  }
+
+  const tuple: [
+    () => React.ReactNode,
+    () => Promise<ConfirmResult<FieldValues, Extra>>,
+  ] = [ConfirmDialog, confirm];
+  return tuple;
+}

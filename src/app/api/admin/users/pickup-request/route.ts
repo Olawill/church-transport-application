@@ -4,7 +4,7 @@ import { z } from "zod";
 import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import { PickupRequest, UserRole } from "@/generated/prisma";
+import { PickupRequest, UserRole } from "@/generated/prisma/client";
 import { AnalyticsService } from "@/lib/analytics";
 import { prisma } from "@/lib/db";
 import { geocodeAddress } from "@/lib/geocoding";

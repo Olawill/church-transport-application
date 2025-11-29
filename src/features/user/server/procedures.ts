@@ -3,14 +3,17 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 
 import { createTRPCRouter, sensitiveProcedure } from "@/trpc/init";
-import { TRPCError } from "@trpc/server";
 
 export const userRouter = createTRPCRouter({
   toggleSettings: sensitiveProcedure
     .input(
       z.object({
-        field: z.string(),
-        value: z.string(),
+        field: z.enum([
+          "emailNotifications",
+          "smsNotifications",
+          "whatsAppNotifications",
+        ]),
+        value: z.boolean(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -18,28 +21,15 @@ export const userRouter = createTRPCRouter({
 
       const userId = ctx.auth.user.id;
 
-      // Valid boolean fields on User
-      const userFields = [
-        "twoFactorEnabled",
-        "emailNotifications",
-        "smsNotifications",
-        "whatsAppNotifications",
-      ];
+      const updated = await prisma.user.update({
+        where: { id: userId },
+        data: { [field]: value },
+        // select: { [field]: true },
+      });
 
-      let result;
-      if (userFields.includes(field)) {
-        result = await prisma.user.update({
-          where: { id: userId },
-          data: { [field]: value },
-          select: { [field]: true },
-        });
-      } else {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Invalid field",
-        });
-      }
-
-      return result;
+      return {
+        field,
+        value: updated[field], // boolean
+      };
     }),
 });

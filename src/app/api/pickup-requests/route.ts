@@ -10,7 +10,7 @@ import {
   PrismaClient,
   RequestStatus,
   UserRole,
-} from "@/generated/prisma";
+} from "@/generated/prisma/client";
 import { AnalyticsService } from "@/lib/analytics";
 import { prisma } from "@/lib/db";
 import {

@@ -4,7 +4,7 @@ import {
   Ordinal,
   ServiceCategory,
   UserRole,
-} from "@/generated/prisma";
+} from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import {
   frequentMultiDaySchema,

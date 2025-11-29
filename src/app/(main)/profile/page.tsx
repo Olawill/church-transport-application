@@ -1,9 +1,7 @@
 import { ErrorState } from "@/components/screen-states/error-state";
 import { ProfileManagement } from "@/features/profile/components/profile-management";
-import { ProfileManagementSkeleton } from "@/features/profile/components/profile-management-skeleton";
 import { requireAuth } from "@/lib/session/server-session";
 import { HydrateClient, prefetch, trpc } from "@/trpc/server";
-import { Suspense } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 
 const ProfilePage = async () => {
@@ -31,13 +29,7 @@ const ProfilePage = async () => {
           />
         }
       >
-        <Suspense
-          fallback={
-            <ProfileManagementSkeleton isAdminOrOwner={isAdminOrOwner} />
-          }
-        >
-          <ProfileManagement />
-        </Suspense>
+        <ProfileManagement />
       </ErrorBoundary>
     </HydrateClient>
   );

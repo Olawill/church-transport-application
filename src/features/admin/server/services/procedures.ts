@@ -1,4 +1,4 @@
-import { Frequency, Ordinal, UserRole } from "@/generated/prisma";
+import { Frequency, Ordinal, UserRole } from "@/generated/prisma/client";
 import { z } from "zod";
 
 import { prisma } from "@/lib/db";

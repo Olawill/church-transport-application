@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import { OTPType } from "@/generated/prisma";
+import { OTPType } from "@/generated/prisma/client";
 import { AnalyticsService } from "@/lib/analytics";
 import { OTPService } from "@/lib/otp";
 

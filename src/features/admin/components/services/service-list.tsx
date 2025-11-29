@@ -59,21 +59,24 @@ export const ServiceList = ({
   // onDelete,
   onShowForm,
 }: ServiceListProps) => {
-  const [DeleteDialog, confirmDelete] = useConfirm(
-    "Delete Service",
-    "Are you sure you want to delete this service? This action cannot be undone."
-  );
+  const [DeleteDialog, confirmDelete] = useConfirm({
+    title: "Delete Service",
+    message:
+      "Are you sure you want to delete this service? This action cannot be undone.",
+  });
 
-  const [ArchiveDialog, confirmArchive] = useConfirm(
-    "Archive Service",
-    "Are you sure you want to archive this service? You will only be able to reactivate this service after 24 hours."
-  );
+  const [ArchiveDialog, confirmArchive] = useConfirm({
+    title: "Archive Service",
+    message:
+      "Are you sure you want to archive this service? You will only be able to reactivate this service after 24 hours.",
+  });
 
-  const [RestoreDialog, confirmRestore] = useConfirm(
-    "Restore Service",
-    "Are you sure you want to restore this service? You can only reactivate this service after 24 hours of being deactivated.",
-    true
-  );
+  const [RestoreDialog, confirmRestore] = useConfirm({
+    title: "Restore Service",
+    message:
+      "Are you sure you want to restore this service? You can only reactivate this service after 24 hours of being deactivated.",
+    update: true,
+  });
 
   const trpc = useTRPC();
 
@@ -132,7 +135,7 @@ export const ServiceList = ({
 
   const handleDelete = async (serviceId: string) => {
     const result = await confirmDelete();
-    if (result !== "confirm") return;
+    if (result.action !== "confirm") return;
 
     await deleteService.mutateAsync({ id: serviceId });
   };
@@ -141,7 +144,7 @@ export const ServiceList = ({
     const confirmFn = currentStatus ? confirmArchive : confirmRestore;
 
     const result = await confirmFn();
-    if (result !== "confirm") return;
+    if (result.action !== "confirm") return;
 
     await archiveService.mutateAsync({ id: serviceId });
   };

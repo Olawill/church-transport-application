@@ -6,7 +6,7 @@ import {
   ServiceType,
   UserRole,
   UserStatus,
-} from "@/generated/prisma";
+} from "@/generated/prisma/client";
 
 export interface User {
   id: string;

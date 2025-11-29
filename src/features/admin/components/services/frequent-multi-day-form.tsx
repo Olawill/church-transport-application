@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Frequency, Ordinal } from "@/generated/prisma";
+import { Frequency, Ordinal } from "@/generated/prisma/enums";
 import { DAYS_OF_WEEK, frequencyOptions } from "@/lib/types";
 import { cn, formatDate } from "@/lib/utils";
 import { FrequentMultiDaySchema } from "@/schemas/serviceDaySchema";

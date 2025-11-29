@@ -1,4 +1,4 @@
-import { PickupRequest, UserRole } from "@/generated/prisma";
+import { PickupRequest, UserRole } from "@/generated/prisma/client";
 
 import { AnalyticsService } from "@/lib/analytics";
 import { auth } from "@/lib/auth";

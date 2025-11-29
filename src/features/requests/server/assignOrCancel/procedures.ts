@@ -1,4 +1,4 @@
-import { RequestStatus, UserRole } from "@/generated/prisma";
+import { RequestStatus, UserRole } from "@/generated/prisma/enums";
 import { z } from "zod";
 
 import { prisma } from "@/lib/db";

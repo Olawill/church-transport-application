@@ -1,4 +1,4 @@
-import { UserRole } from "@/generated/prisma";
+import { UserRole } from "@/generated/prisma/client";
 import { AnalyticsService } from "@/lib/analytics";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";

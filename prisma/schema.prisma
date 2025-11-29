@@ -5,16 +5,23 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
   output   = "../src/generated/prisma"
+  engineType = "client"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // url      = env("DATABASE_URL")
 }
 
 enum UserRole {
+  // Platform Users
+  PLATFORM_ADMIN
+  PLATFORM_SUPERUSER
+  PLATFORM_USER
+
+  // Tenants
   ADMIN
   TRANSPORTATION_TEAM
   USER
@@ -87,6 +94,11 @@ enum OTPType {
   PASSWORD_RESET
 }
 
+enum OTPChoice {
+  TOTP
+  OTP
+}
+
 model Account {
   id                    String     @id @default(cuid())
   accountId             String
@@ -120,6 +132,8 @@ model Session {
   user                User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   token               String
+  activeOrganizationId String?
+  activeTeamId        String?
 
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
@@ -131,6 +145,7 @@ model Session {
 model User {
   id                  String       @id @default(cuid())
   name                String
+  username            String?      @unique
 
   email               String       @unique
   emailVerified       Boolean      @default(false)
@@ -139,7 +154,6 @@ model User {
   whatsappNumber      String?
   phoneNumberVerified Boolean      @default(false)
   
-  username            String?      @unique
   
   image               String?
   role                UserRole     @default(USER)
@@ -147,13 +161,13 @@ model User {
   isActive            Boolean      @default(true)
   
   maxDistance         Int          @default(10) // For transportation team members
-  
-  twoFactorEnabled    Boolean       @default(false)
+
   bannedAt            DateTime?
   bannedBy            String?
   banReason           String?
 
   isAdminCreated      Boolean       @default(false)
+  firstLoginAt        DateTime?
   
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
@@ -164,15 +178,38 @@ model User {
 
   accounts            Account[]
   sessions            Session[]
+  
   addresses           Address[]
   pickupRequests      PickupRequest[] @relation("UserRequests")
   acceptedRequests    PickupRequest[] @relation("DriverRequests")
   cancelledRequests   DriverRequestCancel[] @relation("DriverRequestsCancel")
-  otps                OTP[]
   subscription        Subscription?
+
+  twoFactor           TwoFactor?
+  twoFactorEnabled    Boolean       @default(false)
+  twoFactorMethod     OTPChoice?
+
+  members             Member[]
+  invitations         Invitation[]
+
+  teamMembers         TeamMember[]
+
 
   @@index([email])
   @@map("users")
+}
+
+model TwoFactor {
+  id                  String       @id @default(cuid())
+
+  userId              String
+  user                User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  secret              String?
+  backupCodes         String?
+
+  @@unique([userId])
+  @@map("twoFactor")
 }
 
 model Verification {
@@ -311,25 +348,59 @@ model DriverRequestCancel {
 
 model Organization {
   id                     String            @id @default(cuid())
-  churchName             String            @unique
+  churchName             String            @unique @map("name")
   churchAcronym          String?           @unique       
   churchLogo             String?           @map("logo")
   slug                   String
+  metadata               String?
 
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
 
+  members                Member[]
+  invitations            Invitation[]
+
   organizationBranches   OrganizationBranch[]
 
+  @@unique([slug])
   @@map("organization")
+}
+
+model Member {
+  id                     String            @id @default(cuid())
+  organizationId         String
+  organization           Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId                 String
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           UserRole
+
+  createdAt              DateTime          @default(now())
+
+  @@map("member")
+}
+
+model Invitation {
+  id                     String            @id @default(cuid())
+  organizationId         String
+  organization           Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  email                  String
+  role                   UserRole?
+  status                 String
+  expiresAt              DateTime
+
+  inviterId              String
+  user                   User      @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+
+  teamId                 String?
+
+  @@map("invitation")
 }
 
 model OrganizationBranch {
   id                  String            @id @default(cuid())
-  branchName          String?
+  branchName          String            @map("name")
   branchCategory      BranchType        @default(BRANCH)
-
-  organizationId      String
 
   street              String
   city                String
@@ -343,27 +414,29 @@ model OrganizationBranch {
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
+  teammembers         TeamMember[]
+
+  organizationId      String
   organization        Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  @@map("organization_branch")
+  @@map("team")
 }
 
-model OTP {
-  id                  String             @id @default(cuid())
+model TeamMember {
+  id                  String            @id @default(cuid())
+
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  teamId              String
+  team                OrganizationBranch      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
   userId              String
-  code                String
-  type                OTPType
-  identifier          String             // email or phone
-  expiresAt           DateTime
-  verified            Boolean            @default(false)
-  attempts            Int                @default(0)
-  createdAt           DateTime           @default(now())
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, type])
-  @@map("otps")
+  @@map("teamMember")
 }
+
 
 model Subscription {
   id                  String             @id @default(cuid())

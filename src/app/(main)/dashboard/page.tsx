@@ -9,7 +9,7 @@ import { UserDashboard } from "@/features/dashboard/components/user-dashboard";
 import { adminDashboardParamsLoader } from "@/features/dashboard/params-loader";
 
 import { LoadingState } from "@/components/screen-states/loading-state";
-import { UserRole } from "@/generated/prisma";
+import { UserRole } from "@/generated/prisma/enums";
 import { requireAuth } from "@/lib/session/server-session";
 import { HydrateClient, prefetch, trpc } from "@/trpc/server";
 

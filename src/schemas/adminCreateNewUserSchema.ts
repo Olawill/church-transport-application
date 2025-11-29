@@ -1,4 +1,4 @@
-import { BranchType } from "@/generated/prisma";
+import { BranchType } from "@/generated/prisma/enums";
 import {
   getPostalCodeValidationMessage,
   isValidEmail,

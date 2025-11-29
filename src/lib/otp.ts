@@ -1,4 +1,4 @@
-import { OTPType } from "@/generated/prisma";
+import { OTPType } from "@/generated/prisma/enums";
 import { prisma } from "./db";
 
 export interface OTPOptions {

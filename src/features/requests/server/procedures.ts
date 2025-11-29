@@ -4,7 +4,7 @@ import {
   PrismaClient,
   RequestStatus,
   UserRole,
-} from "@/generated/prisma";
+} from "@/generated/prisma/client";
 import { z } from "zod";
 
 import { AnalyticsService } from "@/lib/analytics";

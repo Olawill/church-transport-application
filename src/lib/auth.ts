@@ -1,10 +1,10 @@
 import { betterAuth, BetterAuthOptions } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
-import { customSession } from "better-auth/plugins";
+import { customSession, haveIBeenPwned, twoFactor } from "better-auth/plugins";
 
 import { env } from "@/env/server";
-import { UserRole, UserStatus } from "@/generated/prisma";
+import { OTPChoice, UserRole, UserStatus } from "@/generated/prisma/enums";
 import { prisma } from "./db";
 import { extendUserSession } from "./session/extend-user-session";
 
@@ -18,7 +18,7 @@ const options = {
   emailAndPassword: {
     enabled: true,
     autoSignIn: false,
-    minPasswordLength: 5,
+    minPasswordLength: 8,
   },
   socialProviders: {
     facebook: {
@@ -44,7 +44,19 @@ const options = {
       },
     },
   },
-  plugins: [nextCookies()],
+  plugins: [
+    haveIBeenPwned(),
+    twoFactor({
+      otpOptions: {
+        allowedAttempts: 3,
+        sendOTP: async ({ user, otp }, request) => {
+          console.log(
+            `Sending OTP ${otp} to user ${user.email} via ${user.name}`
+          );
+        },
+      },
+    }),
+  ],
 } satisfies BetterAuthOptions;
 
 export const auth = betterAuth({
@@ -52,17 +64,29 @@ export const auth = betterAuth({
   plugins: [
     ...(options.plugins ?? []),
     customSession(async ({ user, session }) => {
-      const { role, status } = await extendUserSession(session.userId);
+      const {
+        role,
+        status,
+        provider,
+        isOauthSignup,
+        needsCompletion,
+        otpChoice,
+      } = await extendUserSession(session.userId);
 
       return {
         user: {
           ...user,
           role,
           status,
+          provider,
+          isOauthSignup,
+          needsCompletion,
+          otpChoice,
         },
         session,
       };
     }, options),
+    nextCookies(),
   ],
 });
 
@@ -72,6 +96,10 @@ export type ExtendedSession = {
   user: BaseSession["user"] & {
     role: UserRole;
     status: UserStatus;
+    provider: string;
+    isOauthSignup: boolean;
+    needsCompletion: boolean;
+    otpChoice: OTPChoice | null;
   };
   session: BaseSession["session"];
 };

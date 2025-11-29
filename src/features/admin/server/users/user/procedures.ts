@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { UserRole } from "@/generated/prisma";
+import { UserRole } from "@/generated/prisma/client";
 
 import { AnalyticsService } from "@/lib/analytics";
 import { prisma } from "@/lib/db";

@@ -1,4 +1,4 @@
-import { UserRole } from "@/generated/prisma";
+import { UserRole } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { churchBranchContactInfoUpdateSchema } from "@/schemas/adminCreateNewUserSchema";
 import { createTRPCRouter, protectedRoleProcedure } from "@/trpc/init";

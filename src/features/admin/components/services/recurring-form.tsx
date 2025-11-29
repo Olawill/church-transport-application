@@ -2,7 +2,7 @@ import { cn, formatDate } from "@/lib/utils";
 import { addMonths, format } from "date-fns";
 import { UseFormReturn } from "react-hook-form";
 
-import { Frequency, Ordinal } from "@/generated/prisma";
+import { Frequency, Ordinal } from "@/generated/prisma/enums";
 import { DAYS_OF_WEEK, frequencyOptions } from "@/lib/types";
 import { RecurringSchema } from "@/schemas/serviceDaySchema";
 

@@ -17,7 +17,7 @@ import {
   Ordinal,
   ServiceCategory,
   ServiceType,
-} from "@/generated/prisma";
+} from "@/generated/prisma/enums";
 import {
   frequentMultiDaySchema,
   FrequentMultiDaySchema,

@@ -64,7 +64,7 @@ import { useUsersParams } from "@/features/users/hooks/use-users-params";
 import { useConfirm } from "@/hooks/use-confirm";
 import { useTRPC } from "@/trpc/client";
 import { CustomPagination } from "../../../components/custom-pagination";
-import { UserRole } from "@/generated/prisma";
+import { UserRole } from "@/generated/prisma/enums";
 
 export const UserManagement = () => {
   const { data: session } = useSession();
@@ -77,11 +77,11 @@ export const UserManagement = () => {
   const [nameInput, setNameInput] = useState(search || "");
   const [debouncedNameInput] = useDebounce(search, 300);
 
-  const [UpdateRoleDialog, confirmUpdateRole] = useConfirm(
-    "Change role",
-    "Are you sure you want to change this member's role?",
-    true
-  );
+  const [UpdateRoleDialog, confirmUpdateRole] = useConfirm({
+    title: "Change role",
+    message: "Are you sure you want to change this member's role?",
+    update: true,
+  });
 
   const { data: usersData, isLoading: loading } = useSuspenseQuery(
     trpc.users.getPaginatedUsers.queryOptions({
@@ -161,7 +161,7 @@ export const UserManagement = () => {
   const handleRoleUpdate = async (userId: string, newRole: string) => {
     const result = await confirmUpdateRole();
 
-    if (result !== "confirm") return;
+    if (result.action !== "confirm") return;
 
     await updateUserRole.mutateAsync({ id: userId, role: newRole as UserRole });
   };

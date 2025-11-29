@@ -1,4 +1,4 @@
-import { UserRole } from "@/generated/prisma";
+import { UserRole } from "@/generated/prisma/enums";
 import { redirect } from "next/navigation";
 
 import { ErrorState } from "@/components/screen-states/error-state";

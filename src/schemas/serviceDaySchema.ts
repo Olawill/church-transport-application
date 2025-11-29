@@ -3,7 +3,7 @@ import {
   Ordinal,
   ServiceCategory,
   ServiceType,
-} from "@/generated/prisma";
+} from "@/generated/prisma/enums";
 import z from "zod";
 
 // Base schema with common fields

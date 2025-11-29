@@ -1,6 +1,6 @@
 "use server";
 
-import { UserRole } from "@/generated/prisma";
+import { UserRole } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db";
 import { getAuthSession } from "@/lib/session/server-session";
 import { ChurchBranchContactInfoUpdateSchema } from "@/schemas/adminCreateNewUserSchema";
@@ -75,7 +75,7 @@ export const setHeadquarter = async (addressId: string, orgId?: string) => {
   }
   try {
     // Check if address exist
-    const existingBranch = await prisma.organizationBranchInfo.findUnique({
+    const existingBranch = await prisma.organizationBranch.findUnique({
       where: { id: addressId },
     });
 
@@ -93,7 +93,7 @@ export const setHeadquarter = async (addressId: string, orgId?: string) => {
     }
 
     // Get the current headquarter, if any and make branch
-    await prisma.organizationBranchInfo.update({
+    await prisma.organizationBranch.update({
       where: {
         id: existingBranch.id,
         organizationId: organizationId,
@@ -104,7 +104,7 @@ export const setHeadquarter = async (addressId: string, orgId?: string) => {
       },
     });
     // Set address to headquarter
-    const updatedBranchInfo = await prisma.organizationBranchInfo.update({
+    const updatedBranchInfo = await prisma.organizationBranch.update({
       where: { id: addressId },
       data: {
         branchCategory: "HEADQUARTER",
@@ -145,7 +145,7 @@ export const addBranch = async (
   // TODO: Check if address belongs to organization
   try {
     // Check if organization existing
-    const organization = await prisma.systemConfig.findFirst({
+    const organization = await prisma.organization.findFirst({
       where: { id: organizationId },
     });
 
@@ -155,9 +155,9 @@ export const addBranch = async (
       };
     }
     // Create the branch
-    const newBranch = await prisma.systemBranchInfo.create({
+    const newBranch = await prisma.organizationBranch.create({
       data: {
-        systemConfigId: organizationId,
+        organizationId,
         ...values,
       },
     });
@@ -198,7 +198,7 @@ export const updateBranch = async (
 
   try {
     // Check if address exist
-    const existingBranch = await prisma.systemBranchInfo.findUnique({
+    const existingBranch = await prisma.organizationBranch.findUnique({
       where: { id: addressId },
     });
 
@@ -209,7 +209,7 @@ export const updateBranch = async (
     }
 
     // Check if address belongs to organization
-    if (existingBranch.systemConfigId !== organizationId) {
+    if (existingBranch.organizationId !== organizationId) {
       return {
         success: false,
         error: "Branch does not belong to this organization.",
@@ -217,7 +217,7 @@ export const updateBranch = async (
     }
 
     // Update
-    const updatedBranchInfo = await prisma.systemBranchInfo.update({
+    const updatedBranchInfo = await prisma.organizationBranch.update({
       where: { id: addressId },
       data: {
         ...values,
@@ -254,7 +254,7 @@ export const deleteBranch = async (addressId: string, orgId?: string) => {
   // TODO: Only owner
   try {
     // Check if address exist
-    const existingBranch = await prisma.systemBranchInfo.findUnique({
+    const existingBranch = await prisma.organizationBranch.findUnique({
       where: { id: addressId },
     });
 
@@ -265,7 +265,7 @@ export const deleteBranch = async (addressId: string, orgId?: string) => {
     }
 
     // Check if address belongs to organization
-    if (existingBranch.systemConfigId !== organizationId) {
+    if (existingBranch.organizationId !== organizationId) {
       return {
         success: false,
         error: "Branch does not belong to this organization.",
@@ -275,10 +275,10 @@ export const deleteBranch = async (addressId: string, orgId?: string) => {
     // TODO: If not change admin role to user
 
     // Then delete address
-    await prisma.systemBranchInfo.delete({
+    await prisma.organizationBranch.delete({
       where: {
         id: addressId,
-        systemConfigId: organizationId,
+        organizationId,
       },
     });
 

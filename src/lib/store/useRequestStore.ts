@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-import { RequestStatus } from "@/generated/prisma";
+import { RequestStatus } from "@/generated/prisma/client";
 import { PickupRequest, RequestType } from "@/lib/types";
 
 export type Status = RequestStatus | "ALL";

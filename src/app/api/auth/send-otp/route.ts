@@ -1,5 +1,5 @@
 import { auth } from "@/auth";
-import { OTPType } from "@/generated/prisma";
+import { OTPType } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { NotificationService } from "@/lib/notifications";
 import { OTPService } from "@/lib/otp";

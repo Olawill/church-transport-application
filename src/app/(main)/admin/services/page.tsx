@@ -1,4 +1,4 @@
-import { UserRole } from "@/generated/prisma";
+import { UserRole } from "@/generated/prisma/enums";
 import { redirect } from "next/navigation";
 import { SearchParams } from "nuqs/server";
 import { ErrorBoundary } from "react-error-boundary";

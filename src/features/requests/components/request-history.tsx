@@ -24,7 +24,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 
-import { UserRole } from "@/generated/prisma";
+import { UserRole } from "@/generated/prisma/enums";
 import { Status } from "@/lib/store/useRequestStore";
 import { RequestType } from "@/lib/types";
 import {

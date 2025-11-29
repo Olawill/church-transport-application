@@ -10,6 +10,7 @@ import { authRouter } from "@/features/auth/server/procedures";
 import { sendMailRouter } from "@/features/email/server/procedures";
 import { organizationRouter } from "@/features/organization/server/procedures";
 import { placesRouter } from "@/features/places/server/procedures";
+import { profileRouter } from "@/features/profile/server/procedures";
 import { requestsRouter } from "@/features/requests/server/assignOrCancel/procedures";
 import { driverRequestsRouter } from "@/features/requests/server/driver/procedures";
 import { userRequestRouter } from "@/features/requests/server/procedures";
@@ -22,6 +23,7 @@ import { usersRouter } from "@/features/users/server/procedures";
 export const appRouter = createTRPCRouter({
   auth: authRouter,
   places: placesRouter,
+  profile: profileRouter,
   adminAnalytics: adminAnalyticsRouter,
   adminStats: adminStatRouter,
   services: servicesRouter,

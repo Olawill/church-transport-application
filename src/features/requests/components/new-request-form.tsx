@@ -87,13 +87,14 @@ export const NewRequestForm = ({
   newRequestData,
   setShowDialog,
 }: NewRequestFormProps) => {
-  const [SeriesUpdateDialog, confirmSeriesUpdate] = useConfirm(
-    "Update Series/Occurrence",
-    "Do you want to update the entire ride request series or just this ride occurrence?",
-    true,
-    "Update occurrence",
-    "Update series"
-  );
+  const [SeriesUpdateDialog, confirmSeriesUpdate] = useConfirm({
+    title: "Update Series/Occurrence",
+    message:
+      "Do you want to update the entire ride request series or just this ride occurrence?",
+    update: true,
+    primaryText: "Update occurrence",
+    secondaryText: "Update series",
+  });
 
   return (
     <>
@@ -156,7 +157,7 @@ const RequestForm = ({
   setShowDialog,
   confirmSeriesUpdate,
 }: NewRequestFormProps & {
-  confirmSeriesUpdate: () => Promise<ConfirmResult>;
+  confirmSeriesUpdate: () => Promise<ConfirmResult<never, undefined>>;
 }) => {
   const router = useRouter();
   const trpc = useTRPC();
@@ -356,13 +357,13 @@ const RequestForm = ({
       const result = await confirmSeriesUpdate();
 
       // Handle the three possible results
-      if (result === "cancel") {
+      if (result.action === "cancel") {
         // User clicked cancel - do nothing
         return;
-      } else if (result === "primary") {
+      } else if (result.action === "primary") {
         // User clicked "Update occurrence" - update only this one
         updateSeries = false;
-      } else if (result === "secondary") {
+      } else if (result.action === "secondary") {
         // User clicked "Update series" - update entire series
         updateSeries = true;
       }
