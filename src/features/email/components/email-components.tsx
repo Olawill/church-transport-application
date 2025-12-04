@@ -26,6 +26,10 @@ interface RejectionEmailProps {
   mainMsg?: string;
 }
 
+interface AppealRequestEmailProps {
+  username?: string;
+}
+
 export const WelcomeEmailTemplate = () => {
   return (
     <Section>
@@ -364,7 +368,7 @@ export const UserRejectionEmailTemplate = ({
 
 export const AppealDecisionEmailTemplate = () => {
   const mainMessage =
-    "Thank you for taking the time to submit an appeal regarding your sign-up request.After a thorough review, we're unable to approve your appeal.";
+    "Thank you for submitting your appeal regarding your sign-up request. After a careful and comprehensive review, we regret to inform you that we are unable to approve your appeal at this time.";
 
   return (
     <Section>
@@ -375,4 +379,17 @@ export const AppealDecisionEmailTemplate = () => {
   );
 };
 
-//"rejection_email"
+export const AppealRequestEmailTemplate = ({
+  username,
+}: AppealRequestEmailProps) => {
+  const name = username ?? "Mary";
+  const mainMessage = `An appeal request has been submitted by the user ${name}. Please review the appeal details at your earliest convenience to determine the appropriate next steps.`;
+
+  return (
+    <Section>
+      <Text className="text-[#333] font-serif text-base my-6">
+        {mainMessage}
+      </Text>
+    </Section>
+  );
+};

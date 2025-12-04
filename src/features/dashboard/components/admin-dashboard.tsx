@@ -121,6 +121,18 @@ export const AdminDashboard = () => {
     trpc.adminAnalytics.getAnalytics.queryOptions()
   );
 
+  // rejection email functiom
+  const sendRejectionMessage = useMutation(
+    trpc.emails.sendMail.mutationOptions({
+      onSuccess: () => {
+        toast.success("Rejection email sent successfully");
+      },
+      onError: (error) => {
+        toast.error(error.message || "Failed to send rejection message");
+      },
+    })
+  );
+
   // Logic to approve, reject, ban and unban users
   const approveUser = useMutation(
     trpc.adminUser.approveUser.mutationOptions({
@@ -169,8 +181,12 @@ export const AdminDashboard = () => {
 
   const rejectUser = useMutation(
     trpc.adminUser.rejectUser.mutationOptions({
-      onSuccess: (data) => {
-        //TODO: Send reject email to users to they can login
+      onSuccess: async (data) => {
+        void sendRejectionMessage.mutateAsync({
+          to: data.user.email,
+          type: "rejection_email",
+          name: data.user.name,
+        });
         toast.success(`User ${data.user.name} has been rejected.`);
 
         queryClient.invalidateQueries(

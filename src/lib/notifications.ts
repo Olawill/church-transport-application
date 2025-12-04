@@ -1,6 +1,6 @@
-import { prisma } from "./db";
-import { sendMail } from "@/actions/email/sendEmail";
 import { EmailType } from "../../emails/email-template";
+import { prisma } from "./db";
+import { sendMail } from "@/features/email/actions/sendEmail";
 
 export type NotificationType = "email" | "whatsapp" | "sms";
 export type NotificationChannel = NotificationType[];
@@ -144,12 +144,12 @@ export class NotificationService {
   ): Promise<void> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { whatsappNumber: true, email: true, firstName: true },
+      select: { whatsappNumber: true, email: true, name: true },
     });
 
     if (!user) return;
 
-    const message = `Hello ${user.firstName}! Good news! ${driverName} has accepted your pickup request for ${pickupTime}. They will contact you soon with more details.`;
+    const message = `Hello ${user.name}! Good news! ${driverName} has accepted your pickup request for ${pickupTime}. They will contact you soon with more details.`;
 
     if (user.whatsappNumber) {
       await this.scheduleWhatsAppNotification(userId, {
@@ -174,7 +174,7 @@ export class NotificationService {
   ): Promise<void> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { whatsappNumber: true, email: true, firstName: true },
+      select: { whatsappNumber: true, email: true, name: true },
     });
 
     const driver = await prisma.user.findUnique({
@@ -183,7 +183,7 @@ export class NotificationService {
 
     if (!user || !driver) return;
 
-    const message = `Hello ${driver.firstName}! You have been assigned to pickup ${user.firstName} for ${pickupTime}. Please check tour dashboard for more details and contact them to make arrangements.`;
+    const message = `Hello ${driver.name}! You have been assigned to pickup ${user.name} for ${pickupTime}. Please check tour dashboard for more details and contact them to make arrangements.`;
 
     if (driver.whatsappNumber) {
       await this.scheduleWhatsAppNotification(driverId, {
@@ -206,12 +206,12 @@ export class NotificationService {
   ): Promise<void> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { whatsappNumber: true, email: true, firstName: true },
+      select: { whatsappNumber: true, email: true, name: true },
     });
 
     if (!user) return;
 
-    const message = `Hi ${user.firstName}! This is a reminder that your pickup is scheduled in 10 minutes at ${pickupTime}. Please be ready!`;
+    const message = `Hi ${user.name}! This is a reminder that your pickup is scheduled in 10 minutes at ${pickupTime}. Please be ready!`;
 
     // Schedule for 10 minutes before pickup
     const reminderTime = new Date(pickupTime);
@@ -247,12 +247,12 @@ export class NotificationService {
   ): Promise<void> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { whatsappNumber: true, email: true, firstName: true },
+      select: { whatsappNumber: true, email: true, name: true },
     });
 
     if (!user) return;
 
-    const message = `Hello ${user.firstName}! Your verification code is: ${code}. This code will expire in 10 minutes.`;
+    const message = `Hello ${user.name}! Your verification code is: ${code}. This code will expire in 10 minutes.`;
 
     if (type === "whatsapp" && user.whatsappNumber) {
       await this.scheduleWhatsAppNotification(userId, {

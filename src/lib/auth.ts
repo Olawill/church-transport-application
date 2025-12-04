@@ -13,7 +13,7 @@ import { OTPChoice, UserRole, UserStatus } from "@/generated/prisma/enums";
 import { prisma } from "./db";
 import { extendUserSession } from "./session/extend-user-session";
 import { OTP } from "@/config/constants";
-import { sendMail } from "@/actions/email/sendEmail";
+import { sendMail } from "@/features/email/actions/sendEmail";
 import { ac, CUSTOM_ROLES } from "./permissions";
 
 const options = {
