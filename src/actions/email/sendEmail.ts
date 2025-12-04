@@ -39,7 +39,8 @@ const sendEmailAction = async (values: SendEmailSchema) => {
     };
   }
 
-  const { to, type, name, message } = validatedValues.data;
+  const { to, type, name, message, verifyCode, verifyLink } =
+    validatedValues.data;
 
   try {
     // Create transporter
@@ -50,7 +51,9 @@ const sendEmailAction = async (values: SendEmailSchema) => {
       EmailTemplate({
         type,
         name,
-        message: message || "",
+        message: message,
+        verifyCode,
+        verifyLink,
       })
     );
 

@@ -33,6 +33,8 @@ import {
 } from "@/schemas/authSchemas";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CustomPhoneInput } from "@/components/custom-phone-input";
+import { toast } from "sonner";
+import { authClient } from "@/lib/auth-client";
 
 interface NotificationsTab {
   profile: GetUserProfile | null;
@@ -208,8 +210,33 @@ export const NotificationsTab = ({
         }
 
         if (result.action === "confirm") {
-          // TODO: Trigger verification email
-          console.log("Sending Verification email", currentValue);
+          await authClient.sendVerificationEmail(
+            {
+              email: profile.email,
+              callbackURL: "/",
+            },
+            {
+              onSuccess: () => {
+                toast.success(
+                  <div className="font-bold border-b-2 pb-2 mb-2">
+                    Verification email sent successfully
+                  </div>,
+                  {
+                    description: (
+                      <p className="text-sm">
+                        Once you have verified your email, please return to
+                        complete the activation of your email notifications.
+                      </p>
+                    ),
+                    duration: 5000,
+                  }
+                );
+              },
+              onError: ({ error }) => {
+                toast.error(error.message || "Failed to send email");
+              },
+            }
+          );
           return;
         }
       }
@@ -292,10 +319,8 @@ export const NotificationsTab = ({
                   checked={profile?.emailNotifications}
                   onCheckedChange={async (checked) => {
                     console.log({ checked });
-                    // toggleUserSettings("emailNotifications", !checked);
                     await handleToggleSettings("emailNotifications", checked);
                   }}
-                  // disabled={!profile?.emailVerified}
                   className="cursor-pointer"
                 />
               </div>
@@ -322,10 +347,9 @@ export const NotificationsTab = ({
                 </Badge>
                 <Switch
                   checked={profile?.smsNotifications}
-                  onCheckedChange={(checked) => {
-                    toggleUserSettings("smsNotifications", !checked);
+                  onCheckedChange={async (checked) => {
+                    await handleToggleSettings("smsNotifications", checked);
                   }}
-                  // disabled={!profile?.phoneNumberVerified}
                   className="cursor-pointer"
                 />
               </div>
@@ -355,10 +379,12 @@ export const NotificationsTab = ({
                 </Badge>
                 <Switch
                   checked={profile?.whatsAppNotifications}
-                  onCheckedChange={(checked) => {
-                    toggleUserSettings("whatsAppNotifications", !checked);
+                  onCheckedChange={async (checked) => {
+                    await handleToggleSettings(
+                      "whatsAppNotifications",
+                      checked
+                    );
                   }}
-                  // disabled={!profile?.whatsappNumber}
                   className="cursor-pointer"
                 />
               </div>

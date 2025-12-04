@@ -128,6 +128,8 @@ model Session {
   ipAddress           String?
   userAgent           String?
 
+  impersonatedBy      String?
+
   userId              String
   user                User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -162,9 +164,11 @@ model User {
   
   maxDistance         Int          @default(10) // For transportation team members
 
+  banned              Boolean       @default(false)
   bannedAt            DateTime?
   bannedBy            String?
   banReason           String?
+  banExpires          DateTime?
 
   isAdminCreated      Boolean       @default(false)
   firstLoginAt        DateTime?

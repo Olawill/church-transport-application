@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { UserRole } from "@/generated/prisma/client";
+import { Prisma, UserRole } from "@/generated/prisma/client";
 
 import { AnalyticsService } from "@/lib/analytics";
 import { prisma } from "@/lib/db";
@@ -196,10 +196,11 @@ export const adminUserRouter = createTRPCRouter({
       z.object({
         id: z.string(),
         reason: z.string(),
+        banExpires: z.date().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { id, reason } = input;
+      const { id, reason, banExpires } = input;
 
       if (!reason || reason.trim().length === 0) {
         throw new TRPCError({
@@ -234,15 +235,22 @@ export const adminUserRouter = createTRPCRouter({
         });
       }
 
+      const updatedData: Prisma.UserUpdateInput = {
+        status: "BANNED",
+        isActive: false,
+        banned: true,
+        bannedAt: new Date(),
+        bannedBy: ctx.auth.user.id,
+        banReason: reason.trim(),
+      };
+
+      if (banExpires) {
+        updatedData.banExpires = banExpires;
+      }
+
       const updatedUser = await prisma.user.update({
         where: { id },
-        data: {
-          status: "BANNED",
-          isActive: false,
-          bannedAt: new Date(),
-          bannedBy: ctx.auth.user.id,
-          banReason: reason.trim(),
-        },
+        data: updatedData,
       });
 
       // Cancel any pending pickup requests
@@ -308,6 +316,8 @@ export const adminUserRouter = createTRPCRouter({
           bannedAt: null,
           bannedBy: null,
           banReason: null,
+          banned: false,
+          banExpires: null,
         },
       });
 

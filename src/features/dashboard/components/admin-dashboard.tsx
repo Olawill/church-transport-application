@@ -77,6 +77,7 @@ import {
 import { PAGINATION } from "@/config/constants";
 import { adminGetUsers } from "@/features/admin/types";
 import { useAdminDashboardParams } from "../hooks/use-admin-dashboard-params";
+import { authClient } from "@/lib/auth-client";
 
 const generateChartConfig = (tooltipLabel: string, chartLabel: string) => {
   return {
@@ -123,9 +124,38 @@ export const AdminDashboard = () => {
   // Logic to approve, reject, ban and unban users
   const approveUser = useMutation(
     trpc.adminUser.approveUser.mutationOptions({
-      onSuccess: (data) => {
-        //TODO: Send approved email to users to they can login
+      onSuccess: async (data) => {
         toast.success(`User ${data.user.name} has been approved.`);
+        // Send verification email to user once approved
+        await authClient.admin.impersonateUser(
+          { userId: data.user.id },
+          {
+            onSuccess: async () => {
+              await authClient.sendVerificationEmail(
+                {
+                  email: data.user.email,
+                  callbackURL: "/",
+                },
+                {
+                  onSuccess: async () => {
+                    await authClient.admin.stopImpersonating();
+                    toast.success("Verification email sent successfully");
+                  },
+                  onError: ({ error }) => {
+                    toast.error(error.message || "Failed to send email");
+                  },
+                }
+              );
+            },
+            onError: async ({ error }) => {
+              await authClient.admin.stopImpersonating();
+              toast.error(
+                error.message ||
+                  `Error sending verification email to ${data.user.name}`
+              );
+            },
+          }
+        );
 
         queryClient.invalidateQueries(
           trpc.users.getPaginatedUsers.queryOptions({})

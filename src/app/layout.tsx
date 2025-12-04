@@ -44,7 +44,7 @@ const RootLayout = async ({
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
             <NuqsAdapter>
               {children}
-              <Toaster position="bottom-right" richColors />
+              <Toaster position="bottom-right" richColors closeButton />
             </NuqsAdapter>
           </ThemeProvider>
         </body>

@@ -11,7 +11,7 @@
     "push": "bun prisma db push",
     "seed": "bun prisma db seed",
     "prisma:studio": "prisma studio",
-    "email:dev": "bun --bun email dev",
+    "email:dev": "bun --bun email dev --port 3001",
     "inngest:dev": "npx inngest-cli@latest dev",
     "dev:all": "mprocs"
   },
@@ -92,7 +92,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@iconify-icon/react": "^3.0.3",
-    "@react-email/preview-server": "4.2.12",
+    "@react-email/preview-server": "4.3.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/nodemailer": "^7.0.2",

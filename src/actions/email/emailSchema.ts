@@ -23,6 +23,8 @@ export const sendEmailSchema = z.object({
   ]),
   name: z.string().min(1, "Name is required"),
   message: z.string().optional(),
+  verifyLink: z.url().optional(),
+  verifyCode: z.string().optional(),
 });
 
 export type SendEmailSchema = z.infer<typeof sendEmailSchema>;

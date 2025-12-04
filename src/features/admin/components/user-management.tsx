@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "@/lib/auth-client";
+import { authClient, useSession } from "@/lib/auth-client";
 import {
   useMutation,
   useQueryClient,
@@ -103,9 +103,38 @@ export const UserManagement = () => {
   // Logic to approve, reject, or change users' role
   const approveUser = useMutation(
     trpc.adminUser.approveUser.mutationOptions({
-      onSuccess: (data) => {
-        //TODO: Send approved email to users to they can login
+      onSuccess: async (data) => {
         toast.success(`User ${data.user.name} has been approved.`);
+        // Send verification email to user once approved
+        await authClient.admin.impersonateUser(
+          { userId: data.user.id },
+          {
+            onSuccess: async () => {
+              await authClient.sendVerificationEmail(
+                {
+                  email: data.user.email,
+                  callbackURL: "/",
+                },
+                {
+                  onSuccess: async () => {
+                    await authClient.admin.stopImpersonating();
+                    toast.success("Verification email sent successfully");
+                  },
+                  onError: ({ error }) => {
+                    toast.error(error.message || "Failed to send email");
+                  },
+                }
+              );
+            },
+            onError: async ({ error }) => {
+              await authClient.admin.stopImpersonating();
+              toast.error(
+                error.message ||
+                  `Error sending verification email to ${data.user.name}`
+              );
+            },
+          }
+        );
 
         queryClient.invalidateQueries(
           trpc.users.getPaginatedUsers.queryOptions({})

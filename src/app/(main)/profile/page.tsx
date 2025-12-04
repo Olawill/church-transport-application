@@ -7,17 +7,17 @@ import { ErrorBoundary } from "react-error-boundary";
 const ProfilePage = async () => {
   const session = await requireAuth();
 
-  const isAdminOrOwner =
-    session.user.role === "ADMIN" || session.user.role === "OWNER";
+  // const isAdminOrOwner =
+  //   session.user.role === "ADMIN" || session.user.role === "OWNER";
 
   prefetch(trpc.userProfile.getUserProfile.queryOptions());
   prefetch(trpc.userAddresses.getUserAddresses.queryOptions());
 
   prefetch(trpc.places.countries.queryOptions());
 
-  if (isAdminOrOwner) {
-    prefetch(trpc.organization.getOrganizationData.queryOptions({}));
-  }
+  // if (isAdminOrOwner) {
+  //   prefetch(trpc.organization.getOrganizationData.queryOptions({}));
+  // }
 
   return (
     <HydrateClient>

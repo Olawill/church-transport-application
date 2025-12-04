@@ -7,3 +7,6 @@ procs:
 
   prisma:
     cmd: ["bun", "run", "prisma:studio"]
+
+  email:
+    cmd: ["bun", "run", "email:dev"]

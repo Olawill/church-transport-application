@@ -1,12 +1,20 @@
 import { betterAuth, BetterAuthOptions } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
-import { customSession, haveIBeenPwned, twoFactor } from "better-auth/plugins";
+import {
+  admin,
+  customSession,
+  haveIBeenPwned,
+  twoFactor,
+} from "better-auth/plugins";
 
 import { env } from "@/env/server";
 import { OTPChoice, UserRole, UserStatus } from "@/generated/prisma/enums";
 import { prisma } from "./db";
 import { extendUserSession } from "./session/extend-user-session";
+import { OTP } from "@/config/constants";
+import { sendMail } from "@/actions/email/sendEmail";
+import { ac, CUSTOM_ROLES } from "./permissions";
 
 const options = {
   session: {
@@ -19,6 +27,22 @@ const options = {
     enabled: true,
     autoSignIn: false,
     minPasswordLength: 8,
+  },
+  emailVerification: {
+    sendVerificationEmail: async ({ user, url }, request) => {
+      const referer = request?.headers.get("referer") as string;
+
+      const fromProfile = referer?.includes("profile");
+      await sendMail({
+        to: user.email,
+        type: "email_verification",
+        name: user.name,
+        verifyLink: url,
+        message: fromProfile
+          ? "For your security, we need to confirm that this email address belongs to you before enabling email notifications. Please use the button below to verify your email. Once confirmed, you will start receiving important updates and notifications from us. If you did not request this change, please ignore this email."
+          : undefined,
+      });
+    },
   },
   socialProviders: {
     facebook: {
@@ -46,13 +70,29 @@ const options = {
   },
   plugins: [
     haveIBeenPwned(),
+    admin({
+      ac,
+      roles: { ...CUSTOM_ROLES },
+      defaultRole: "USER",
+      adminRoles: [
+        "PLATFORM_ADMIN",
+        "PLATFORM_SUPERUSER",
+        "PLATFORM_USER",
+        "ADMIN",
+        "OWNER",
+      ],
+    }),
     twoFactor({
       otpOptions: {
-        allowedAttempts: 3,
-        sendOTP: async ({ user, otp }, request) => {
-          console.log(
-            `Sending OTP ${otp} to user ${user.email} via ${user.name}`
-          );
+        allowedAttempts: OTP.ALLOWED_ATTEMPTS,
+        period: OTP.PERIOD,
+        sendOTP: async ({ user, otp }) => {
+          await sendMail({
+            to: user.email,
+            type: "otp",
+            name: user.name,
+            verifyCode: otp,
+          });
         },
       },
     }),

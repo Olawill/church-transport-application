@@ -5,9 +5,9 @@ import { cn } from "@/lib/utils";
 import { useTRPC } from "@/trpc/client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  skipToken,
+  // skipToken,
   useMutation,
-  useQuery,
+  // useQuery,
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
@@ -22,8 +22,8 @@ import { useConfirm } from "@/hooks/use-confirm";
 import {
   AddressUpdateSchema,
   addressUpdateSchema,
-  churchBranchContactInfoUpdateSchema,
-  ChurchBranchContactInfoUpdateSchema,
+  // churchBranchContactInfoUpdateSchema,
+  // ChurchBranchContactInfoUpdateSchema,
   ProfileUpdateSchema,
   profileUpdateSchema,
   SecurityUpdateSchema,
@@ -31,7 +31,7 @@ import {
 } from "@/schemas/adminCreateNewUserSchema";
 
 import { AddressesTab } from "@/features/profile/components/addresses-tab";
-import { ChurchTab } from "@/features/profile/components/church-tab";
+// import { ChurchTab } from "@/features/profile/components/church-tab";
 import { NotificationsTab } from "@/features/profile/components/notifications-tab";
 import { ProfileManagementSkeleton } from "@/features/profile/components/profile-management-skeleton";
 import { ProfileTab } from "@/features/profile/components/profile-tab";
@@ -93,10 +93,10 @@ export const ProfileManagement = () => {
 
   const [imagePreview, setImagePreview] = useState<string>("");
 
-  const [isEditingBranchAddress, setIsEditingBranchAddress] = useState(false);
-  const [branchAddressDialogOpen, setBranchAddressDialogOpen] = useState(false);
-  const [selectedBranchAddress, setSelectedBranchAddress] =
-    useState<BranchAddress | null>(null);
+  // const [isEditingBranchAddress, setIsEditingBranchAddress] = useState(false);
+  // const [branchAddressDialogOpen, setBranchAddressDialogOpen] = useState(false);
+  // const [selectedBranchAddress, setSelectedBranchAddress] =
+  //   useState<BranchAddress | null>(null);
 
   const isAdminOrOwner =
     session?.user?.role === "ADMIN" || session?.user?.role === "OWNER";
@@ -108,11 +108,11 @@ export const ProfileManagement = () => {
     trpc.userAddresses.getUserAddresses.queryOptions()
   );
 
-  const { data: organization, isLoading: organizationLoading } = useQuery(
-    trpc.organization.getOrganizationData.queryOptions(
-      isAdminOrOwner ? {} : skipToken
-    )
-  );
+  // const { data: organization, isLoading: organizationLoading } = useQuery(
+  //   trpc.organization.getOrganizationData.queryOptions(
+  //     isAdminOrOwner ? {} : skipToken
+  //   )
+  // );
 
   const [DeleteAddressDialog, confirmDeleteAddress] = useConfirm({
     title: "Delete Address",
@@ -152,23 +152,23 @@ export const ProfileManagement = () => {
     },
   });
 
-  const churchContactInfoForm = useForm<ChurchBranchContactInfoUpdateSchema>({
-    resolver: zodResolver(churchBranchContactInfoUpdateSchema),
-    values: {
-      branchName: selectedBranchAddress?.branchName || "",
-      branchCategory: selectedBranchAddress?.branchCategory || "BRANCH",
-      street: selectedBranchAddress?.street || "",
-      city: selectedBranchAddress?.city || "",
-      province: selectedBranchAddress?.province || "",
-      postalCode: selectedBranchAddress?.postalCode || "",
-      country: selectedBranchAddress?.country || "",
-      churchPhone: selectedBranchAddress?.churchPhone || "",
-      requestCutOffInHrs: selectedBranchAddress?.requestCutOffInHrs || "",
-      defaultMaxDistance:
-        (selectedBranchAddress?.defaultMaxDistance as ChurchBranchContactInfoUpdateSchema["defaultMaxDistance"]) ||
-        "10",
-    },
-  });
+  // const churchContactInfoForm = useForm<ChurchBranchContactInfoUpdateSchema>({
+  //   resolver: zodResolver(churchBranchContactInfoUpdateSchema),
+  //   values: {
+  //     branchName: selectedBranchAddress?.branchName || "",
+  //     branchCategory: selectedBranchAddress?.branchCategory || "BRANCH",
+  //     street: selectedBranchAddress?.street || "",
+  //     city: selectedBranchAddress?.city || "",
+  //     province: selectedBranchAddress?.province || "",
+  //     postalCode: selectedBranchAddress?.postalCode || "",
+  //     country: selectedBranchAddress?.country || "",
+  //     churchPhone: selectedBranchAddress?.churchPhone || "",
+  //     requestCutOffInHrs: selectedBranchAddress?.requestCutOffInHrs || "",
+  //     defaultMaxDistance:
+  //       (selectedBranchAddress?.defaultMaxDistance as ChurchBranchContactInfoUpdateSchema["defaultMaxDistance"]) ||
+  //       "10",
+  //   },
+  // });
 
   const securityForm = useForm({
     resolver: zodResolver(securityUpdateSchema),
@@ -261,68 +261,68 @@ export const ProfileManagement = () => {
   );
 
   // Organization address mutations
-  const addBranchAddress = useMutation(
-    trpc.organization.addBranch.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries(
-          trpc.organization.getOrganizationData.queryOptions({})
-        );
-        setBranchAddressDialogOpen(false);
-        churchContactInfoForm.reset();
-        toast.success("Branch Added Successfully");
-      },
-      onError: (error) => {
-        toast.error(error.message || "Failed to add branch");
-      },
-    })
-  );
+  // const addBranchAddress = useMutation(
+  //   trpc.organization.addBranch.mutationOptions({
+  //     onSuccess: () => {
+  //       queryClient.invalidateQueries(
+  //         trpc.organization.getOrganizationData.queryOptions({})
+  //       );
+  //       setBranchAddressDialogOpen(false);
+  //       churchContactInfoForm.reset();
+  //       toast.success("Branch Added Successfully");
+  //     },
+  //     onError: (error) => {
+  //       toast.error(error.message || "Failed to add branch");
+  //     },
+  //   })
+  // );
 
-  const updateBranchAddress = useMutation(
-    trpc.organization.updateBranch.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries(
-          trpc.organization.getOrganizationData.queryOptions({})
-        );
-        setBranchAddressDialogOpen(false);
-        setSelectedBranchAddress(null);
-        churchContactInfoForm.reset();
-        toast.success("Branch information updated successfully");
-      },
-      onError: (error) => {
-        toast.error(error.message || "Failed to update branch information");
-      },
-    })
-  );
+  // const updateBranchAddress = useMutation(
+  //   trpc.organization.updateBranch.mutationOptions({
+  //     onSuccess: () => {
+  //       queryClient.invalidateQueries(
+  //         trpc.organization.getOrganizationData.queryOptions({})
+  //       );
+  //       setBranchAddressDialogOpen(false);
+  //       setSelectedBranchAddress(null);
+  //       churchContactInfoForm.reset();
+  //       toast.success("Branch information updated successfully");
+  //     },
+  //     onError: (error) => {
+  //       toast.error(error.message || "Failed to update branch information");
+  //     },
+  //   })
+  // );
 
-  const setOrganizationHeadquarter = useMutation(
-    trpc.organization.setHeadquarter.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries(
-          trpc.organization.getOrganizationData.queryOptions({})
-        );
-        setSelectedBranchAddress(null);
-        toast.success("Headquarter address set");
-      },
-      onError: (error) => {
-        toast.error(error.message || "Failed to set headquarters");
-      },
-    })
-  );
+  // const setOrganizationHeadquarter = useMutation(
+  //   trpc.organization.setHeadquarter.mutationOptions({
+  //     onSuccess: () => {
+  //       queryClient.invalidateQueries(
+  //         trpc.organization.getOrganizationData.queryOptions({})
+  //       );
+  //       setSelectedBranchAddress(null);
+  //       toast.success("Headquarter address set");
+  //     },
+  //     onError: (error) => {
+  //       toast.error(error.message || "Failed to set headquarters");
+  //     },
+  //   })
+  // );
 
-  const deleteBranchAddress = useMutation(
-    trpc.organization.deleteBranch.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries(
-          trpc.organization.getOrganizationData.queryOptions({})
-        );
-        setSelectedBranchAddress(null);
-        toast.success("Branch deleted successfully");
-      },
-      onError: (error) => {
-        toast.error(error.message || "Failed to delete branch");
-      },
-    })
-  );
+  // const deleteBranchAddress = useMutation(
+  //   trpc.organization.deleteBranch.mutationOptions({
+  //     onSuccess: () => {
+  //       queryClient.invalidateQueries(
+  //         trpc.organization.getOrganizationData.queryOptions({})
+  //       );
+  //       setSelectedBranchAddress(null);
+  //       toast.success("Branch deleted successfully");
+  //     },
+  //     onError: (error) => {
+  //       toast.error(error.message || "Failed to delete branch");
+  //     },
+  //   })
+  // );
 
   // User address handlers
   const handleProfileUpdate = async (values: ProfileUpdateSchema) => {
@@ -379,64 +379,64 @@ export const ProfileManagement = () => {
   };
 
   // Organization address handlers
-  const handleAddBranchAddress = async (
-    values: ChurchBranchContactInfoUpdateSchema
-  ) => {
-    const validatedFields =
-      churchBranchContactInfoUpdateSchema.safeParse(values);
+  // const handleAddBranchAddress = async (
+  //   values: ChurchBranchContactInfoUpdateSchema
+  // ) => {
+  //   const validatedFields =
+  //     churchBranchContactInfoUpdateSchema.safeParse(values);
 
-    if (!validatedFields.success) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
+  //   if (!validatedFields.success) {
+  //     toast.error("Please fill in all required fields");
+  //     return;
+  //   }
 
-    await addBranchAddress.mutateAsync({
-      ...validatedFields.data,
-    });
-  };
+  //   await addBranchAddress.mutateAsync({
+  //     ...validatedFields.data,
+  //   });
+  // };
 
-  const handleUpdateBranchAddress = async (
-    values: ChurchBranchContactInfoUpdateSchema
-  ) => {
-    if (!selectedBranchAddress) {
-      toast.error("No address selected for editing");
-      return;
-    }
+  // const handleUpdateBranchAddress = async (
+  //   values: ChurchBranchContactInfoUpdateSchema
+  // ) => {
+  //   if (!selectedBranchAddress) {
+  //     toast.error("No address selected for editing");
+  //     return;
+  //   }
 
-    const validatedFields =
-      churchBranchContactInfoUpdateSchema.safeParse(values);
+  //   const validatedFields =
+  //     churchBranchContactInfoUpdateSchema.safeParse(values);
 
-    if (!validatedFields.success) {
-      toast.error("Please correct the errors in the form");
-      return;
-    }
+  //   if (!validatedFields.success) {
+  //     toast.error("Please correct the errors in the form");
+  //     return;
+  //   }
 
-    await updateBranchAddress.mutateAsync({
-      addressId: selectedBranchAddress.id,
-      organizationId: selectedBranchAddress.organizationId,
-      values: {
-        ...validatedFields.data,
-      },
-    });
-  };
+  //   await updateBranchAddress.mutateAsync({
+  //     addressId: selectedBranchAddress.id,
+  //     organizationId: selectedBranchAddress.organizationId,
+  //     values: {
+  //       ...validatedFields.data,
+  //     },
+  //   });
+  // };
 
-  const handleSetHeadquarterAddress = async (addressId: string) => {
-    await setOrganizationHeadquarter.mutateAsync({
-      addressId,
-      organizationId: selectedBranchAddress?.organizationId,
-    });
-  };
+  // const handleSetHeadquarterAddress = async (addressId: string) => {
+  //   await setOrganizationHeadquarter.mutateAsync({
+  //     addressId,
+  //     organizationId: selectedBranchAddress?.organizationId,
+  //   });
+  // };
 
-  const handleDeleteBranchAddress = async (addressId: string) => {
-    const result = await confirmDeleteAddress();
+  // const handleDeleteBranchAddress = async (addressId: string) => {
+  //   const result = await confirmDeleteAddress();
 
-    if (result.action !== "confirm") return;
+  //   if (result.action !== "confirm") return;
 
-    await deleteBranchAddress.mutateAsync({
-      addressId,
-      organizationId: selectedBranchAddress?.organizationId as string,
-    });
-  };
+  //   await deleteBranchAddress.mutateAsync({
+  //     addressId,
+  //     organizationId: selectedBranchAddress?.organizationId as string,
+  //   });
+  // };
 
   // Handlers to open form and dialogs
   const handleAddressEdit = (address: GetUserAddress) => {
@@ -453,24 +453,24 @@ export const ProfileManagement = () => {
     });
   };
 
-  const handleBranchAddressEdit = (address: BranchAddress) => {
-    setSelectedBranchAddress(address);
-    setIsEditingBranchAddress(true);
-    setBranchAddressDialogOpen(true);
-    churchContactInfoForm.reset({
-      branchName: address.branchName,
-      branchCategory: address.branchCategory,
-      street: address.street,
-      city: address.city,
-      province: address.province,
-      postalCode: address.postalCode,
-      country: address.country,
-      churchPhone: address.churchPhone,
-      requestCutOffInHrs: address.requestCutOffInHrs,
-      defaultMaxDistance:
-        address.defaultMaxDistance as ChurchBranchContactInfoUpdateSchema["defaultMaxDistance"],
-    });
-  };
+  // const handleBranchAddressEdit = (address: BranchAddress) => {
+  //   setSelectedBranchAddress(address);
+  //   setIsEditingBranchAddress(true);
+  //   setBranchAddressDialogOpen(true);
+  //   churchContactInfoForm.reset({
+  //     branchName: address.branchName,
+  //     branchCategory: address.branchCategory,
+  //     street: address.street,
+  //     city: address.city,
+  //     province: address.province,
+  //     postalCode: address.postalCode,
+  //     country: address.country,
+  //     churchPhone: address.churchPhone,
+  //     requestCutOffInHrs: address.requestCutOffInHrs,
+  //     defaultMaxDistance:
+  //       address.defaultMaxDistance as ChurchBranchContactInfoUpdateSchema["defaultMaxDistance"],
+  //   });
+  // };
 
   // Security tab handlers
   const handleChangePassword = (values: SecurityUpdateSchema) => {
@@ -541,11 +541,11 @@ export const ProfileManagement = () => {
     addUserAddress.isPending ||
     updateUserAddress.isPending ||
     deleteUserAddress.isPending ||
-    setDefaultUserAddress.isPending ||
-    addBranchAddress.isPending ||
-    updateBranchAddress.isPending ||
-    deleteBranchAddress.isPending ||
-    setOrganizationHeadquarter.isPending;
+    setDefaultUserAddress.isPending;
+  // addBranchAddress.isPending ||
+  // updateBranchAddress.isPending ||
+  // deleteBranchAddress.isPending ||
+  // setOrganizationHeadquarter.isPending;
 
   if (loading)
     return <ProfileManagementSkeleton isAdminOrOwner={isAdminOrOwner} />;
@@ -567,17 +567,17 @@ export const ProfileManagement = () => {
         >
           <TabsList
             className={cn(
-              "grid w-full grid-cols-4 [&_button]:data-[state=active]:shadow-none",
-              isAdminOrOwner && "grid-cols-5"
+              "grid w-full grid-cols-4 [&_button]:data-[state=active]:shadow-none"
+              // isAdminOrOwner && "grid-cols-5"
             )}
           >
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="addresses">Addresses</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            {isAdminOrOwner && (
+            {/* {isAdminOrOwner && (
               <TabsTrigger value="church">Church Settings</TabsTrigger>
-            )}
+            )} */}
           </TabsList>
 
           <TabsContent value="profile">
@@ -628,7 +628,7 @@ export const ProfileManagement = () => {
             />
           </TabsContent>
 
-          {isAdminOrOwner && (
+          {/* {isAdminOrOwner && (
             <TabsContent value="church">
               <ChurchTab
                 organization={organization}
@@ -647,7 +647,7 @@ export const ProfileManagement = () => {
                 loading={organizationLoading || isLoading}
               />
             </TabsContent>
-          )}
+          )} */}
         </Tabs>
       </div>
     </>

@@ -96,12 +96,28 @@ export const SignupForm = () => {
     errors: [],
   });
 
+  const sendWelcomeMessage = useMutation(
+    trpc.emails.sendMail.mutationOptions({
+      onSuccess: () => {
+        toast.success("Welcome email sent successfully");
+      },
+      onError: (error) => {
+        toast.error(error.message || "Failed to send welcome message");
+      },
+    })
+  );
+
   const register = useMutation(
     trpc.auth.register.mutationOptions({
-      onSuccess: async () => {
+      onSuccess: async ({ user }) => {
         toast.success(
           "Registration successful! Please wait for admin approval to access your account."
         );
+        await sendWelcomeMessage.mutateAsync({
+          to: user.email,
+          type: "welcome",
+          name: user.name,
+        });
         router.push("/login");
       },
       onError: (error) => {
