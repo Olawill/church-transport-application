@@ -15,6 +15,7 @@ import {
   RequestNotificationEmailTemplate,
   UserRejectionEmailTemplate,
   AppealDecisionEmailTemplate,
+  AppealRequestEmailTemplate,
 } from "@/features/email/components/email-components";
 
 export const templates = {
@@ -22,6 +23,7 @@ export const templates = {
   otp: OTPEmailVerificationTemplate,
   email_verification: VerificationEmailTemplate,
   rejection_email: UserRejectionEmailTemplate,
+  appeal_request: AppealRequestEmailTemplate,
   appeal_denial: AppealDecisionEmailTemplate,
   forgot_password: ForgotPasswordEmailTemplate,
   password_change: ChangePasswordEmailTemplate,

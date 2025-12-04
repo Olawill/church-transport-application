@@ -1,22 +1,9 @@
 import React from "react";
 import { templates } from "./template";
 import { EmailLayout } from "@/features/email/components/email-section";
+import { EmailTypes } from "@/features/email/emailSchema";
 
-export type EmailType =
-  | "welcome"
-  | "otp"
-  | "email_verification"
-  | "rejection_email"
-  | "appeal_denial"
-  | "forgot_password"
-  | "password_change"
-  | "2FA_confirm"
-  | "admin_user_creation"
-  | "driver_assignment"
-  | "driver_accept"
-  | "approval_need"
-  | "request_notify"
-  | "driver_notice";
+type EmailType = (typeof EmailTypes)[number];
 
 interface EmailTemplateProps {
   type: EmailType;
@@ -24,6 +11,7 @@ interface EmailTemplateProps {
   message?: string;
   verifyCode?: string;
   verifyLink?: string;
+  username?: string;
 }
 
 const emailItems = {
@@ -38,6 +26,9 @@ const emailItems = {
   },
   rejection_email: {
     preview: "Your Sign up request was rejected",
+  },
+  appeal_request: {
+    preview: "Appeal has been made!",
   },
   appeal_denial: {
     preview: "Decision has been made about your appeal",
@@ -72,11 +63,12 @@ const emailItems = {
 };
 
 const EmailTemplate = ({
-  type = "welcome",
+  type = "appeal_request",
   name,
   verifyCode,
   message,
   verifyLink,
+  username,
 }: EmailTemplateProps) => {
   const Template = templates[type];
   const preview = emailItems[type].preview;
@@ -91,6 +83,7 @@ const EmailTemplate = ({
         loginLink={""}
         securityWord={verifyLink || ""}
         mainMsg={message}
+        username={username}
       />
     </EmailLayout>
   );
