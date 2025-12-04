@@ -113,7 +113,7 @@ export const SignupForm = () => {
         toast.success(
           "Registration successful! Please wait for admin approval to access your account."
         );
-        await sendWelcomeMessage.mutateAsync({
+        void sendWelcomeMessage.mutateAsync({
           to: user.email,
           type: "welcome",
           name: user.name,
