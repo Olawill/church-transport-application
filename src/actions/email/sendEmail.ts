@@ -1,11 +1,11 @@
 "use server";
 
-import { sendEmailSchema, SendEmailSchema } from "./emailSchema";
+import { sendEmailSchema, SendEmailSchema } from "@/features/email/emailSchema";
 
 import nodemailer from "nodemailer";
 import { render, toPlainText } from "@react-email/render";
-// import { z } from "zod";
 import EmailTemplate from "../../../emails/email-template";
+import z from "zod";
 
 const mailTransporter = () => {
   const host = process.env.SMTP_HOST;
@@ -34,8 +34,7 @@ const sendEmailAction = async (values: SendEmailSchema) => {
 
   if (!validatedValues.success) {
     return {
-      errors: validatedValues.error.flatten().fieldErrors,
-      // errors: z.treeifyError(validatedValues.error).properties,
+      errors: z.treeifyError(validatedValues.error).errors,
     };
   }
 
@@ -44,7 +43,7 @@ const sendEmailAction = async (values: SendEmailSchema) => {
 
   try {
     // Create transporter
-    const transporter = await mailTransporter();
+    const transporter = mailTransporter();
 
     // Render email template
     const emailHtml = await render(
@@ -66,7 +65,6 @@ const sendEmailAction = async (values: SendEmailSchema) => {
     // Send Email
     await transporter.sendMail({
       to,
-      //   bcc: "henry.williams658@gmail.com",
       subject: emailSubject,
       html: emailHtml,
       text: emailText,
@@ -85,8 +83,7 @@ const sendEmailAction = async (values: SendEmailSchema) => {
 
 export const sendMail = async (values: SendEmailSchema) => {
   const result = await sendEmailAction(values);
-  if ("errors" in result || "error" in result) return result;
-  return { success: true };
+  return result;
 };
 
 // Helper function to get default subject based on email type
@@ -94,6 +91,9 @@ function getDefaultSubject(type: SendEmailSchema["type"]): string {
   const subjects: Record<SendEmailSchema["type"], string> = {
     welcome: "Welcome Aboard!",
     email_verification: "Verify Your Email Address",
+    rejection_email: "Your Sign up request has been rejected",
+    appeal_denial: "Decision has been made about your appeal",
+    appeal_request: "Sign Up Rejection Appeal",
     forgot_password: "Password Reset Request",
     password_change: "Password Changed Successfully",
     "2FA_confirm": "Two-Factor Authentication Enabled",
