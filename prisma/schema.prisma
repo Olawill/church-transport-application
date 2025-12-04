@@ -35,6 +35,13 @@ enum UserStatus {
   BANNED
 }
 
+enum AppealStatus {
+  NO_APPEAL        @map("No Appeal")
+  APPEALED         @map("Appealed")
+  APPEAL_REJECTED  @map("Appeal Rejected")
+}
+
+
 enum ServiceType {
   REGULAR
   SPECIAL
@@ -160,6 +167,7 @@ model User {
   image               String?
   role                UserRole     @default(USER)
   status              UserStatus   @default(PENDING)
+  appealStatus        AppealStatus  @default(NO_APPEAL)
   isActive            Boolean      @default(true)
   
   maxDistance         Int          @default(10) // For transportation team members
