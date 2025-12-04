@@ -3,7 +3,7 @@ import { templates } from "./template";
 import { EmailLayout } from "@/features/email/components/email-section";
 import { EmailTypes } from "@/features/email/emailSchema";
 
-type EmailType = (typeof EmailTypes)[number];
+export type EmailType = (typeof EmailTypes)[number];
 
 interface EmailTemplateProps {
   type: EmailType;
