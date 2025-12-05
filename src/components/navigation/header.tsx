@@ -5,6 +5,7 @@ import {
   BellIcon,
   CalendarIcon,
   CarIcon,
+  GavelIcon,
   HomeIcon,
   KeyIcon,
   LogOut,
@@ -200,6 +201,15 @@ export const Header = ({
                     <>
                       <DropdownMenuItem
                         className="cursor-pointer font-semibold"
+                        onClick={() => router.push("/admin/appeal-decision")}
+                      >
+                        <GavelIcon className="size-4" />
+                        APPEAL DECISION
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+
+                      <DropdownMenuItem
+                        className="cursor-pointer font-semibold"
                         onClick={() => router.push("/credentials")}
                       >
                         <KeyIcon className="size-4" />
@@ -300,6 +310,19 @@ export const Header = ({
                   {(session.user.role === UserRole.ADMIN ||
                     session.user.role === UserRole.OWNER) && (
                     <>
+                      <Separator className="my-2" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          "w-full justify-start px-3 py-3 text-base font-semibold",
+                          pathname === "/admin/appeal-decision" && "bg-blue-500"
+                        )}
+                        onClick={() => router.push("/admin/appeal-decision")}
+                      >
+                        <GavelIcon className="size-4" />
+                        APPEAL DECISION
+                      </Button>
                       <Separator className="my-2" />
                       <Button
                         variant="ghost"

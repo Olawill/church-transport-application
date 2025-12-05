@@ -36,9 +36,10 @@ enum UserStatus {
 }
 
 enum AppealStatus {
-  NO_APPEAL        @map("No Appeal")
-  APPEALED         @map("Appealed")
-  APPEAL_REJECTED  @map("Appeal Rejected")
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
 }
 
 
@@ -167,7 +168,6 @@ model User {
   image               String?
   role                UserRole     @default(USER)
   status              UserStatus   @default(PENDING)
-  appealStatus        AppealStatus  @default(NO_APPEAL)
   isActive            Boolean      @default(true)
   
   maxDistance         Int          @default(10) // For transportation team members
@@ -188,6 +188,7 @@ model User {
   whatsAppNotifications Boolean     @default(false)
   smsNotifications    Boolean       @default(false)
 
+  appeal              Appeal?
   accounts            Account[]
   sessions            Session[]
   
@@ -209,6 +210,30 @@ model User {
 
   @@index([email])
   @@map("users")
+}
+
+model Appeal {
+  id              String   @id @default(cuid())
+  email           String
+  reason          String   @db.Text
+  additionalInfo  String?  @db.Text
+  status          AppealStatus @default(PENDING)
+  
+  // Optional: link to user if they exist
+  userId          String?  @unique
+  user            User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Admin review fields
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  reviewNotes     String?  @db.Text
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model TwoFactor {
