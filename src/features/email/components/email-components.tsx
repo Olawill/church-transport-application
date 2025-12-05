@@ -30,6 +30,10 @@ interface AppealRequestEmailProps {
   username?: string;
 }
 
+interface AppealDecisonEmailProps {
+  status?: string;
+}
+
 export const WelcomeEmailTemplate = () => {
   return (
     <Section>
@@ -37,7 +41,8 @@ export const WelcomeEmailTemplate = () => {
         Thank you for signing up with ActsOnWheel for your organization&apos;s
         transportation. The admin has received your sign up request and will
         review your request. Upon your organization&apos;s administration
-        decision, you will be notified. Decision takes between 24 - 72 hours.
+        decision, you will be notified. Decision takes between 2 - 3 business
+        days.
       </Text>
     </Section>
   );
@@ -366,9 +371,22 @@ export const UserRejectionEmailTemplate = ({
   );
 };
 
-export const AppealDecisionEmailTemplate = () => {
-  const mainMessage =
+export const AppealDecisionEmailTemplate = ({
+  status,
+}: AppealDecisonEmailProps) => {
+  const rejectMessage =
     "Thank you for submitting your appeal regarding your sign-up request. After a careful and comprehensive review, we regret to inform you that we are unable to approve your appeal at this time.";
+  const approveMessage =
+    "Thank you for submitting your appeal regarding your sign-up request. After a careful and comprehensive review, we are happy to inform you that your request has been approved. Kindly look out for a verification email that will be sent shortly.";
+  const reviewMessage =
+    "We have received your appeal and it is currently under review. A decision on your appeal will be made shortly.";
+
+  const mainMessage =
+    status === "approved"
+      ? approveMessage
+      : status === "rejected"
+        ? rejectMessage
+        : reviewMessage;
 
   return (
     <Section>

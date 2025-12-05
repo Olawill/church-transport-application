@@ -6,6 +6,7 @@ import { servicesRouter } from "@/features/admin/server/services/procedures";
 import { adminUsersRouter } from "@/features/admin/server/users/procedures";
 import { adminUserRequestRouter } from "@/features/admin/server/users/request/procedures";
 import { adminUserRouter } from "@/features/admin/server/users/user/procedures";
+import { appealRouter } from "@/features/appeal/server/procedures";
 import { authRouter } from "@/features/auth/server/procedures";
 import { sendMailRouter } from "@/features/email/server/procedures";
 import { organizationRouter } from "@/features/organization/server/procedures";
@@ -40,6 +41,7 @@ export const appRouter = createTRPCRouter({
   userAddress: userAddressRouter,
   users: usersRouter,
   organization: organizationRouter,
+  appeal: appealRouter,
 });
 
 // export type definition of API

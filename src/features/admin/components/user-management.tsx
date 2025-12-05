@@ -65,6 +65,7 @@ import { useConfirm } from "@/hooks/use-confirm";
 import { useTRPC } from "@/trpc/client";
 import { CustomPagination } from "../../../components/custom-pagination";
 import { UserRole } from "@/generated/prisma/enums";
+import { env } from "@/env/client";
 
 export const UserManagement = () => {
   const { data: session } = useSession();
@@ -160,11 +161,14 @@ export const UserManagement = () => {
 
   const rejectUser = useMutation(
     trpc.adminUser.rejectUser.mutationOptions({
-      onSuccess: (data) => {
-        void sendRejectionMessage.mutateAsync({
+      onSuccess: async (data) => {
+        const rejectionLink = `${env.NEXT_PUBLIC_APP_URL}/appeal?appeal_token=${data.appealToken}`;
+
+        await sendRejectionMessage.mutateAsync({
           to: data.user.email,
           type: "rejection_email",
           name: data.user.name,
+          verifyLink: rejectionLink,
         });
         toast.success(`User ${data.user.name} has been rejected.`);
 

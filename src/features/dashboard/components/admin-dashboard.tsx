@@ -78,6 +78,7 @@ import { PAGINATION } from "@/config/constants";
 import { adminGetUsers } from "@/features/admin/types";
 import { useAdminDashboardParams } from "../hooks/use-admin-dashboard-params";
 import { authClient } from "@/lib/auth-client";
+import { env } from "@/env/client";
 
 const generateChartConfig = (tooltipLabel: string, chartLabel: string) => {
   return {
@@ -182,10 +183,14 @@ export const AdminDashboard = () => {
   const rejectUser = useMutation(
     trpc.adminUser.rejectUser.mutationOptions({
       onSuccess: async (data) => {
-        void sendRejectionMessage.mutateAsync({
-          to: data.user.email,
+        const rejectionLink = `${env.NEXT_PUBLIC_APP_URL}/appeal?appeal_token=${data.appealToken}`;
+
+        await sendRejectionMessage.mutateAsync({
+          // to: data.user.email,
+          to: "oluwapelumi.ajuwon@gmail.com",
           type: "rejection_email",
           name: data.user.name,
+          verifyLink: rejectionLink,
         });
         toast.success(`User ${data.user.name} has been rejected.`);
 

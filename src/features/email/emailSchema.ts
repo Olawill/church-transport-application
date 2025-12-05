@@ -6,8 +6,8 @@ export const EmailTypes = [
   "otp",
   "email_verification",
   "rejection_email",
-  "appeal_denial",
   "appeal_request",
+  "appeal_status",
   "forgot_password",
   "password_change",
   "2FA_confirm",
@@ -30,6 +30,8 @@ export const sendEmailSchema = z.object({
   message: z.string().optional(),
   verifyLink: z.url().optional(),
   verifyCode: z.string().optional(),
+  username: z.string().optional(),
+  status: z.string().optional(),
 });
 
 export type SendEmailSchema = z.infer<typeof sendEmailSchema>;

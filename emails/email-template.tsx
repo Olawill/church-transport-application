@@ -12,6 +12,7 @@ interface EmailTemplateProps {
   verifyCode?: string;
   verifyLink?: string;
   username?: string;
+  status?: string;
 }
 
 const emailItems = {
@@ -30,8 +31,8 @@ const emailItems = {
   appeal_request: {
     preview: "Appeal has been made!",
   },
-  appeal_denial: {
-    preview: "Decision has been made about your appeal",
+  appeal_status: {
+    preview: "Update on your appeal",
   },
   forgot_password: {
     preview: "Reset your password",
@@ -69,6 +70,7 @@ const EmailTemplate = ({
   message,
   verifyLink,
   username,
+  status,
 }: EmailTemplateProps) => {
   const Template = templates[type];
   const preview = emailItems[type].preview;
@@ -84,6 +86,7 @@ const EmailTemplate = ({
         securityWord={verifyLink || ""}
         mainMsg={message}
         username={username}
+        status={status}
       />
     </EmailLayout>
   );

@@ -220,8 +220,8 @@ model Appeal {
   status          AppealStatus @default(PENDING)
   
   // Optional: link to user if they exist
-  userId          String?  @unique
-  user            User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String  @unique
+  user            User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   // Admin review fields
   reviewedBy      String?

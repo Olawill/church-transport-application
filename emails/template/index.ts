@@ -24,7 +24,7 @@ export const templates = {
   email_verification: VerificationEmailTemplate,
   rejection_email: UserRejectionEmailTemplate,
   appeal_request: AppealRequestEmailTemplate,
-  appeal_denial: AppealDecisionEmailTemplate,
+  appeal_status: AppealDecisionEmailTemplate,
   forgot_password: ForgotPasswordEmailTemplate,
   password_change: ChangePasswordEmailTemplate,
   "2FA_confirm": TwoFactorEmailTemplate,

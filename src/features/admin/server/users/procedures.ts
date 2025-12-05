@@ -152,41 +152,4 @@ export const adminUsersRouter = createTRPCRouter({
         },
       };
     }),
-
-  getAppealedUser: protectedRoleProcedure([
-    UserRole.ADMIN,
-    UserRole.OWNER,
-  ]).query(async () => {
-    const users = await prisma.user.findMany({
-      where: {
-        appeal: {
-          // Return only users who have an appeal record
-          isNot: null,
-        },
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        status: true,
-        createdAt: true,
-        appeal: {
-          select: {
-            id: true,
-            createdAt: true,
-            updatedAt: true,
-            status: true,
-            reason: true,
-            additionalInfo: true,
-            reviewedBy: true,
-            reviewedAt: true,
-            reviewNotes: true,
-          },
-        },
-      },
-    });
-
-    return users;
-  }),
 });

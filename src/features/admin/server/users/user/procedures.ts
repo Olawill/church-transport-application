@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 
 import { createTRPCRouter, protectedRoleProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
+import { generateAppealToken } from "@/features/appeal/lib/appealToken";
 
 export const adminUserRouter = createTRPCRouter({
   updateUserRole: protectedRoleProcedure([UserRole.ADMIN, UserRole.OWNER])
@@ -178,6 +179,9 @@ export const adminUserRouter = createTRPCRouter({
         },
       });
 
+      // Generate Appeal Token
+      const appealToken = generateAppealToken(existingUser.email);
+
       // Track analytics
       await AnalyticsService.trackEvent({
         eventType: "user_rejected",
@@ -188,6 +192,7 @@ export const adminUserRouter = createTRPCRouter({
       return {
         success: true,
         user: updatedUser,
+        appealToken,
       };
     }),
 

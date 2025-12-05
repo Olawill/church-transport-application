@@ -38,7 +38,7 @@ const sendEmailAction = async (values: SendEmailSchema) => {
     };
   }
 
-  const { to, type, name, message, verifyCode, verifyLink } =
+  const { to, type, name, message, verifyCode, verifyLink, username, status } =
     validatedValues.data;
 
   try {
@@ -53,6 +53,8 @@ const sendEmailAction = async (values: SendEmailSchema) => {
         message: message,
         verifyCode,
         verifyLink,
+        username,
+        status,
       })
     );
 
@@ -92,7 +94,7 @@ function getDefaultSubject(type: SendEmailSchema["type"]): string {
     welcome: "Welcome Aboard!",
     email_verification: "Verify Your Email Address",
     rejection_email: "Your Sign up request has been rejected",
-    appeal_denial: "Decision has been made about your appeal",
+    appeal_status: "Update on your appeal",
     appeal_request: "Sign Up Rejection Appeal",
     forgot_password: "Password Reset Request",
     password_change: "Password Changed Successfully",
