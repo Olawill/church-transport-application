@@ -27,6 +27,21 @@ const options = {
     enabled: true,
     autoSignIn: false,
     minPasswordLength: 8,
+    sendResetPassword: async ({ user, url }) => {
+      await sendMail({
+        to: user.email,
+        type: "forgot_password",
+        name: user.name,
+        verifyLink: url,
+      });
+    },
+    onPasswordReset: async ({ user }) => {
+      await sendMail({
+        to: user.email,
+        type: "password_change",
+        name: user.name,
+      });
+    },
   },
   emailVerification: {
     sendVerificationEmail: async ({ user, url }, request) => {

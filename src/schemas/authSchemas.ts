@@ -173,3 +173,10 @@ export type ProfileContactSchema = z.infer<typeof profileContactSchema>;
 
 export const profileAddressSchema = addressUpdateSchema;
 export type ProfileAddressSchema = z.infer<typeof profileAddressSchema>;
+
+export const resetPasswordSchema = signupSchema.pick({
+  password: true,
+  confirmPassword: true,
+});
+
+export type ResetPasswordValues = z.infer<typeof resetPasswordSchema>;

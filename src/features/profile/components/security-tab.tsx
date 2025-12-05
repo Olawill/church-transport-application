@@ -501,8 +501,6 @@ export const SecurityTab = ({
     if (checked && isFirstTimeEnable) {
       const { type, password } = formValues as TwoFactorFirstTimeToggleValues;
 
-      console.log(type);
-
       await handleTwoFactorType(type, password, isFirstTimeEnable);
       twoFactorFirstTimeForm.reset();
       return;

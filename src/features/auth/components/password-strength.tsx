@@ -115,7 +115,8 @@ export const PasswordStrength = ({ strength }: { strength: PasswordScore }) => {
                 className="mt-2"
               >
                 <span className="text-xs italic block">
-                  Requirements: <span className="font-bold">Password must</span>
+                  Requirements:{" "}
+                  <span className="font-bold">Password should</span>
                 </span>
                 <ul className="text-xs italic list-disc ml-4 text-red-500 space-y-1">
                   {strength.errors.map((error, index) => (

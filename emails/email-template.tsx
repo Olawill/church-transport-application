@@ -64,7 +64,7 @@ const emailItems = {
 };
 
 const EmailTemplate = ({
-  type = "appeal_request",
+  type = "forgot_password",
   name,
   verifyCode,
   message,
