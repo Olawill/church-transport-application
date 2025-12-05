@@ -20,7 +20,6 @@ export const adminUsersRouter = createTRPCRouter({
           createdAt: true,
           bannedAt: true,
           banReason: true,
-          appealStatus: true,
           isActive: true,
         },
         orderBy: [
@@ -160,8 +159,10 @@ export const adminUsersRouter = createTRPCRouter({
   ]).query(async () => {
     const users = await prisma.user.findMany({
       where: {
-        status: "REJECTED",
-        appealStatus: "Appealed",
+        appeal: {
+          // Return only users who have an appeal record
+          isNot: null,
+        },
       },
       select: {
         id: true,
@@ -170,10 +171,19 @@ export const adminUsersRouter = createTRPCRouter({
         role: true,
         status: true,
         createdAt: true,
-        bannedAt: true,
-        banReason: true,
-        appealStatus: true,
-        isActive: true,
+        appeal: {
+          select: {
+            id: true,
+            createdAt: true,
+            updatedAt: true,
+            status: true,
+            reason: true,
+            additionalInfo: true,
+            reviewedBy: true,
+            reviewedAt: true,
+            reviewNotes: true,
+          },
+        },
       },
     });
 

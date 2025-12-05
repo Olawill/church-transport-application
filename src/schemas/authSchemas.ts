@@ -9,6 +9,15 @@ import {
 import z from "zod";
 import { addressUpdateSchema } from "./adminCreateNewUserSchema";
 
+export const userAppealSchema = z.object({
+  reason: z.string().min(1, {
+    message: "Your reason for appeal is required",
+  }),
+  additionalInfo: z.string().optional(),
+});
+
+export type UserAppealValues = z.infer<typeof userAppealSchema>;
+
 export const passwordResetSchema = z.object({
   email: z.email({
     message: "Email is required",
