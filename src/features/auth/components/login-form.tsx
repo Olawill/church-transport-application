@@ -113,7 +113,7 @@ export const LoginForm = () => {
   const [TwoFactorDialog, confirmTwoFactor] = useConfirm<TwoFactorTypeValues>({
     title: "Enable 2FA",
     message:
-      "You are about to enable Two-Factor Authentication. This will make your acount more secure.",
+      "You are about to enable Two-Factor Authentication. This will make your account more secure.",
     form: twoFactorTypeForm,
     renderForm: (form) => (
       <FormField
@@ -151,7 +151,7 @@ export const LoginForm = () => {
       if (!value || !value.backupCodes || !value.totpURI) {
         return (
           <div className="py-6 flex flex-col items-center text-center gap-4">
-            <div className="size-48 bg-muted/40 animated-pulse rounded-lg" />
+            <div className="size-48 bg-muted/40 animate-pulse rounded-lg" />
             <p className="text-sm text-muted-foreground">
               Preparing QR code setup...
             </p>
@@ -267,6 +267,11 @@ export const LoginForm = () => {
    * Only show QR Code for TOTP method
    */
   const handleShowQR = async (method: OTPChoice, isFirstLogin: boolean) => {
+    if (!currentEmail) {
+      toast.error("Email is required");
+      return;
+    }
+
     const result = await confirmQR();
 
     if (result.action === "cancel") {
@@ -276,7 +281,7 @@ export const LoginForm = () => {
 
     // Set two factor method in database
     const updatedUser = await toggle2FA.mutateAsync({
-      email: currentEmail as string,
+      email: currentEmail,
       twoFactorMethod: method,
     });
 
@@ -298,7 +303,6 @@ export const LoginForm = () => {
     password: string,
     isFirstLogin: boolean
   ) => {
-    console.log("Handle 2FA: ", isFirstLogin);
     if (type === "OTP") {
       // Enable two factor manually
       await toggle2FA.mutateAsync(
@@ -358,10 +362,16 @@ export const LoginForm = () => {
     if (formValues) {
       const { email } = formValues;
 
-      await requestPasswordReset({
-        email,
-        redirectTo: `${env.NEXT_PUBLIC_APP_URL}/reset-password`,
-      });
+      try {
+        await requestPasswordReset({
+          email,
+          redirectTo: `${env.NEXT_PUBLIC_APP_URL}/reset-password`,
+        });
+
+        toast.success("Password reset link sent to your email");
+      } catch {
+        toast.error("Failed to send password reset link");
+      }
     }
   };
 

@@ -186,7 +186,6 @@ export const UserManagement = () => {
   const updateUserRole = useMutation(
     trpc.adminUser.updateUserRole.mutationOptions({
       onSuccess: (data) => {
-        //TODO: Send reject email to users to they can login
         toast.success(`User ${data.user.name}'s role has been updated.`);
 
         queryClient.invalidateQueries(

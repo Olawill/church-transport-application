@@ -644,7 +644,7 @@ export const userRequestRouter = createTRPCRouter({
         serviceDay,
         normalizedRequestDate
       );
-      console.log({ timingValidation });
+
       if (!timingValidation.valid) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -654,7 +654,7 @@ export const userRequestRouter = createTRPCRouter({
 
       // Validate requestDate has the same day of week
       const dayValidation = validateDayOfWeek(dayOfWeek, normalizedRequestDate);
-      console.log({ dayValidation });
+
       if (!dayValidation.valid) {
         throw new TRPCError({
           code: "BAD_REQUEST",

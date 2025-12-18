@@ -187,7 +187,6 @@ export const SecurityTab = ({
   const handleShowQR = async (method: OTPChoice) => {
     const result = await confirmQR();
     if (result.action === "cancel") {
-      console.log("Dialog closed");
       return;
     }
     await handleVerifyCode({ twoFactorMethod: method });
@@ -947,7 +946,6 @@ const GetTotpURI = () => {
   const handleShowQR = async () => {
     const result = await confirmQR();
     if (result.action === "cancel") {
-      console.log("Dialog closed");
       return;
     }
   };
@@ -1066,7 +1064,6 @@ const SwitchTwoFactorMethod = () => {
   });
 
   const handleSubmit = async (values: TwoFactorFirstTimeToggleValues) => {
-    console.log(values);
     const validatedFields = twoFactorFirstTimeToggleSchema.safeParse(values);
 
     if (!validatedFields.success) {

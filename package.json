@@ -9,14 +9,10 @@
     "lint": "eslint",
     "generate": "bun prisma generate",
     "push": "bun prisma db push",
-    "seed": "bun prisma db seed",
     "prisma:studio": "prisma studio",
     "email:dev": "bun --bun email dev --port 3001",
     "inngest:dev": "npx inngest-cli@latest dev",
     "dev:all": "mprocs"
-  },
-  "prisma": {
-    "seed": "tsx --require dotenv/config scripts/seed.ts"
   },
   "dependencies": {
     "@arcjet/next": "^1.0.0-beta.14",

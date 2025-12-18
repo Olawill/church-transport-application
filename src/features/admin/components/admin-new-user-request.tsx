@@ -121,7 +121,7 @@ const AdminNewUserRequest = ({
   const queryClient = useQueryClient();
 
   const [usersOpen, setUsersOpen] = useState(false);
-  const [userAddressesOpen, setUserAddressesOpen] = useState(false);
+  const [servicesOpen, setServicesOpen] = useState(false);
 
   const [selectedService, setSelectedService] = useState<GetServiceType | null>(
     null
@@ -878,8 +878,8 @@ const AdminNewUserRequest = ({
                       <FormItem className="space-y-2">
                         <CustomFormLabel title="Church Service" />
                         <Popover
-                          open={userAddressesOpen}
-                          onOpenChange={setUserAddressesOpen}
+                          open={servicesOpen}
+                          onOpenChange={setServicesOpen}
                         >
                           <PopoverTrigger
                             asChild
@@ -890,7 +890,7 @@ const AdminNewUserRequest = ({
                               <Button
                                 variant="outline"
                                 role="combobox"
-                                aria-expanded={userAddressesOpen}
+                                aria-expanded={servicesOpen}
                                 disabled={!!newRequestData || servicesLoading}
                                 className={cn(
                                   "justify-between",
@@ -930,7 +930,7 @@ const AdminNewUserRequest = ({
                                           "serviceDayId",
                                           service.id
                                         );
-                                        setUserAddressesOpen(false);
+                                        setServicesOpen(false);
                                       }}
                                       className={cn(
                                         field.value === service.id &&
