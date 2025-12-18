@@ -27,6 +27,7 @@ export const extendUserSession = async (id: string) => {
       isOauthSignup: false,
       needsCompletion: false,
       otpChoice: null,
+      firstTimeLogin: true,
     };
   }
 
@@ -49,5 +50,6 @@ export const extendUserSession = async (id: string) => {
     isOauthSignup,
     needsCompletion,
     otpChoice: user.twoFactorMethod,
+    firstTimeLogin: user.firstLoginAt === null,
   };
 };

@@ -288,6 +288,7 @@ export const SecurityTab = ({
       secondaryText: "Enable 2FA",
       update: true,
     });
+
   const [EnableDialog, confirmEnable] = useConfirm<TwoFactorToggleValues>({
     title: "Enable 2FA",
     message:

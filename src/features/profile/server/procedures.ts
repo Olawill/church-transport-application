@@ -36,6 +36,7 @@ export const profileRouter = createTRPCRouter({
         where: { email },
         data: updateData,
         select: {
+          id: true,
           twoFactorEnabled: true,
           twoFactorMethod: true,
           email: true,

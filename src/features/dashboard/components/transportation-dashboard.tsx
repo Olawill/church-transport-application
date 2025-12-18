@@ -63,7 +63,6 @@ export const TransportationDashboard = () => {
     serviceDay,
     maxDistance,
   } = params;
-  // const { requests, loading, fetchRequests } = useRequestStore();
 
   const [nameInput, setNameInput] = useState(search || "");
   const [debouncedNameInput] = useDebounce(search, 300);

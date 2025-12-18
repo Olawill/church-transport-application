@@ -36,18 +36,30 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 
-import { requestPasswordReset, signIn } from "@/lib/auth-client";
+import { requestPasswordReset, signIn, twoFactor } from "@/lib/auth-client";
 import {
   loginSchema,
   LoginSchema,
   passwordResetSchema,
   PasswordResetValues,
+  twoFactorTypeSchema,
+  TwoFactorTypeValues,
 } from "@/schemas/authSchemas";
 import { useTRPC } from "@/trpc/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useConfirm } from "@/hooks/use-confirm";
 import { CustomFormLabel } from "@/components/custom-form-label";
 import { env } from "@/env/client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { APP_NAME } from "@/config/constants";
+import { OTPChoice } from "@/generated/prisma/enums";
+import { QRBackupCodeContent } from "@/features/profile/components/security-tab";
 
 export const LoginForm = () => {
   const queryClient = useQueryClient();
@@ -62,20 +74,12 @@ export const LoginForm = () => {
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  const login = useMutation(
-    trpc.auth.login.mutationOptions({
-      onSuccess: async () => {
-        // await queryClient.invalidateQueries(trpc.auth.session.queryOptions());
-        toast.success("Logged in successfully");
-        router.push(redirectUrl as Route);
-      },
-      onError: (error) => {
-        setError(error.message);
-        toast.error("An error occurred during login");
-      },
-    })
-  );
+  const [totpSetup, setTotpSetup] = useState<{
+    totpURI: string;
+    backupCodes: string[];
+  } | null>(null);
 
+  // Login Form
   const form = useForm<LoginSchema>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -84,11 +88,81 @@ export const LoginForm = () => {
     },
   });
 
+  // Two-Factor Type Form
+  const twoFactorTypeForm = useForm<TwoFactorTypeValues>({
+    resolver: zodResolver(twoFactorTypeSchema),
+    defaultValues: {
+      type: "TOTP",
+    },
+  });
+
+  // Forgot Password Form
   const forgotPasswordForm = useForm<PasswordResetValues>({
     resolver: zodResolver(passwordResetSchema),
     defaultValues: {
       email: "",
     },
+  });
+
+  /**
+   * Dialogs for confirmation
+   * - TwoFactorDialog: for selecting Two Factor Method
+   * - QRDialog: for displaying the TOTP OR Code
+   * - ForgotPasswordDialog - for requesting password reset
+   */
+  const [TwoFactorDialog, confirmTwoFactor] = useConfirm<TwoFactorTypeValues>({
+    title: "Enable 2FA",
+    message:
+      "You are about to enable Two-Factor Authentication. This will make your acount more secure.",
+    form: twoFactorTypeForm,
+    renderForm: (form) => (
+      <FormField
+        control={form.control}
+        name="type"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>2FA Type</FormLabel>
+            <Select value={field.value} onValueChange={field.onChange}>
+              <FormControl>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select 2FA Type" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="TOTP">TOTP</SelectItem>
+                <SelectItem value="OTP">OTP</SelectItem>
+              </SelectContent>
+            </Select>
+          </FormItem>
+        )}
+      />
+    ),
+    secondaryText: "Continue",
+    cancelText: "Skip",
+    update: true,
+  });
+
+  const [QRDialog, confirmQR, setQRValue] = useConfirm({
+    exposeValue: true,
+    title: "Setup Authenticator App",
+    message: "Scan this QR code with your authenticator app.",
+    initialValue: totpSetup,
+    renderContent: ({ value }) => {
+      if (!value || !value.backupCodes || !value.totpURI) {
+        return (
+          <div className="py-6 flex flex-col items-center text-center gap-4">
+            <div className="size-48 bg-muted/40 animated-pulse rounded-lg" />
+            <p className="text-sm text-muted-foreground">
+              Preparing QR code setup...
+            </p>
+          </div>
+        );
+      }
+
+      return <QRBackupCodeContent {...value} />;
+    },
+    cancelText: "Skip",
+    secondaryText: "Proceed",
   });
 
   const [ForgotPasswordDialog, confirmForgotPassword] =
@@ -120,6 +194,164 @@ export const LoginForm = () => {
       update: true,
     });
 
+  /**
+   * Mutations
+   */
+  const updateFirstTimeLogin = useMutation(
+    trpc.auth.updateFirstLogin.mutationOptions()
+  );
+
+  const toggle2FA = useMutation(trpc.profile.toggle2FA.mutationOptions({}));
+  const createTwoFactorToken = useMutation(
+    trpc.auth.createTwoFactorToken.mutationOptions()
+  );
+
+  const login = useMutation(
+    trpc.auth.login.mutationOptions({
+      onSuccess: async (data) => {
+        await queryClient.invalidateQueries(trpc.auth.session.queryOptions());
+        const { isFirstLogin } = data;
+
+        console.log("Login Mutate:", data);
+
+        // ✅ Handle first-time login 2FA setup
+        if (isFirstLogin) {
+          const result = await confirmTwoFactor();
+
+          if (result.action === "confirm") {
+            const formValues = result.formValues;
+
+            if (formValues) {
+              await handleTwoFactorType(
+                formValues.type,
+                currentPassword,
+                isFirstLogin
+                // Issue is here, at this point isFirstTimeLogin will be false
+              );
+            }
+          } else {
+            // User clicked "Skip" on first login
+            // Still redirect to dashboard even if they skip 2FA setup
+            toast.success("Logged in successfully");
+            router.push(redirectUrl as Route);
+          }
+          // Update first time login at
+          await updateFirstTimeLogin.mutateAsync({
+            email: data.user.email,
+          });
+          return;
+        }
+
+        // ✅ Handle 2FA redirect for existing users
+        if ("twoFactorRedirect" in data && data.twoFactorRedirect) {
+          console.log("Redirect:", data.twoFactorRedirect);
+          if (data.twoFactorMethod === "OTP") {
+            // Send OTP
+            await twoFactor.sendOtp();
+            toast.success("OTP Code has been sent to you");
+          }
+          router.push(
+            `/two-factor?method=${data.twoFactorMethod}&redirect=${encodeURIComponent(redirectUrl)}&twoFactorRedirect=${data.twoFactorRedirect}`
+          );
+        } else {
+          // ✅ No 2FA required - direct login
+          toast.success("Logged in successfully");
+          router.push(redirectUrl as Route);
+        }
+      },
+      onError: (error) => {
+        setError(error.message);
+        toast.error("An error occurred during login");
+      },
+    })
+  );
+
+  /**
+   * Handle First time Two-factor Setup
+   * Only show QR Code for TOTP method
+   */
+  const handleShowQR = async (method: OTPChoice, isFirstLogin: boolean) => {
+    const result = await confirmQR();
+
+    if (result.action === "cancel") {
+      toast.warning("Two-Factor Authentication cancelled");
+      return;
+    }
+
+    // Set two factor method in database
+    const updatedUser = await toggle2FA.mutateAsync({
+      email: currentEmail as string,
+      twoFactorMethod: method,
+    });
+
+    // ✅ Create pending token for first-time TOTP setup
+    await createTwoFactorToken.mutateAsync({
+      userId: updatedUser.id,
+    });
+
+    // redirect to verify page with method "TOTP"
+    router.push(
+      isFirstLogin
+        ? `/two-factor?method=${method}&redirect=${encodeURIComponent(redirectUrl)}&firstLogin=${true}`
+        : `/two-factor?method=${method}&redirect=${encodeURIComponent(redirectUrl)}`
+    );
+  };
+
+  const handleTwoFactorType = async (
+    type: OTPChoice,
+    password: string,
+    isFirstLogin: boolean
+  ) => {
+    console.log("Handle 2FA: ", isFirstLogin);
+    if (type === "OTP") {
+      // Enable two factor manually
+      await toggle2FA.mutateAsync(
+        {
+          email: currentEmail,
+          twoFactorMethod: "OTP",
+          value: true,
+        },
+        {
+          onSuccess: async (data) => {
+            // ✅ Create pending token for first-time OTP setup
+            await createTwoFactorToken.mutateAsync({
+              userId: data.id,
+            });
+
+            await twoFactor.sendOtp();
+
+            // Route to verify-two-factor page
+            router.push(
+              isFirstLogin
+                ? `/two-factor?method=${data.twoFactorMethod}&redirect=${encodeURIComponent(redirectUrl)}&firstLogin=${true}`
+                : `/two-factor?method=${data.twoFactorMethod}&redirect=${encodeURIComponent(redirectUrl)}`
+            );
+          },
+          onError: (error) => {
+            toast.error(error.message || "Failed to enable 2FA");
+          },
+        }
+      );
+    }
+
+    if (type === "TOTP") {
+      const { data, error } = await twoFactor.enable({
+        password,
+        issuer: APP_NAME,
+      });
+
+      if (error) {
+        toast.error(error.message || "Failed to generate QR code");
+        return;
+      }
+
+      setTotpSetup(data);
+      setQRValue(data);
+      await handleShowQR(type, isFirstLogin);
+    }
+  };
+
+  // Handle Password Reset request
   const handleForgotPassword = async () => {
     const result = await confirmForgotPassword();
 
@@ -137,6 +369,7 @@ export const LoginForm = () => {
     }
   };
 
+  // Handle Email/Password signing in
   const onSubmit = async (values: LoginSchema) => {
     setError(null);
 
@@ -150,8 +383,10 @@ export const LoginForm = () => {
     const { email, password } = validatedFields.data;
 
     login.mutate({ email, password });
+    // revert.mutate({ email });
   };
 
+  // Handle OAuth Sign in/Sign up
   const handleOAuthSignIn = async (provider: "google" | "facebook") => {
     setOauthLoading(provider);
     setError(null);
@@ -176,17 +411,29 @@ export const LoginForm = () => {
     );
   };
 
+  // Current values for email and password
+  const currentEmail = form.watch("email");
+  const currentPassword = form.watch("password");
+
   return (
     <>
+      {/* Forgot Password Dialog */}
       <ForgotPasswordDialog />
-      <Card className="w-full max-w-md shadow-lg">
+
+      {/* Two-Factor Type Dialog */}
+      <TwoFactorDialog />
+
+      {/* TOTP QR Code Dialog */}
+      <QRDialog />
+
+      <Card className="w-full max-w-md shadow-lg min-w-md">
         <CardHeader className="space-y-2 text-center">
           <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
           <CardDescription>Sign in to access your account</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* OAuth Sign-in Buttons */}
-          <div className="space-y-3">
+          {/* <div className="space-y-3">
             <Button
               type="button"
               variant="outline"
@@ -232,10 +479,10 @@ export const LoginForm = () => {
                 </>
               )}
             </Button>
-          </div>
+          </div> */}
 
           {/* Divider */}
-          <div className="relative">
+          {/* <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
             </div>
@@ -244,7 +491,7 @@ export const LoginForm = () => {
                 Or continue with email
               </span>
             </div>
-          </div>
+          </div> */}
 
           {!!error && (
             <Alert className="bg-destructive/10 border-none">
@@ -255,12 +502,12 @@ export const LoginForm = () => {
 
           {/* Email/Password Form */}
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-1">
               <FormField
                 control={form.control}
                 name="email"
                 render={({ field }) => (
-                  <FormItem className="space-y-2">
+                  <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
                       <Input
@@ -283,14 +530,14 @@ export const LoginForm = () => {
                 control={form.control}
                 name="password"
                 render={({ field }) => (
-                  <FormItem className="space-y-2">
+                  <FormItem>
                     <FormLabel>
                       Password
                       <Button
                         type="button"
                         variant="link"
                         onClick={handleForgotPassword}
-                        className="ml-auto inline-block text-sm font-light underline-offset-4 hover:underline hover:text-blue-500"
+                        className="ml-auto inline-block text-sm font-light underline-offset-4 hover:underline hover:text-blue-500 pr-0"
                       >
                         Forgot your password?
                       </Button>
@@ -331,7 +578,7 @@ export const LoginForm = () => {
 
               <Button
                 type="submit"
-                className="w-full mt-6"
+                className="w-full mt-2"
                 disabled={login.isPending}
               >
                 {login.isPending ? (

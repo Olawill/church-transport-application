@@ -24,8 +24,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 
-import { UserRole } from "@/generated/prisma/enums";
-import { Status } from "@/lib/store/useRequestStore";
+import { RequestStatus, UserRole } from "@/generated/prisma/enums";
 import { RequestType } from "@/lib/types";
 import {
   calculateDistance,
@@ -89,6 +88,7 @@ import { useRequestsParams } from "../hooks/use-requests-params";
 import { GetUserRequestsType } from "../server/types";
 
 type Type = RequestType | "ALL";
+type Status = RequestStatus | "ALL";
 
 export const RequestHistory = () => {
   const { data: session } = useSession();

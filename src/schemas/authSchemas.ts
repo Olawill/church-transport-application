@@ -45,6 +45,12 @@ export type TwoFactorFirstTimeToggleValues = z.infer<
   typeof twoFactorFirstTimeToggleSchema
 >;
 
+export const twoFactorTypeSchema = z.object({
+  type: z.enum(["TOTP", "OTP"]),
+});
+
+export type TwoFactorTypeValues = z.infer<typeof twoFactorTypeSchema>;
+
 export const otpSchema = z.object({
   code: z.string().min(6, {
     message: "OTP code is required",

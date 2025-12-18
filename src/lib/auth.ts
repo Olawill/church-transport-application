@@ -126,6 +126,7 @@ export const auth = betterAuth({
         isOauthSignup,
         needsCompletion,
         otpChoice,
+        firstTimeLogin,
       } = await extendUserSession(session.userId);
 
       return {
@@ -137,6 +138,7 @@ export const auth = betterAuth({
           isOauthSignup,
           needsCompletion,
           otpChoice,
+          firstTimeLogin,
         },
         session,
       };

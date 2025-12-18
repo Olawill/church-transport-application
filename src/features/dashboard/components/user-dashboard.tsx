@@ -13,7 +13,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-// import { useRequestStore } from "@/lib/store/useRequestStore";
 import { useSession } from "@/lib/auth-client";
 import { formatDate, formatTime } from "@/lib/utils";
 import { useTRPC } from "@/trpc/client";
@@ -22,8 +21,6 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 export const UserDashboard = () => {
   const trpc = useTRPC();
   const { data: session } = useSession();
-
-  // const { fetchRequests, loading, requests } = useRequestStore();
 
   const {
     data: { requests },

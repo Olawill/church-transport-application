@@ -8,6 +8,8 @@ import { comparePassword } from "@/lib/compare-password";
 import { geocodeAddress } from "@/lib/geocoding";
 import { createTRPCRouter, publicProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
+import z from "zod";
+import { redis } from "@/lib/redis";
 
 export const authRouter = createTRPCRouter({
   session: publicProcedure.query(async () => {
@@ -38,12 +40,33 @@ export const authRouter = createTRPCRouter({
       });
     }
 
+    const isFirstLogin = user.firstLoginAt === null;
+
     const data = await auth.api.signInEmail({
       body: { email, password, callbackURL: "/dashboard" },
       headers: await headers(),
     });
 
-    return data;
+    // ✅ If user has 2FA enabled, create pending token
+    if (user.twoFactorEnabled && user.twoFactorMethod) {
+      const token = crypto.randomUUID();
+
+      // Store token with 10 minute expiry
+      await redis.setex(`2fa-pending:${user.id}`, 600, token);
+
+      return {
+        ...data,
+        isFirstLogin,
+        twoFactorRedirect: true,
+        twoFactorMethod: user.twoFactorMethod,
+      };
+    }
+
+    return {
+      ...data,
+      isFirstLogin,
+      twoFactorMethod: user.twoFactorMethod,
+    };
   }),
 
   register: publicProcedure.input(signupSchema).mutation(async ({ input }) => {
@@ -119,4 +142,39 @@ export const authRouter = createTRPCRouter({
 
     return data;
   }),
+
+  updateFirstLogin: publicProcedure
+    .input(
+      z.object({
+        email: z.string(),
+      })
+    )
+    .mutation(({ input }) => {
+      const { email } = input;
+
+      return prisma.user.update({
+        where: { email },
+        data: {
+          firstLoginAt: new Date(),
+        },
+      });
+    }),
+
+  createTwoFactorToken: publicProcedure
+    .input(z.object({ userId: z.string() }))
+    .mutation(async ({ input }) => {
+      const token = crypto.randomUUID();
+
+      // Store token with 10 minute expiry
+      await redis.setex(`2fa-pending:${input.userId}`, 600, token);
+
+      return { success: true };
+    }),
+
+  deleteTwoFactorToken: publicProcedure
+    .input(z.object({ userId: z.string() }))
+    .mutation(async ({ input }) => {
+      await redis.del(`2fa-pending:${input.userId}`);
+      return { success: true };
+    }),
 });

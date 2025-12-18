@@ -194,7 +194,7 @@ export const SignupForm = () => {
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-1">
             {/* Name */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
@@ -591,7 +591,7 @@ export const AddressFields = <T extends AddressFormFields>({
   const showCityCombobox = cities.length > 0;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-1">
       <h3 className="text-lg font-semibold">Address Information</h3>
 
       {/* Street Address */}
