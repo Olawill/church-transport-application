@@ -100,15 +100,35 @@ export const adminUsersRouter = createTRPCRouter({
         });
       }
 
-      const newUser = await prisma.user.create({
-        data: {
-          name: `${firstName} ${lastName}`,
-          email,
-          phoneNumber: phone || null,
-          role: "USER",
-          status: "APPROVED",
-          isAdminCreated: true,
-        },
+      const newUser = await prisma.$transaction(async (tx) => {
+        const user = await tx.user.create({
+          data: {
+            name: `${firstName} ${lastName}`,
+            email,
+            phoneNumber: phone || null,
+            role: "USER",
+            status: "APPROVED",
+            isAdminCreated: true,
+          },
+        });
+
+        // Create default address
+        await tx.address.create({
+          data: {
+            userId: user.id,
+            name: "Home",
+            street,
+            city,
+            province,
+            postalCode,
+            country,
+            latitude: coordinates?.latitude || null,
+            longitude: coordinates?.longitude || null,
+            isDefault: true,
+          },
+        });
+
+        return user;
       });
 
       // Update password if login is required
@@ -117,22 +137,6 @@ export const adminUsersRouter = createTRPCRouter({
         providerId: "credential",
         accountId,
         password: hashedPassword || null,
-      });
-
-      // Create default address
-      await prisma.address.create({
-        data: {
-          userId: newUser.id,
-          name: "Home",
-          street,
-          city,
-          province,
-          postalCode,
-          country,
-          latitude: coordinates?.latitude || null,
-          longitude: coordinates?.longitude || null,
-          isDefault: true,
-        },
       });
 
       // Track user creating by admin event

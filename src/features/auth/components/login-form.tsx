@@ -212,8 +212,6 @@ export const LoginForm = () => {
         await queryClient.invalidateQueries(trpc.auth.session.queryOptions());
         const { isFirstLogin } = data;
 
-        console.log("Login Mutate:", data);
-
         // ✅ Handle first-time login 2FA setup
         if (isFirstLogin) {
           const result = await confirmTwoFactor();
@@ -226,7 +224,6 @@ export const LoginForm = () => {
                 formValues.type,
                 currentPassword,
                 isFirstLogin
-                // Issue is here, at this point isFirstTimeLogin will be false
               );
             }
           } else {
@@ -244,14 +241,13 @@ export const LoginForm = () => {
 
         // ✅ Handle 2FA redirect for existing users
         if ("twoFactorRedirect" in data && data.twoFactorRedirect) {
-          console.log("Redirect:", data.twoFactorRedirect);
           if (data.twoFactorMethod === "OTP") {
             // Send OTP
             await twoFactor.sendOtp();
             toast.success("OTP Code has been sent to you");
           }
           router.push(
-            `/two-factor?method=${data.twoFactorMethod}&redirect=${encodeURIComponent(redirectUrl)}&twoFactorRedirect=${data.twoFactorRedirect}`
+            `/two-factor?method=${data.twoFactorMethod}&redirect=${encodeURIComponent(redirectUrl)}&twoFactorRedirect=${data.twoFactorRedirect}&type=email`
           );
         } else {
           // ✅ No 2FA required - direct login
@@ -292,8 +288,8 @@ export const LoginForm = () => {
     // redirect to verify page with method "TOTP"
     router.push(
       isFirstLogin
-        ? `/two-factor?method=${method}&redirect=${encodeURIComponent(redirectUrl)}&firstLogin=${true}`
-        : `/two-factor?method=${method}&redirect=${encodeURIComponent(redirectUrl)}`
+        ? `/two-factor?method=${method}&redirect=${encodeURIComponent(redirectUrl)}&firstLogin=${true}&type=email`
+        : `/two-factor?method=${method}&redirect=${encodeURIComponent(redirectUrl)}&type=email`
     );
   };
 
@@ -323,8 +319,8 @@ export const LoginForm = () => {
             // Route to verify-two-factor page
             router.push(
               isFirstLogin
-                ? `/two-factor?method=${data.twoFactorMethod}&redirect=${encodeURIComponent(redirectUrl)}&firstLogin=${true}`
-                : `/two-factor?method=${data.twoFactorMethod}&redirect=${encodeURIComponent(redirectUrl)}`
+                ? `/two-factor?method=${data.twoFactorMethod}&redirect=${encodeURIComponent(redirectUrl)}&firstLogin=${true}&type=email`
+                : `/two-factor?method=${data.twoFactorMethod}&redirect=${encodeURIComponent(redirectUrl)}&type=email`
             );
           },
           onError: (error) => {

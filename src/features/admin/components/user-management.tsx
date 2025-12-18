@@ -133,7 +133,8 @@ export const UserManagement = () => {
                     await authClient.admin.stopImpersonating();
                     toast.success("Verification email sent successfully");
                   },
-                  onError: ({ error }) => {
+                  onError: async ({ error }) => {
+                    await authClient.admin.stopImpersonating();
                     toast.error(error.message || "Failed to send email");
                   },
                 }

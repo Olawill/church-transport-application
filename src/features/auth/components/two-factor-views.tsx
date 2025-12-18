@@ -42,12 +42,11 @@ import { cn } from "@/lib/utils";
 
 interface OTPInputProps {
   type: "email" | "phone" | "whatsapp";
-  identifier: string;
 }
 
 const TIME_REMAINING = OTP.PERIOD * 60;
 
-export const OTPInputView = ({ type, identifier }: OTPInputProps) => {
+export const OTPInputView = ({ type }: OTPInputProps) => {
   const queryClient = useQueryClient();
   const trpc = useTRPC();
   const router = useRouter();
@@ -293,7 +292,12 @@ export const OTPInputView = ({ type, identifier }: OTPInputProps) => {
       <CardHeader>
         <CardTitle className="flex items-center justify-center">
           <ShieldIcon className="size-5 mr-2" />
-          Verify Your {type === "email" ? "Email" : "Phone"}
+          Verify Your{" "}
+          {type === "email"
+            ? "Email"
+            : type === "phone"
+              ? "Phone Number"
+              : "whatsApp Number"}
         </CardTitle>
         <CardDescription className="text-center">
           {twoFactorMethod === "TOTP" ? (
@@ -302,7 +306,11 @@ export const OTPInputView = ({ type, identifier }: OTPInputProps) => {
             <>
               We&apos;ve sent a 6-digit verification code to{" "}
               <span className="font-medium">
-                {type === "email" ? identifier : `****${identifier.slice(-4)}`}
+                {type === "email"
+                  ? "Email"
+                  : type === "phone"
+                    ? "Phone Number"
+                    : "whatsApp Number"}
               </span>
             </>
           )}

@@ -930,7 +930,7 @@ const AdminNewUserRequest = ({
                                           "serviceDayId",
                                           service.id
                                         );
-                                        setUsersOpen(false);
+                                        setUserAddressesOpen(false);
                                       }}
                                       className={cn(
                                         field.value === service.id &&
