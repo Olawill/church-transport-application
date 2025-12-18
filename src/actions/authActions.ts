@@ -1,7 +1,7 @@
 "use server";
 
 import { signIn, signOut } from "@/auth";
-import { loginSchema, LoginSchema } from "@/types/authSchemas";
+import { loginSchema, LoginSchema } from "@/schemas/authSchemas";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import z from "zod";

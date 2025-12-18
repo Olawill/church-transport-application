@@ -1,36 +1,40 @@
 import {
+  DriverRequestCancel,
   RequestStatus,
   ServiceCategory,
   ServiceDayWeekday,
   ServiceType,
   UserRole,
   UserStatus,
-} from "@/generated/prisma";
+} from "@/generated/prisma/client";
 
 export interface User {
   id: string;
-  firstName: string;
-  lastName: string;
+  name: string;
   email: string;
-  phone?: string | null;
+  emailVerified: boolean;
+  phoneNumber?: string | null;
+  whatsappNumber: string | null;
+  phoneNumberVerified: boolean;
   username: string | null;
+  image: string | null;
   role: UserRole;
   status: UserStatus;
   isActive: boolean;
   maxDistance: number;
-  emailVerified: Date | null;
-  phoneVerified: Date | null;
-  image: string | null;
-  whatsappNumber: string | null;
   twoFactorEnabled: boolean;
   bannedAt: Date | null;
   bannedBy: string | null;
   banReason: string | null;
   createdAt: Date;
   updatedAt: Date;
+  emailNotifications: boolean;
+  smsNotifications: boolean;
+  whatsAppNotifications: boolean;
   addresses?: Address[];
   pickupRequests?: PickupRequest[];
   acceptedRequests?: PickupRequest[];
+  cancelledRequests?: DriverRequestCancel[];
 }
 
 export interface Address {

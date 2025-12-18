@@ -1,0 +1,12 @@
+procs:
+  inngest:
+    cmd: ["npm", "run", "inngest:dev"]
+
+  next:
+    cmd: ["bun", "run", "dev"]
+
+  prisma:
+    cmd: ["bun", "run", "prisma:studio"]
+
+  email:
+    cmd: ["bun", "run", "email:dev"]

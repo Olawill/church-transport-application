@@ -5,16 +5,23 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
   output   = "../src/generated/prisma"
+  engineType = "client"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // url      = env("DATABASE_URL")
 }
 
 enum UserRole {
+  // Platform Users
+  PLATFORM_ADMIN
+  PLATFORM_SUPERUSER
+  PLATFORM_USER
+
+  // Tenants
   ADMIN
   TRANSPORTATION_TEAM
   USER
@@ -27,6 +34,14 @@ enum UserStatus {
   REJECTED
   BANNED
 }
+
+enum AppealStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
 
 enum ServiceType {
   REGULAR
@@ -87,53 +102,85 @@ enum OTPType {
   PASSWORD_RESET
 }
 
+enum OTPChoice {
+  TOTP
+  OTP
+}
+
 model Account {
-  id                  String     @id @default(cuid())
-  userId              String
-  type                String
-  provider            String
-  providerAccountId   String
-  refresh_token       String?    @db.Text
-  access_token        String?    @db.Text
-  expires_at          Int?
-  token_type          String?
-  scope               String?
-  id_token            String?    @db.Text
-  session_state       String?
+  id                    String     @id @default(cuid())
+  accountId             String
+  providerId            String
 
-  user                User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                String
+  user                  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  expiresAt             DateTime?
+  password              String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
 
-  @@unique([provider, providerAccountId])
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  @@map("account")
 }
 
 model Session {
   id                  String      @id @default(cuid())
-  sessionToken        String      @unique
+  expiresAt           DateTime
+  ipAddress           String?
+  userAgent           String?
+
+  impersonatedBy      String?
+
   userId              String
-  expires             DateTime
   user                User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  token               String
+  activeOrganizationId String?
+  activeTeamId        String?
+
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  @@unique([token])
+  @@map("session")
 }
 
 model User {
   id                  String       @id @default(cuid())
-  firstName           String
-  lastName            String
-  email               String       @unique
-  password            String?      // Optional for OAuth
-  phone               String?
+  name                String
   username            String?      @unique
+
+  email               String       @unique
+  emailVerified       Boolean      @default(false)
+  
+  phoneNumber         String?
+  whatsappNumber      String?
+  phoneNumberVerified Boolean      @default(false)
+  
+  
+  image               String?
   role                UserRole     @default(USER)
   status              UserStatus   @default(PENDING)
   isActive            Boolean      @default(true)
+  
   maxDistance         Int          @default(10) // For transportation team members
-  emailVerified       DateTime?
-  phoneVerified       DateTime?
-  image               String?
-  whatsappNumber      String?
-  twoFactorEnabled    Boolean       @default(false)
+
+  banned              Boolean       @default(false)
   bannedAt            DateTime?
   bannedBy            String?
   banReason           String?
+  banExpires          DateTime?
+
+  isAdminCreated      Boolean       @default(false)
+  firstLoginAt        DateTime?
+  
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
 
@@ -141,25 +188,79 @@ model User {
   whatsAppNotifications Boolean     @default(false)
   smsNotifications    Boolean       @default(false)
 
+  appeal              Appeal?
   accounts            Account[]
   sessions            Session[]
+  
   addresses           Address[]
   pickupRequests      PickupRequest[] @relation("UserRequests")
   acceptedRequests    PickupRequest[] @relation("DriverRequests")
   cancelledRequests   DriverRequestCancel[] @relation("DriverRequestsCancel")
-  otps                OTP[]
   subscription        Subscription?
+
+  twoFactor           TwoFactor?
+  twoFactorEnabled    Boolean       @default(false)
+  twoFactorMethod     OTPChoice?
+
+  members             Member[]
+  invitations         Invitation[]
+
+  teamMembers         TeamMember[]
+
 
   @@index([email])
   @@map("users")
 }
 
-model VerificationToken {
-  identifier          String
-  token               String           @unique
-  expires             DateTime
+model Appeal {
+  id              String   @id @default(cuid())
+  email           String
+  reason          String   @db.Text
+  additionalInfo  String?  @db.Text
+  status          AppealStatus @default(PENDING)
+  
+  // Optional: link to user if they exist
+  userId          String  @unique
+  user            User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Admin review fields
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  reviewNotes     String?  @db.Text
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+}
 
-  @@unique([identifier, token])
+model TwoFactor {
+  id                  String       @id @default(cuid())
+
+  userId              String
+  user                User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  secret              String?
+  backupCodes         String?
+
+  @@unique([userId])
+  @@map("twoFactor")
+}
+
+model Verification {
+  id                  String           @id @default(cuid())
+
+  identifier          String
+  value               String
+  expiresAt           DateTime
+
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  @@unique([identifier, value])
+  @@map("verification")
 }
 
 model Address {
@@ -282,32 +383,67 @@ model DriverRequestCancel {
   @@map("driver_requests_cancel")
 }
 
-model SystemConfig {
-  id                  String            @id @default(cuid())
-  churchName          String            @unique
-  churchAcronym       String?           @unique       
-  churchLogo          String?       
+model Organization {
+  id                     String            @id @default(cuid())
+  churchName             String            @unique @map("name")
+  churchAcronym          String?           @unique       
+  churchLogo             String?           @map("logo")
+  slug                   String
+  metadata               String?
 
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
 
-  systemBranchInfos   SystemBranchInfo[]
+  members                Member[]
+  invitations            Invitation[]
 
-  @@map("system_config")
+  organizationBranches   OrganizationBranch[]
+
+  @@unique([slug])
+  @@map("organization")
 }
 
-model SystemBranchInfo {
+model Member {
+  id                     String            @id @default(cuid())
+  organizationId         String
+  organization           Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId                 String
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           UserRole
+
+  createdAt              DateTime          @default(now())
+
+  @@map("member")
+}
+
+model Invitation {
+  id                     String            @id @default(cuid())
+  organizationId         String
+  organization           Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  email                  String
+  role                   UserRole?
+  status                 String
+  expiresAt              DateTime
+
+  inviterId              String
+  user                   User      @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+
+  teamId                 String?
+
+  @@map("invitation")
+}
+
+model OrganizationBranch {
   id                  String            @id @default(cuid())
-  branchName          String?
+  branchName          String            @map("name")
   branchCategory      BranchType        @default(BRANCH)
 
-  systemConfigId      String
-
-  churchAddress       String
-  churchCity          String
-  churchProvince      String
-  churchPostalCode    String
-  churchCountry       String
+  street              String
+  city                String
+  province            String
+  postalCode          String
+  country             String
   churchPhone         String
   requestCutOffInHrs  String
   defaultMaxDistance  String
@@ -315,27 +451,29 @@ model SystemBranchInfo {
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
-  systemConfig        SystemConfig      @relation(fields: [systemConfigId], references: [id], onDelete: Cascade)
+  teammembers         TeamMember[]
 
-  @@map("system_branch_infos")
+  organizationId      String
+  organization        Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("team")
 }
 
-model OTP {
-  id                  String             @id @default(cuid())
+model TeamMember {
+  id                  String            @id @default(cuid())
+
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  teamId              String
+  team                OrganizationBranch      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
   userId              String
-  code                String
-  type                OTPType
-  identifier          String             // email or phone
-  expiresAt           DateTime
-  verified            Boolean            @default(false)
-  attempts            Int                @default(0)
-  createdAt           DateTime           @default(now())
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, type])
-  @@map("otps")
+  @@map("teamMember")
 }
+
 
 model Subscription {
   id                  String             @id @default(cuid())

@@ -1,15 +1,15 @@
 "use server";
 
-import { auth } from "@/auth";
-import { UserRole } from "@/generated/prisma";
+import { UserRole } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db";
-import { ChurchBranchContactInfoUpdateSchema } from "@/types/adminCreateNewUserSchema";
+import { getAuthSession } from "@/lib/session/server-session";
+import { ChurchBranchContactInfoUpdateSchema } from "@/schemas/adminCreateNewUserSchema";
 
 // import { revalidatePath } from "next/cache";
 // import { redirect } from "next/navigation";
 
 export const getOrgInfo = async (orgId?: string) => {
-  const session = await auth();
+  const session = await getAuthSession();
 
   if (
     !session ||
@@ -28,10 +28,10 @@ export const getOrgInfo = async (orgId?: string) => {
   // TODO: Check if user is admin, show only branch attached to admin
 
   try {
-    const organization = await prisma.systemConfig.findFirst({
+    const organization = await prisma.organization.findFirst({
       where: { id: organizationId },
       include: {
-        systemBranchInfos: true,
+        organizationBranches: true,
       },
     });
 
@@ -51,7 +51,7 @@ export const getOrgInfo = async (orgId?: string) => {
 };
 
 export const setHeadquarter = async (addressId: string, orgId?: string) => {
-  const session = await auth();
+  const session = await getAuthSession();
 
   if (
     !session ||
@@ -75,7 +75,7 @@ export const setHeadquarter = async (addressId: string, orgId?: string) => {
   }
   try {
     // Check if address exist
-    const existingBranch = await prisma.systemBranchInfo.findUnique({
+    const existingBranch = await prisma.organizationBranch.findUnique({
       where: { id: addressId },
     });
 
@@ -85,7 +85,7 @@ export const setHeadquarter = async (addressId: string, orgId?: string) => {
       };
     }
     // Check if address belongs to organization
-    if (existingBranch.systemConfigId !== organizationId) {
+    if (existingBranch.organizationId !== organizationId) {
       return {
         success: false,
         error: "Branch does not belong to this organization.",
@@ -93,9 +93,10 @@ export const setHeadquarter = async (addressId: string, orgId?: string) => {
     }
 
     // Get the current headquarter, if any and make branch
-    await prisma.systemBranchInfo.updateMany({
+    await prisma.organizationBranch.update({
       where: {
-        systemConfigId: organizationId,
+        id: existingBranch.id,
+        organizationId: organizationId,
         branchCategory: "HEADQUARTER",
       },
       data: {
@@ -103,7 +104,7 @@ export const setHeadquarter = async (addressId: string, orgId?: string) => {
       },
     });
     // Set address to headquarter
-    const updatedBranchInfo = await prisma.systemBranchInfo.update({
+    const updatedBranchInfo = await prisma.organizationBranch.update({
       where: { id: addressId },
       data: {
         branchCategory: "HEADQUARTER",
@@ -127,7 +128,7 @@ export const addBranch = async (
   values: ChurchBranchContactInfoUpdateSchema,
   orgId?: string
 ) => {
-  const session = await auth();
+  const session = await getAuthSession();
 
   // TODO: Check authentication and if user is admin or owner
   if (
@@ -144,7 +145,7 @@ export const addBranch = async (
   // TODO: Check if address belongs to organization
   try {
     // Check if organization existing
-    const organization = await prisma.systemConfig.findFirst({
+    const organization = await prisma.organization.findFirst({
       where: { id: organizationId },
     });
 
@@ -154,9 +155,9 @@ export const addBranch = async (
       };
     }
     // Create the branch
-    const newBranch = await prisma.systemBranchInfo.create({
+    const newBranch = await prisma.organizationBranch.create({
       data: {
-        systemConfigId: organizationId,
+        organizationId,
         ...values,
       },
     });
@@ -179,7 +180,7 @@ export const updateBranch = async (
   values: ChurchBranchContactInfoUpdateSchema,
   orgId?: string
 ) => {
-  const session = await auth();
+  const session = await getAuthSession();
 
   // TODO: Check if user is admin or owner
   if (
@@ -197,7 +198,7 @@ export const updateBranch = async (
 
   try {
     // Check if address exist
-    const existingBranch = await prisma.systemBranchInfo.findUnique({
+    const existingBranch = await prisma.organizationBranch.findUnique({
       where: { id: addressId },
     });
 
@@ -208,7 +209,7 @@ export const updateBranch = async (
     }
 
     // Check if address belongs to organization
-    if (existingBranch.systemConfigId !== organizationId) {
+    if (existingBranch.organizationId !== organizationId) {
       return {
         success: false,
         error: "Branch does not belong to this organization.",
@@ -216,7 +217,7 @@ export const updateBranch = async (
     }
 
     // Update
-    const updatedBranchInfo = await prisma.systemBranchInfo.update({
+    const updatedBranchInfo = await prisma.organizationBranch.update({
       where: { id: addressId },
       data: {
         ...values,
@@ -235,7 +236,7 @@ export const updateBranch = async (
 
 // Delete branch
 export const deleteBranch = async (addressId: string, orgId?: string) => {
-  const session = await auth();
+  const session = await getAuthSession();
 
   if (
     !session ||
@@ -253,7 +254,7 @@ export const deleteBranch = async (addressId: string, orgId?: string) => {
   // TODO: Only owner
   try {
     // Check if address exist
-    const existingBranch = await prisma.systemBranchInfo.findUnique({
+    const existingBranch = await prisma.organizationBranch.findUnique({
       where: { id: addressId },
     });
 
@@ -264,7 +265,7 @@ export const deleteBranch = async (addressId: string, orgId?: string) => {
     }
 
     // Check if address belongs to organization
-    if (existingBranch.systemConfigId !== organizationId) {
+    if (existingBranch.organizationId !== organizationId) {
       return {
         success: false,
         error: "Branch does not belong to this organization.",
@@ -274,10 +275,10 @@ export const deleteBranch = async (addressId: string, orgId?: string) => {
     // TODO: If not change admin role to user
 
     // Then delete address
-    await prisma.systemBranchInfo.delete({
+    await prisma.organizationBranch.delete({
       where: {
         id: addressId,
-        systemConfigId: organizationId,
+        organizationId,
       },
     });
 
@@ -292,7 +293,7 @@ export const deleteBranch = async (addressId: string, orgId?: string) => {
 };
 
 export const getServices = async (orgId?: string) => {
-  const session = await auth();
+  const session = await getAuthSession();
 
   if (
     !session ||

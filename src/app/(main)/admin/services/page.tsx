@@ -1,16 +1,43 @@
-import { auth } from "@/auth";
-import { ServiceManagement } from "@/components/admin/service-management";
-import { UserRole } from "@/generated/prisma";
+import { UserRole } from "@/generated/prisma/enums";
 import { redirect } from "next/navigation";
+import { SearchParams } from "nuqs/server";
+import { ErrorBoundary } from "react-error-boundary";
 
-const AdminServicesPage = async () => {
-  const session = await auth();
+import { ErrorState } from "@/components/screen-states/error-state";
+import { ServiceManagement } from "@/features/admin/components/service-management";
+import { servicesParamsLoader } from "@/features/admin/server/services/params-loader";
+import { requireAuth } from "@/lib/session/server-session";
+import { HydrateClient, prefetch, trpc } from "@/trpc/server";
+
+type Props = {
+  searchParams: Promise<SearchParams>;
+};
+
+const AdminServicesPage = async ({ searchParams }: Props) => {
+  const session = await requireAuth();
 
   if (!session?.user || session.user.role !== UserRole.ADMIN) {
     redirect("/dashboard");
   }
 
-  return <ServiceManagement />;
+  const params = await servicesParamsLoader(searchParams);
+
+  prefetch(trpc.services.getPaginatedServices.queryOptions(params));
+
+  return (
+    <HydrateClient>
+      <ErrorBoundary
+        fallback={
+          <ErrorState
+            title="Service Management Failed to Load"
+            description="An error occurred while loading your services. Please try again or contact support if the issue continues."
+          />
+        }
+      >
+        <ServiceManagement />
+      </ErrorBoundary>
+    </HydrateClient>
+  );
 };
 
 export default AdminServicesPage;

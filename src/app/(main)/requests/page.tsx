@@ -1,15 +1,57 @@
-import { auth } from "@/auth";
-import { RequestHistory } from "@/components/requests/request-history";
-import { redirect } from "next/navigation";
+import type { SearchParams } from "nuqs/server";
+// import { Suspense } from "react";
+import { ErrorBoundary } from "react-error-boundary";
 
-const RequestsPage = async () => {
-  const session = await auth();
+import { ErrorState } from "@/components/screen-states/error-state";
+import { RequestHistory } from "@/features/requests/components/request-history";
+import { requestsParamsLoader } from "@/features/requests/server/params-loader";
+import { requireAuth } from "@/lib/session/server-session";
+import { HydrateClient, prefetch, trpc } from "@/trpc/server";
 
-  if (!session?.user) {
-    redirect("/login");
-  }
+type Props = {
+  searchParams: Promise<SearchParams>;
+};
 
-  return <RequestHistory />;
+const RequestsPage = async ({ searchParams }: Props) => {
+  await requireAuth();
+
+  const params = await requestsParamsLoader(searchParams);
+
+  prefetch(
+    trpc.userRequests.getUserRequests.queryOptions({
+      ...params,
+      // maxDistance: "10",
+    })
+  );
+
+  // Services
+  prefetch(
+    trpc.services.getServices.queryOptions({
+      status: "active",
+    })
+  );
+
+  // Users - just transportation team members
+  prefetch(
+    trpc.users.getUsers.queryOptions({
+      role: "TRANSPORTATION_TEAM",
+    })
+  );
+
+  return (
+    <HydrateClient>
+      <ErrorBoundary
+        fallback={
+          <ErrorState
+            title="Request History Failed to Load"
+            description="An error occurred while loading the requests. Please try again or contact support if the issue continues."
+          />
+        }
+      >
+        <RequestHistory />
+      </ErrorBoundary>
+    </HydrateClient>
+  );
 };
 
 export default RequestsPage;

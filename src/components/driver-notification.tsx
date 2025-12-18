@@ -3,7 +3,6 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { DriverAssignmentType } from "@/components/drivers/column";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,6 +24,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { DriverAssignmentType } from "@/features/drivers/components/column";
 
 interface EmailProps {
   openEmailDialog: boolean;
@@ -121,7 +121,9 @@ export const DriverEmailDialog = ({
                   <FormDescription>
                     NOTE: The subject field is optional
                   </FormDescription>
-                  <FormMessage />
+                  <div className="min-h-[1.25rem]">
+                    <FormMessage />
+                  </div>
                 </FormItem>
               )}
             />
@@ -140,7 +142,9 @@ export const DriverEmailDialog = ({
                       className="resize-none"
                     />
                   </FormControl>
-                  <FormMessage />
+                  <div className="min-h-[1.25rem]">
+                    <FormMessage />
+                  </div>
                 </FormItem>
               )}
             />
@@ -184,7 +188,7 @@ export const DriverWhatsAppDialog = ({
 
       const { message } = validated.data;
 
-      const to = driverRequest.whatsappNumber ?? driverRequest.phone;
+      const to = driverRequest.whatsappNumber ?? driverRequest.phoneNumber;
 
       if (!to) {
         toast.error("The driver does not have phone number on file.");
@@ -232,7 +236,9 @@ export const DriverWhatsAppDialog = ({
                       disabled={form.formState.isSubmitting}
                     />
                   </FormControl>
-                  <FormMessage />
+                  <div className="min-h-[1.25rem]">
+                    <FormMessage />
+                  </div>
                 </FormItem>
               )}
             />

@@ -1,4 +1,4 @@
-import { ServiceDay } from "@/generated/prisma";
+import { ServiceDay } from "@/generated/prisma/client";
 import { differenceInMonths } from "date-fns";
 import { getDayNameFromNumber } from "./utils";
 

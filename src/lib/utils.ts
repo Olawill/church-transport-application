@@ -1,13 +1,14 @@
 import { clsx, type ClassValue } from "clsx";
+import { Country } from "country-state-city";
 import { addDays, addMonths, format, setDay, startOfMonth } from "date-fns";
-import { twMerge } from "tailwind-merge";
 import {
-  Frequency,
-  frequencyMap,
-  Ordinal,
-  ordinalMap,
-  ServiceDay,
-} from "./types";
+  postcodeValidator,
+  postcodeValidatorExistsForCountry,
+} from "postcode-validator";
+import { twMerge } from "tailwind-merge";
+
+import { GetServiceType } from "@/features/admin/types";
+import { Frequency, frequencyMap, Ordinal, ordinalMap } from "./types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -345,9 +346,52 @@ export function formatAddress(address: {
 }
 
 // Validate Canadian postal code
-export function isValidPostalCode(postalCode: string): boolean {
-  const regex = /^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/;
-  return regex.test(postalCode);
+export function isValidPostalCode(
+  postalCode: string,
+  countryCode: string
+): boolean {
+  if (!postalCode || !countryCode) return false;
+
+  // Check if country is supported
+  const isSupportedCountry = postcodeValidatorExistsForCountry(countryCode);
+
+  // If country is supported, validate the postal code
+  if (isSupportedCountry) {
+    return postcodeValidator(postalCode, countryCode);
+  }
+
+  // If country is not supported, just check that postal code is not empty and has reasonable length (between 3 and 10 characters)
+  const trimmed = postalCode.trim();
+  return trimmed.length >= 3 && trimmed.length <= 10;
+}
+
+// Get appropriate error message based on country support
+export function getPostalCodeValidationMessage(
+  postalCode: string,
+  countryCode: string
+): string {
+  if (!countryCode) {
+    return "Please select a country first";
+  }
+
+  const isSupportedCountry = postcodeValidatorExistsForCountry(countryCode);
+
+  if (isSupportedCountry) {
+    const country = Country.getCountryByCode(countryCode);
+
+    const countryName = country?.name || "";
+    return `Invalid postal code format for '${countryName ?? countryCode}'`;
+  } else {
+    const trimmed = postalCode.trim();
+    if (trimmed.length < 3) {
+      return "Postal code must be at least 3 characters";
+    }
+
+    if (trimmed.length > 10) {
+      return "Postal code must be at most 10 characters";
+    }
+    return "Invalid postal code";
+  }
 }
 
 // Validate email address
@@ -402,7 +446,7 @@ export const getDayNameFromNumber = (dayNumber: number) => {
   return format(date, "EEEE"); // EEEE = full weekday name
 };
 
-export const getServiceDayOptions = (service: ServiceDay) => {
+export const getServiceDayOptions = (service: GetServiceType) => {
   if (service.weekdays && service.weekdays.length > 1) {
     // Multi-day service with cycles - generate options
     const options: Array<{ value: string; label: string; dayOfWeek: number }> =

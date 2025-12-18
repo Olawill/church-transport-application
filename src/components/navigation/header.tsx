@@ -1,23 +1,30 @@
 "use client";
 
-import {
-  Bell,
-  Calendar,
-  Car,
-  Home,
-  LogOut,
-  Menu,
-  User,
-  Users,
-  X,
-} from "lucide-react";
 import { cn } from "@/lib/utils";
-import { signOut, useSession } from "next-auth/react";
+import {
+  BellIcon,
+  CalendarIcon,
+  CarIcon,
+  GavelIcon,
+  HomeIcon,
+  KeyIcon,
+  LogOut,
+  MenuIcon,
+  UserIcon,
+  UsersIcon,
+  XIcon,
+} from "lucide-react";
 import Link from "next/link";
-import { redirect, usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { ModeToggle } from "@/components/mode-toggle";
+import { UserRole } from "@/generated/prisma/enums";
+import { ExtendedSession } from "@/lib/auth";
+import { signOut, useSession } from "@/lib/auth-client";
+
+import { ActsOnWheelsLogo } from "@/components/logo";
+import { ModeToggle } from "@/components/theming/mode-toggle";
+
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -32,53 +39,64 @@ const navigationItems = [
   {
     name: "Dashboard",
     href: "/dashboard",
-    icon: Home,
+    icon: HomeIcon,
     roles: ["ADMIN", "TRANSPORTATION_TEAM", "USER"],
   },
   {
     name: "Requests",
     href: "/requests",
-    icon: Calendar,
+    icon: CalendarIcon,
     roles: ["ADMIN", "TRANSPORTATION_TEAM", "USER"],
   },
-  { name: "Users", href: "/admin/users", icon: Users, roles: ["ADMIN"] },
+  { name: "Users", href: "/admin/users", icon: UsersIcon, roles: ["ADMIN"] },
   {
     name: "Services",
     href: "/admin/services",
-    icon: Calendar,
+    icon: CalendarIcon,
     roles: ["ADMIN"],
   },
   {
     name: "Transportation",
     href: "/transportation",
-    icon: Car,
+    icon: CarIcon,
     roles: ["TRANSPORTATION_TEAM"],
   },
 ];
 
-export const Header = () => {
-  const { data: session, status } = useSession();
+export const Header = ({
+  initialSession,
+}: {
+  initialSession: ExtendedSession;
+}) => {
+  const { data: clientSession, isPending } = useSession();
+
+  const session = (clientSession as ExtendedSession) || initialSession;
   const router = useRouter();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleSignOut = async () => {
-    await signOut({ redirect: false });
-    redirect("/login");
+    await signOut({
+      fetchOptions: {
+        onSuccess: () => {
+          router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+        },
+      },
+    });
   };
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
 
-  if (status === "loading") {
+  if (isPending && !session) {
     return (
       <header className="bg-secondary shadow-sm border-b sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <div className="size-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Car className="size-5 text-white" />
+                <CarIcon className="size-5 text-white" />
               </div>
               <span className="text-xl font-bold text-gray-900 dark:text-white hidden sm:block">
                 Church Transport
@@ -102,16 +120,7 @@ export const Header = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo and brand */}
-          <div className="flex items-center">
-            <Link href="/dashboard" className="flex items-center space-x-2">
-              <div className="size-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Car className="size-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-gray-900 dark:text-white hidden sm:block">
-                Church Transport
-              </span>
-            </Link>
-          </div>
+          <ActsOnWheelsLogo />
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex space-x-8">
@@ -120,16 +129,16 @@ export const Header = () => {
                 key={item.name}
                 href={{ pathname: item.href }}
                 className={cn(
-                  "flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                  pathname === item.href && "text-blue-500"
+                  "flex items-center space-x-1 px-3 py-2 rounded-md text-sm text-gray-900 dark:text-white font-semibold transition-colors",
+                  pathname === item.href && "text-blue-500 dark:text-blue-700"
                 )}
               >
                 <div className="relative flex items-center space-x-1">
                   {pathname === item.href && (
-                    <div className="absolute h-1 w-full bg-blue-500 rounded-sm -bottom-2 left-0" />
+                    <div className="absolute h-1 w-full bg-blue-500 dark:bg-blue-700 rounded-sm -bottom-2 left-0" />
                   )}
                   <item.icon className="size-4" />
-                  <span>{item.name}</span>
+                  <span>{item.name.toUpperCase()}</span>
                 </div>
               </Link>
             ))}
@@ -142,7 +151,7 @@ export const Header = () => {
 
             {/* Notifications - placeholder for future implementation */}
             <Button variant="ghost" size="sm" className="relative">
-              <Bell className="size-6 text-gray-600 dark:text-gray-200" />
+              <BellIcon className="size-6 text-gray-600 dark:text-gray-200" />
             </Button>
 
             {/* User info */}
@@ -150,15 +159,15 @@ export const Header = () => {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                      <User className="h-4 w-4 text-gray-600" />
+                    <div className="size-8 bg-gray-300 rounded-full flex items-center justify-center">
+                      <UserIcon className="size-4 text-gray-600" />
                     </div>
                     <div className="text-sm">
-                      <p className="text-gray-900 dark:text-gray-200 font-medium">
-                        {session.user.firstName} {session.user.lastName}
+                      <p className="text-gray-900 dark:text-white font-medium">
+                        {session.user.name}
                       </p>
-                      <p className="text-gray-500 dark:text-gray-400 capitalize">
-                        {session.user.role?.toLowerCase().replace("_", " ")}
+                      <p className="text-gray-700 dark:text-gray-100 text-xs font-semibold italic capitalize">
+                        {session.user.role?.toUpperCase().replace("_", " ")}
                       </p>
                     </div>
                   </div>
@@ -167,40 +176,55 @@ export const Header = () => {
                   <DropdownMenuItem>
                     <div className="flex items-center space-x-2">
                       <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                        <User className="size-4 text-gray-600" />
+                        <UserIcon className="size-4 text-gray-600" />
                       </div>
                       <div className="text-sm">
-                        <p className="text-gray-900 dark:text-gray-200 font-medium">
-                          {session.user.firstName} {session.user.lastName}
+                        <p className="text-gray-900 dark:text-white font-medium">
+                          {session.user.name}
                         </p>
-                        <p className="text-gray-500 dark:text-gray-400 capitalize">
-                          {session.user.role?.toLowerCase().replace("_", " ")}
+                        <p className="text-gray-700 dark:text-gray-300 text-xs italic font-semibold capitalize">
+                          {session.user.role?.toUpperCase().replace("_", " ")}
                         </p>
                       </div>
                     </div>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    className="cursor-pointer"
+                    className="cursor-pointer  font-semibold"
                     onClick={() => router.push("/profile")}
                   >
-                    <User className="size-4" />
-                    Profile
+                    <UserIcon className="size-4" />
+                    PROFILE
                   </DropdownMenuItem>
+                  {(session.user.role === UserRole.ADMIN ||
+                    session.user.role === UserRole.OWNER) && (
+                    <>
+                      <DropdownMenuItem
+                        className="cursor-pointer font-semibold"
+                        onClick={() => router.push("/admin/appeal-decision")}
+                      >
+                        <GavelIcon className="size-4" />
+                        APPEAL DECISION
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+
+                      <DropdownMenuItem
+                        className="cursor-pointer font-semibold"
+                        onClick={() => router.push("/credentials")}
+                      >
+                        <KeyIcon className="size-4" />
+                        CREDENTIALS
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
                   <DropdownMenuItem
                     onClick={handleSignOut}
-                    className="text-gray-600 dark:text-gray-200 hover:text-gray-900 cursor-pointer"
+                    className="text-gray-900 dark:text-white hover:text-gray-900 cursor-pointer  font-semibold"
                   >
                     <LogOut className="size-4" />
-                    Sign out
+                    LOGOUT
                   </DropdownMenuItem>
-                  {/* <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleSignOut}
-                    className="text-gray-600 hover:text-gray-900"
-                  >
-                  </Button> */}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -213,9 +237,9 @@ export const Header = () => {
               onClick={toggleMobileMenu}
             >
               {mobileMenuOpen ? (
-                <X className="size-6" />
+                <XIcon className="size-6" />
               ) : (
-                <Menu className="size-6" />
+                <MenuIcon className="size-6" />
               )}
             </Button>
           </div>
@@ -243,26 +267,27 @@ export const Header = () => {
                     key={item.name}
                     href={{ pathname: item.href }}
                     className={cn(
-                      "flex items-center space-x-2 text-gray-600 dark:text-gray-200 hover:text-gray-900 px-3 py-2 rounded-md text-base font-medium",
-                      pathname === item.href && "bg-blue-500"
+                      "flex items-center space-x-2 hover:bg-accent px-3 py-2 rounded-md text-base font-semibold hover:text-gray-900 dark:hover:text-white",
+                      pathname === item.href &&
+                        "bg-blue-500 text-white dark:text-gray-900"
                     )}
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    <item.icon className="h-5 w-5" />
-                    <span>{item.name}</span>
+                    <item.icon className="size-5" />
+                    <span>{item.name.toUpperCase()}</span>
                   </Link>
                 ))}
                 <div className="border-t pt-4 mt-4">
                   <div className="flex items-center space-x-3 px-3 py-2">
-                    <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                      <User className="h-4 w-4 text-gray-600" />
+                    <div className="size-8 bg-gray-300 rounded-full flex items-center justify-center">
+                      <UserIcon className="size-4 text-gray-600" />
                     </div>
                     <div className="text-sm">
-                      <p className="text-gray-900 dark:text-gray-200 font-medium">
-                        {session.user.firstName} {session.user.lastName}
+                      <p className="text-gray-900 dark:text-white font-medium">
+                        {session.user.name}
                       </p>
-                      <p className="text-gray-500 dark:text-gray-300 capitalize">
-                        {session.user.role?.toLowerCase().replace("_", " ")}
+                      <p className="text-gray-700 dark:text-gray-100 text-xs font-semibold italic capitalize">
+                        {session.user.role?.toUpperCase().replace("_", " ")}
                       </p>
                     </div>
                   </div>
@@ -275,22 +300,53 @@ export const Header = () => {
                       setMobileMenuOpen(false);
                     }}
                     className={cn(
-                      "w-full justify-start text-gray-600 dark:text-gray-200 hover:text-gray-900 px-3 py-3 text-base",
+                      "w-full justify-start px-3 py-3 text-base font-semibold",
                       pathname === "/profile" && "bg-blue-500"
                     )}
                   >
-                    <User className="size-5" />
-                    Profile
+                    <UserIcon className="size-5" />
+                    PROFILE
                   </Button>
+                  {(session.user.role === UserRole.ADMIN ||
+                    session.user.role === UserRole.OWNER) && (
+                    <>
+                      <Separator className="my-2" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          "w-full justify-start px-3 py-3 text-base font-semibold",
+                          pathname === "/admin/appeal-decision" && "bg-blue-500"
+                        )}
+                        onClick={() => router.push("/admin/appeal-decision")}
+                      >
+                        <GavelIcon className="size-4" />
+                        APPEAL DECISION
+                      </Button>
+                      <Separator className="my-2" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          "w-full justify-start px-3 py-3 text-base font-semibold",
+                          pathname === "/credentials" && "bg-blue-500"
+                        )}
+                        onClick={() => router.push("/credentials")}
+                      >
+                        <KeyIcon className="size-4" />
+                        CREDENTIALS
+                      </Button>
+                    </>
+                  )}
                   <Separator className="my-2" />
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={handleSignOut}
-                    className="w-full justify-start text-gray-600 dark:text-gray-200 hover:text-gray-900 px-3 py-2 text-base"
+                    className="w-full justify-start text-gray-600 dark:text-white hover:text-gray-900 dark:hover:text-white px-3 py-2 text-base font-semibold"
                   >
                     <LogOut className="size-5" />
-                    Sign out
+                    LOGOUT
                   </Button>
                 </div>
               </nav>

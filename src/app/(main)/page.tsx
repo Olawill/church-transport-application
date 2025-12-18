@@ -1,8 +1,8 @@
-import { auth } from "@/auth";
+import { getAuthSession } from "@/lib/session/server-session";
 import { redirect } from "next/navigation";
 
 const Home = async () => {
-  const session = await auth();
+  const session = await getAuthSession();
 
   if (session?.user) {
     redirect("/dashboard");

@@ -1,13 +1,8 @@
-import { auth } from "@/auth";
-import { LoginForm } from "@/components/auth/login-form";
-import { redirect } from "next/navigation";
+import { LoginForm } from "@/features/auth/components/login-form";
+import { requireNoAuth } from "@/lib/session/server-session";
 
 const LoginPage = async () => {
-  const session = await auth();
-
-  if (session?.user) {
-    redirect("/dashboard");
-  }
+  await requireNoAuth();
 
   return <LoginForm />;
 };

@@ -1,33 +1,73 @@
-import { auth } from "@/auth";
-import AdminNewUserRequest from "@/components/admin/admin-new-user-request";
-import { NewRequestForm } from "@/components/requests/new-request-form";
-import { UserRole } from "@/generated/prisma";
+import { UserRole } from "@/generated/prisma/enums";
 import { redirect } from "next/navigation";
 
-const NewRequestPage = async () => {
-  const session = await auth();
+import { ErrorState } from "@/components/screen-states/error-state";
+import { LoadingState } from "@/components/screen-states/loading-state";
+import AdminNewUserRequest from "@/features/admin/components/admin-new-user-request";
+import { NewRequestForm } from "@/features/requests/components/new-request-form";
+import { requireAuth } from "@/lib/session/server-session";
+import { HydrateClient, prefetch, trpc } from "@/trpc/server";
+import { Suspense } from "react";
+import { ErrorBoundary } from "react-error-boundary";
 
-  if (
-    !session?.user ||
-    (session.user.role !== UserRole.USER &&
-      session.user.role !== UserRole.ADMIN)
-  ) {
-    // if (!session) {
+const NewRequestPage = async () => {
+  const session = await requireAuth();
+
+  if (session.user.role === UserRole.TRANSPORTATION_TEAM) {
     redirect("/dashboard");
   }
 
+  // Services
+  prefetch(
+    trpc.services.getServices.queryOptions({
+      status: "active",
+    })
+  );
+
+  if (session.user.role === "USER") {
+    // User addresses
+    prefetch(trpc.userAddresses.getUserAddresses.queryOptions());
+  }
+
+  // Users
+  if (
+    session.user.role === UserRole.ADMIN ||
+    session.user.role === UserRole.OWNER
+  ) {
+    prefetch(trpc.users.getUsers.queryOptions({}));
+  }
+
   return (
-    <>
-      {session.user.role === UserRole.ADMIN ? (
-        <AdminNewUserRequest
-          isNewUser={false}
-          isGroupRequest={false}
-          isRecurringRequest={false}
-        />
-      ) : (
-        <NewRequestForm />
-      )}
-    </>
+    <HydrateClient>
+      <ErrorBoundary
+        fallback={
+          <ErrorState
+            title="New Request Form Failed to Load"
+            description="An error occurred while loading the request form. Please try again or contact support if the issue continues."
+          />
+        }
+      >
+        <Suspense
+          fallback={
+            <LoadingState
+              title="New Request Form Loading..."
+              description="Please wait while we load your form."
+            />
+          }
+        >
+          {session.user.role === UserRole.ADMIN ||
+          session.user.role === UserRole.OWNER ? (
+            <AdminNewUserRequest
+              isNewUser={false}
+              isGroupRequest={false}
+              isRecurringRequest={false}
+            />
+          ) : (
+            <NewRequestForm />
+          )}
+        </Suspense>
+      </ErrorBoundary>
+    </HydrateClient>
   );
 };
 

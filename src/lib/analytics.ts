@@ -324,7 +324,7 @@ export class AnalyticsService {
 
     const drivers = await prisma.user.findMany({
       where: { id: { in: driverIds as string[] } },
-      select: { id: true, firstName: true, lastName: true },
+      select: { id: true, name: true },
     });
 
     return drivers.map((driver) => {
@@ -334,7 +334,7 @@ export class AnalyticsService {
 
       return {
         driverId: driver.id,
-        driverName: `${driver.firstName} ${driver.lastName}`,
+        driverName: `${driver.name}`,
         acceptances: acceptance?._count.id || 0,
         completions: completion?._count.id || 0,
         cancellations: cancellation?._count.id || 0,

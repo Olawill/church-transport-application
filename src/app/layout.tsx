@@ -1,16 +1,26 @@
-import { auth } from "@/auth";
-import { Providers } from "@/components/providers";
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Fira_Code, Lora, Poppins } from "next/font/google";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
+
+import { ThemeProvider } from "@/components/theming/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
+import { TRPCReactProvider } from "@/trpc/client";
+
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const poppins = Poppins({
+  variable: "--font-poppins",
+  subsets: ["latin"],
+  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
+});
+
+const lora = Lora({
+  variable: "--font-lora",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const firaCode = Fira_Code({
+  variable: "--font-fira-code",
   subsets: ["latin"],
 });
 
@@ -25,16 +35,21 @@ const RootLayout = async ({
 }: Readonly<{
   children: React.ReactNode;
 }>) => {
-  const session = await auth();
-
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <Providers session={session}>{children}</Providers>
-      </body>
-    </html>
+    <TRPCReactProvider>
+      <html lang="en" suppressHydrationWarning>
+        <body
+          className={`${poppins.variable} ${lora.variable} ${firaCode.variable} antialiased`}
+        >
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+            <NuqsAdapter>
+              {children}
+              <Toaster position="bottom-right" richColors closeButton />
+            </NuqsAdapter>
+          </ThemeProvider>
+        </body>
+      </html>
+    </TRPCReactProvider>
   );
 };
 
