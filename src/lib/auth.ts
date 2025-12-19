@@ -8,7 +8,7 @@ import {
   twoFactor,
 } from "better-auth/plugins";
 
-import { env } from "@/env/server";
+// import { env } from "@/env/server";
 import { OTPChoice, UserRole, UserStatus } from "@/generated/prisma/enums";
 import { prisma } from "./db";
 import { extendUserSession } from "./session/extend-user-session";
@@ -59,16 +59,16 @@ const options = {
       });
     },
   },
-  socialProviders: {
-    facebook: {
-      clientId: env.FACEBOOK_CLIENT_ID,
-      clientSecret: env.FACEBOOK_CLIENT_SECRET,
-    },
-    google: {
-      clientId: env.GOOGLE_CLIENT_ID,
-      clientSecret: env.GOOGLE_CLIENT_SECRET,
-    },
-  },
+  // socialProviders: {
+  //   facebook: {
+  //     clientId: env.FACEBOOK_CLIENT_ID,
+  //     clientSecret: env.FACEBOOK_CLIENT_SECRET,
+  //   },
+  //   google: {
+  //     clientId: env.GOOGLE_CLIENT_ID,
+  //     clientSecret: env.GOOGLE_CLIENT_SECRET,
+  //   },
+  // },
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
