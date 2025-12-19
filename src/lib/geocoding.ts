@@ -1,13 +1,15 @@
 // Geocoding utilities for address coordinate conversion
 // In production, you would use a real geocoding service like Google Maps API
 
+import { env } from "@/env/server";
+
 export interface GeocodeResult {
   latitude: number;
   longitude: number;
 }
 
 // Mock geocoding function - replace with actual service in production
-export const geocodeAddress = async (address: {
+const geocodeAddressDev = async (address: {
   street: string;
   city: string;
   province: string;
@@ -50,68 +52,75 @@ export const geocodeAddress = async (address: {
 };
 
 // Production implementation would look like this:
-/*
-export const geocodeAddress = async (address: {
+
+const geocodeAddressGoogle = async (address: {
   street: string;
   city: string;
   province: string;
   postalCode: string;
   country?: string;
 }): Promise<GeocodeResult | null> => {
-  const addressString = `${address.street}, ${address.city}, ${address.province} ${address.postalCode}, ${address.country || 'Canada'}`;
-  
+  const addressString = `${address.street}, ${address.city}, ${address.province} ${address.postalCode}, ${address.country || "Canada"}`;
+
   try {
     const response = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(addressString)}&key=${process.env.GOOGLE_MAPS_API_KEY}`
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(addressString)}&key=${env.GOOGLE_MAPS_API_KEY}`
     );
-    
+
     const data = await response.json();
-    
-    if (data.status === 'OK' && data.results.length > 0) {
+
+    if (data.status === "OK" && data.results.length > 0) {
       const location = data.results[0].geometry.location;
       return {
         latitude: location.lat,
         longitude: location.lng,
       };
     }
-    
+
     return null;
   } catch (error) {
-    console.error('Geocoding error:', error);
+    console.error("Geocoding error:", error);
     return null;
   }
-}
-*/
+};
 
-// export const geocodeAddress = async (
-//   address: {
-//   street: string;
-//   city: string;
-//   province: string;
-//   postalCode: string;
-//   country?: string;
-// }
-// ): Promise<GeocodeResult | null> => {
-//   const addressString = `${address.street}, ${address.city}, ${address.province} ${address.postalCode}, ${address.country || 'Canada'}`;
+const geocodeAddressLocationIQ = async (address: {
+  street: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  country?: string;
+}): Promise<GeocodeResult | null> => {
+  const addressString = `${address.street}, ${address.city}, ${address.province} ${address.postalCode}, ${address.country || "Canada"}`;
 
-//   try {
-//     console.log({ address, LOCATIONIQ_API_KEY });
-//     const response = await fetch(
-//       `https://us1.locationiq.com/v1/search.php?key=${LOCATIONIQ_API_KEY}&q=${encodeURIComponent(addressString)}&format=json`
-//     );
-//     console.log(response);
-//     const data = await response.json();
+  try {
+    const response = await fetch(
+      `https://us1.locationiq.com/v1/search.php?key=${env.LOCATIONIQ_API_KEY}&q=${encodeURIComponent(addressString)}&format=json`
+    );
 
-//     if (!data.length) {
-//       throw new Error("No results");
-//     }
+    const data = await response.json();
 
-//     return {
-//       lat: parseFloat(data[0].lat),
-//       lng: parseFloat(data[0].lon),
-//     };
-//   } catch (error) {
-//     console.error("Geocoding error:", error);
-//     return null;
-//   }
-// };
+    if (!data.length) {
+      throw new Error("No results");
+    }
+
+    return {
+      latitude: parseFloat(data[0].lat),
+      longitude: parseFloat(data[0].lon),
+    };
+  } catch (error) {
+    console.error("Geocoding error:", error);
+    return null;
+  }
+};
+
+export const geocodeAddress = async (
+  address: Parameters<typeof geocodeAddressGoogle>[0]
+) => {
+  if (process.env.NODE_ENV !== "production") {
+    return geocodeAddressDev(address);
+  }
+
+  const result = await geocodeAddressGoogle(address);
+  return result ?? geocodeAddressLocationIQ(address);
+};

@@ -186,8 +186,7 @@ export const AdminDashboard = () => {
         const rejectionLink = `${env.NEXT_PUBLIC_APP_URL}/appeal?appeal_token=${data.appealToken}`;
 
         await sendRejectionMessage.mutateAsync({
-          // to: data.user.email,
-          to: "oluwapelumi.ajuwon@gmail.com",
+          to: data.user.email,
           type: "rejection_email",
           name: data.user.name,
           verifyLink: rejectionLink,
@@ -207,7 +206,6 @@ export const AdminDashboard = () => {
   const banUser = useMutation(
     trpc.adminUser.banUser.mutationOptions({
       onSuccess: (data) => {
-        //TODO: Send reject email to users to they can login
         setBanDialogOpen(false);
         setBanReason("");
         setSelectedUser(null);
@@ -226,7 +224,6 @@ export const AdminDashboard = () => {
   const unBanUser = useMutation(
     trpc.adminUser.unBanUser.mutationOptions({
       onSuccess: (data) => {
-        //TODO: Send banned email to users to they can login
         toast.success(`User ${data.user.name}'s account has been reactivated.`);
 
         queryClient.invalidateQueries(
