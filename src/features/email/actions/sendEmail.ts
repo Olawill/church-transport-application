@@ -97,14 +97,22 @@ export const sendMail = async (values: SendEmailSchema) => {
     };
   }
 
-  await inngest.send({
-    name: "app/email.notifications",
-    data: { values: validatedValues.data },
-  });
+  try {
+    await inngest.send({
+      name: "app/email.notifications",
+      data: { values: validatedValues.data },
+    });
 
-  return {
-    success: true,
-  };
+    return {
+      success: true,
+    };
+  } catch (error) {
+    console.error("Error queuing email:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to queue email",
+    };
+  }
 };
 
 // Helper function to get default subject based on email type

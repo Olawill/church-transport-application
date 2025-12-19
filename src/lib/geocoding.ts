@@ -97,7 +97,7 @@ const geocodeAddressLocationIQ = async (address: {
     const response = await fetch(
       `https://us1.locationiq.com/v1/search.php?key=${env.LOCATIONIQ_API_KEY}&q=${encodeURIComponent(addressString)}&format=json`
     );
-    console.log(response);
+
     const data = await response.json();
 
     if (!data.length) {
@@ -114,7 +114,13 @@ const geocodeAddressLocationIQ = async (address: {
   }
 };
 
-export const geocodeAddress =
-  process.env.NODE_ENV !== "production"
-    ? geocodeAddressDev
-    : geocodeAddressGoogle || geocodeAddressLocationIQ;
+export const geocodeAddress = async (
+  address: Parameters<typeof geocodeAddressGoogle>[0]
+) => {
+  if (process.env.NODE_ENV !== "production") {
+    return geocodeAddressDev(address);
+  }
+
+  const result = await geocodeAddressGoogle(address);
+  return result ?? geocodeAddressLocationIQ(address);
+};
