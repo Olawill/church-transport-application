@@ -103,9 +103,9 @@ export const ChurchTab = ({
 
   // Get paginated branches
   const paginatedBranches = paginateItems(
-    organization?.systemBranchInfos ?? []
+    organization?.organizationBranches ?? []
   );
-  const totalBranches = (organization?.systemBranchInfos ?? []).length;
+  const totalBranches = (organization?.organizationBranches ?? []).length;
 
   useEffect(() => {
     if (totalBranches === 0) {
