@@ -5,7 +5,7 @@ import { sendEmailSchema, SendEmailSchema } from "@/features/email/emailSchema";
 import nodemailer from "nodemailer";
 import { render, toPlainText } from "@react-email/render";
 import EmailTemplate from "../../../../emails/email-template";
-import z from "zod";
+import { inngest } from "@/inngest/client";
 
 const mailTransporter = () => {
   const host = process.env.SMTP_HOST;
@@ -28,13 +28,13 @@ const mailTransporter = () => {
     connectionTimeout: 10000,
   });
 };
-// TODO: use inngest to send email in the background
-const sendEmailAction = async (values: SendEmailSchema) => {
+export const sendEmailAction = async (values: SendEmailSchema) => {
   const validatedValues = sendEmailSchema.safeParse(values);
 
   if (!validatedValues.success) {
     return {
-      errors: z.treeifyError(validatedValues.error).errors,
+      error: "Validation error",
+      success: false,
     };
   }
 
@@ -62,10 +62,11 @@ const sendEmailAction = async (values: SendEmailSchema) => {
 
     // Get Subject from template config if not provided
     const emailSubject = getDefaultSubject(type);
-    // const defaultFrom = `"${process.env.SMTP_FROM_NAME || "ActsOnWheel"}" <${process.env.SMTP_FROM_EMAIL}>`;
+    const defaultFrom = `"${process.env.SMTP_FROM_NAME || "ActsOnWheel"}" <${process.env.SMTP_FROM_EMAIL}>`;
 
     // Send Email
     await transporter.sendMail({
+      from: defaultFrom,
       to,
       subject: emailSubject,
       html: emailHtml,
@@ -74,18 +75,36 @@ const sendEmailAction = async (values: SendEmailSchema) => {
 
     return {
       success: true,
+      error: null,
     };
   } catch (error) {
     console.error("Error sending email:", error);
     return {
+      success: false,
       error: error instanceof Error ? error.message : "Failed to send email",
     };
   }
 };
 
 export const sendMail = async (values: SendEmailSchema) => {
-  const result = await sendEmailAction(values);
-  return result;
+  // Validate before queuing
+  const validatedValues = sendEmailSchema.safeParse(values);
+
+  if (!validatedValues.success) {
+    return {
+      success: false,
+      error: "Validation error",
+    };
+  }
+
+  await inngest.send({
+    name: "app/email.notifications",
+    data: { values: validatedValues.data },
+  });
+
+  return {
+    success: true,
+  };
 };
 
 // Helper function to get default subject based on email type

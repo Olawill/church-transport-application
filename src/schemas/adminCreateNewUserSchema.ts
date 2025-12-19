@@ -335,7 +335,7 @@ export type SecurityUpdateSchema = z.infer<typeof securityUpdateSchema>;
 
 export const churchBranchContactInfoUpdateSchema = z
   .object({
-    branchName: z.string().nullable(),
+    branchName: z.string(),
     branchCategory: z.enum(BranchType),
     street: z.string().trim().min(1, "Church address is required"),
     city: z.string().trim().min(1, "City is required"),

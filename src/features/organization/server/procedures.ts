@@ -102,7 +102,7 @@ export const organizationRouter = createTRPCRouter({
     .input(
       z.object({
         organizationId: z.string().optional(),
-        branchName: z.string().nullish(),
+        branchName: z.string(),
         branchCategory: z.enum(["HEADQUARTER", "BRANCH"]),
         street: z.string(),
         city: z.string(),

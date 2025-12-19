@@ -357,7 +357,6 @@ export const OTPInputView = ({ type }: OTPInputProps) => {
               )}
             />
 
-            {/* TODO: Add Skip button to cancel 2FA */}
             <div className="flex w-full items-center justify-between mt-4">
               {firstLogin && (
                 <Button
@@ -534,7 +533,6 @@ export const BackupCodeView = () => {
               )}
             />
           </CardContent>
-          {/* TODO: Add Skip button to cancel 2FA */}
           <CardFooter className="mt-4 flex w-full items-center justify-between">
             <Button
               type="button"

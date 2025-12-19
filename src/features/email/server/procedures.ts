@@ -10,7 +10,7 @@ export const sendMailRouter = createTRPCRouter({
     .mutation(async ({ input }) => {
       const { to, type, name, message, verifyCode, verifyLink } = input;
 
-      const { success, errors, error } = await sendMail({
+      const { success, error } = await sendMail({
         to,
         type,
         name,
@@ -23,13 +23,6 @@ export const sendMailRouter = createTRPCRouter({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: error || "Failed to send email",
-        });
-      }
-
-      if (errors) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: errors.join(", ") || "Validation error",
         });
       }
 
