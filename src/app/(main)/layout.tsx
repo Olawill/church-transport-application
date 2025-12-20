@@ -7,7 +7,7 @@ const MainLayout = async ({ children }: { children: React.ReactNode }) => {
 
   return (
     <LayoutBackground>
-      <div className="min-h-screen flex flex-col">
+      <div className="flex flex-col">
         <Header initialSession={session} />
         <main className="flex-1 flex w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {children}

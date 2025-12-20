@@ -129,7 +129,7 @@ export const Header = ({
                 key={item.name}
                 href={{ pathname: item.href }}
                 className={cn(
-                  "flex items-center space-x-1 px-3 py-2 rounded-md text-sm text-gray-900 dark:text-white font-semibold transition-colors",
+                  "flex items-center space-x-1 px-3 py-2 rounded-md text-sm text-gray-900 dark:text-white font-semibold transition-colors hover:text-blue-500 hover:dark:text-blue-700",
                   pathname === item.href && "text-blue-500 dark:text-blue-700"
                 )}
               >
@@ -190,29 +190,56 @@ export const Header = ({
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    className="cursor-pointer  font-semibold"
+                    className={cn(
+                      "cursor-pointer  font-semibold",
+                      pathname === "/profile" && "bg-accent"
+                    )}
                     onClick={() => router.push("/profile")}
                   >
-                    <UserIcon className="size-4" />
+                    <UserIcon
+                      className={cn(
+                        "size-4",
+                        pathname === "/profile" && "text-accent-foreground"
+                      )}
+                    />
                     PROFILE
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   {(session.user.role === UserRole.ADMIN ||
                     session.user.role === UserRole.OWNER) && (
                     <>
                       <DropdownMenuItem
-                        className="cursor-pointer font-semibold"
+                        className={cn(
+                          "cursor-pointer  font-semibold",
+                          pathname === "/admin/appeal-decision" && "bg-accent"
+                        )}
                         onClick={() => router.push("/admin/appeal-decision")}
                       >
-                        <GavelIcon className="size-4" />
+                        <GavelIcon
+                          className={cn(
+                            "size-4",
+                            pathname === "/admin/appeal-decision" &&
+                              "text-accent-foreground"
+                          )}
+                        />
                         APPEAL DECISION
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
 
                       <DropdownMenuItem
-                        className="cursor-pointer font-semibold"
+                        className={cn(
+                          "cursor-pointer  font-semibold",
+                          pathname === "/credentials" && "bg-accent"
+                        )}
                         onClick={() => router.push("/credentials")}
                       >
-                        <KeyIcon className="size-4" />
+                        <KeyIcon
+                          className={cn(
+                            "size-4",
+                            pathname === "/credentials" &&
+                              "text-accent-foreground"
+                          )}
+                        />
                         CREDENTIALS
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
@@ -318,7 +345,10 @@ export const Header = ({
                           "w-full justify-start px-3 py-3 text-base font-semibold",
                           pathname === "/admin/appeal-decision" && "bg-blue-500"
                         )}
-                        onClick={() => router.push("/admin/appeal-decision")}
+                        onClick={() => {
+                          router.push("/admin/appeal-decision");
+                          setMobileMenuOpen(false);
+                        }}
                       >
                         <GavelIcon className="size-4" />
                         APPEAL DECISION
@@ -331,7 +361,10 @@ export const Header = ({
                           "w-full justify-start px-3 py-3 text-base font-semibold",
                           pathname === "/credentials" && "bg-blue-500"
                         )}
-                        onClick={() => router.push("/credentials")}
+                        onClick={() => {
+                          router.push("/credentials");
+                          setMobileMenuOpen(false);
+                        }}
                       >
                         <KeyIcon className="size-4" />
                         CREDENTIALS

@@ -59,6 +59,7 @@ import { Switch } from "@/components/ui/switch";
 import { CustomFormLabel } from "@/components/custom-form-label";
 import { CustomPhoneInput } from "@/components/custom-phone-input";
 
+import { Separator } from "@/components/ui/separator";
 import { signupSchema, SignupSchema } from "@/schemas/authSchemas";
 import { useTRPC } from "@/trpc/client";
 import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
@@ -192,6 +193,7 @@ export const SignupForm = () => {
           Create an account to request pickup services
         </CardDescription>
       </CardHeader>
+      <Separator />
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-1">
@@ -593,6 +595,8 @@ export const AddressFields = <T extends AddressFormFields>({
   return (
     <div className="space-y-1">
       <h3 className="text-lg font-semibold">Address Information</h3>
+
+      <Separator className="my-4" />
 
       {/* Street Address */}
       <FormField
