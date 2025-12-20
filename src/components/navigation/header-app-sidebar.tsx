@@ -22,22 +22,24 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Route } from "next";
+import { ActsOnWheelsLogo } from "../logo";
 import { navigationItems } from "./navigation-items";
 
-export function NavAppSidebar({
+export const NavAppSidebar = ({
   initialSession,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   initialSession: ExtendedSession;
-}) {
+}) => {
   const { data: clientSession } = useSession();
-  const { toggleSidebar } = useSidebar();
+  const { toggleSidebar, isMobile } = useSidebar();
   const session = (clientSession as ExtendedSession) || initialSession;
   const router = useRouter();
   const pathname = usePathname();
@@ -60,11 +62,16 @@ export function NavAppSidebar({
 
   return (
     <Sidebar
-      // collapsible="offcanvas"
       collapsible="offcanvas"
-      className="!top-16 !h-[calc(100vh-4rem)] lg:hidden"
+      className="!top-16 !h-[calc(100svh-4rem)] lg:hidden"
       {...props}
     >
+      {isMobile && (
+        <SidebarHeader className="border-b">
+          <ActsOnWheelsLogo />
+        </SidebarHeader>
+      )}
+
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
@@ -174,4 +181,4 @@ export function NavAppSidebar({
       </SidebarFooter>
     </Sidebar>
   );
-}
+};

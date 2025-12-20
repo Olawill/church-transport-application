@@ -48,7 +48,7 @@ import {
   AccordionItem,
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import {
   Card,
@@ -346,11 +346,11 @@ export const RequestHistory = () => {
             </p>
           </div>
           {(isUser || isAdmin) && (
-            <Link href="/requests/new">
-              <Button>
-                <Plus className="size-4" />
-                New Request
-              </Button>
+            <Link href="/requests/new" className={buttonVariants()}>
+              {/* <Button> */}
+              <Plus className="size-4" />
+              New Request
+              {/* </Button> */}
             </Link>
           )}
         </div>
@@ -454,8 +454,9 @@ export const RequestHistory = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* <div className="flex flex-col lg:flex-row lg:items-center gap-4"> */}
+            <div className="grid grid-cols-5 gap-4">
+              <div className="col-span-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Status */}
                 <div>
                   <Label className="text-sm font-medium mb-2 block">
@@ -608,11 +609,9 @@ export const RequestHistory = () => {
                 </p>
                 {isUser && (
                   <div className="mt-6">
-                    <Link href="/requests/new">
-                      <Button>
-                        <Plus className="size-4" />
-                        Create Your First Request
-                      </Button>
+                    <Link href="/requests/new" className={buttonVariants()}>
+                      <Plus className="size-4" />
+                      Create Your First Request
                     </Link>
                   </div>
                 )}

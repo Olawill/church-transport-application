@@ -86,8 +86,8 @@ export const Header = ({
   );
 
   return (
-    <header className="bg-background shadow-sm border-b sticky top-0 z-50 w-full h-16">
-      <div className="flex h-full w-full items-center gap-2 px-4 max-w-7xl mx-auto sm:px-6 lg:px-8">
+    <header className="bg-secondary shadow-sm border-b sticky top-0 z-50 w-full">
+      <div className="flex h-16 w-full items-center gap-2 px-4 max-w-7xl mx-auto sm:px-6 lg:px-8">
         {/* Logo and brand */}
         <ActsOnWheelsLogo />
 
@@ -119,7 +119,11 @@ export const Header = ({
           <ModeToggle />
 
           {/* Notifications */}
-          <Button variant="ghost" size="sm" className="relative">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="relative hover:bg-transparent hover:dark:bg-transparent hover:-translate-y-0.5"
+          >
             <BellIcon className="size-6 text-gray-600 dark:text-gray-200" />
           </Button>
 
@@ -156,7 +160,7 @@ export const Header = ({
                     <UserIcon className="size-4 text-gray-600" />
                   </div>
                   <div className="text-sm text-left max-w-[80px]">
-                    <p className="text-gray-900 dark:text-white font-medium truncate">
+                    <p className="text-gray-900 dark:text-white font-medium max-2xl:truncate">
                       {session.user.name}
                     </p>
                     <p className="text-gray-700 dark:text-gray-100 text-xs font-semibold italic capitalize">
