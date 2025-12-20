@@ -3,20 +3,16 @@
 import { cn } from "@/lib/utils";
 import {
   BellIcon,
-  CalendarIcon,
   CarIcon,
   GavelIcon,
-  HomeIcon,
   KeyIcon,
   LogOut,
   MenuIcon,
+  SidebarCloseIcon,
   UserIcon,
-  UsersIcon,
-  XIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
 
 import { UserRole } from "@/generated/prisma/enums";
 import { ExtendedSession } from "@/lib/auth";
@@ -33,35 +29,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Separator } from "@/components/ui/separator";
-
-const navigationItems = [
-  {
-    name: "Dashboard",
-    href: "/dashboard",
-    icon: HomeIcon,
-    roles: ["ADMIN", "TRANSPORTATION_TEAM", "USER"],
-  },
-  {
-    name: "Requests",
-    href: "/requests",
-    icon: CalendarIcon,
-    roles: ["ADMIN", "TRANSPORTATION_TEAM", "USER"],
-  },
-  { name: "Users", href: "/admin/users", icon: UsersIcon, roles: ["ADMIN"] },
-  {
-    name: "Services",
-    href: "/admin/services",
-    icon: CalendarIcon,
-    roles: ["ADMIN"],
-  },
-  {
-    name: "Transportation",
-    href: "/transportation",
-    icon: CarIcon,
-    roles: ["TRANSPORTATION_TEAM"],
-  },
-];
+import { useSidebar } from "@/components/ui/sidebar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { navigationItems } from "./navigation-items";
 
 export const Header = ({
   initialSession,
@@ -69,11 +43,11 @@ export const Header = ({
   initialSession: ExtendedSession;
 }) => {
   const { data: clientSession, isPending } = useSession();
+  const { toggleSidebar, open } = useSidebar();
 
   const session = (clientSession as ExtendedSession) || initialSession;
   const router = useRouter();
   const pathname = usePathname();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleSignOut = async () => {
     await signOut({
@@ -85,13 +59,9 @@ export const Header = ({
     });
   };
 
-  const toggleMobileMenu = () => {
-    setMobileMenuOpen(!mobileMenuOpen);
-  };
-
   if (isPending && !session) {
     return (
-      <header className="bg-secondary shadow-sm border-b sticky top-0 z-50">
+      <header className="bg-background shadow-sm border-b sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
@@ -116,276 +86,134 @@ export const Header = ({
   );
 
   return (
-    <header className="bg-secondary shadow-sm border-b sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo and brand */}
-          <ActsOnWheelsLogo />
+    <header className="bg-background shadow-sm border-b sticky top-0 z-50 w-full h-16">
+      <div className="flex h-full w-full items-center gap-2 px-4 max-w-7xl mx-auto sm:px-6 lg:px-8">
+        {/* Logo and brand */}
+        <ActsOnWheelsLogo />
 
-          {/* Desktop Navigation */}
-          <nav className="hidden lg:flex space-x-8">
-            {userNavigationItems.map((item) => (
-              <Link
-                key={item.name}
-                href={{ pathname: item.href }}
-                className={cn(
-                  "flex items-center space-x-1 px-3 py-2 rounded-md text-sm text-gray-900 dark:text-white font-semibold transition-colors hover:text-blue-500 hover:dark:text-blue-700",
-                  pathname === item.href && "text-blue-500 dark:text-blue-700"
-                )}
-              >
-                <div className="relative flex items-center space-x-1">
-                  {pathname === item.href && (
-                    <div className="absolute h-1 w-full bg-blue-500 dark:bg-blue-700 rounded-sm -bottom-2 left-0" />
-                  )}
-                  <item.icon className="size-4" />
-                  <span>{item.name.toUpperCase()}</span>
-                </div>
-              </Link>
-            ))}
-          </nav>
-
-          {/* User menu */}
-          <div className="flex items-center">
-            {/* Theme toggle */}
-            <ModeToggle />
-
-            {/* Notifications - placeholder for future implementation */}
-            <Button variant="ghost" size="sm" className="relative">
-              <BellIcon className="size-6 text-gray-600 dark:text-gray-200" />
-            </Button>
-
-            {/* User info */}
-            <div className="hidden lg:flex items-center space-x-3">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <div className="flex items-center space-x-2">
-                    <div className="size-8 bg-gray-300 rounded-full flex items-center justify-center">
-                      <UserIcon className="size-4 text-gray-600" />
-                    </div>
-                    <div className="text-sm">
-                      <p className="text-gray-900 dark:text-white font-medium">
-                        {session.user.name}
-                      </p>
-                      <p className="text-gray-700 dark:text-gray-100 text-xs font-semibold italic capitalize">
-                        {session.user.role?.toUpperCase().replace("_", " ")}
-                      </p>
-                    </div>
-                  </div>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                        <UserIcon className="size-4 text-gray-600" />
-                      </div>
-                      <div className="text-sm">
-                        <p className="text-gray-900 dark:text-white font-medium">
-                          {session.user.name}
-                        </p>
-                        <p className="text-gray-700 dark:text-gray-300 text-xs italic font-semibold capitalize">
-                          {session.user.role?.toUpperCase().replace("_", " ")}
-                        </p>
-                      </div>
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className={cn(
-                      "cursor-pointer  font-semibold",
-                      pathname === "/profile" && "bg-accent"
-                    )}
-                    onClick={() => router.push("/profile")}
-                  >
-                    <UserIcon
-                      className={cn(
-                        "size-4",
-                        pathname === "/profile" && "text-accent-foreground"
-                      )}
-                    />
-                    PROFILE
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  {(session.user.role === UserRole.ADMIN ||
-                    session.user.role === UserRole.OWNER) && (
-                    <>
-                      <DropdownMenuItem
-                        className={cn(
-                          "cursor-pointer  font-semibold",
-                          pathname === "/admin/appeal-decision" && "bg-accent"
-                        )}
-                        onClick={() => router.push("/admin/appeal-decision")}
-                      >
-                        <GavelIcon
-                          className={cn(
-                            "size-4",
-                            pathname === "/admin/appeal-decision" &&
-                              "text-accent-foreground"
-                          )}
-                        />
-                        APPEAL DECISION
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-
-                      <DropdownMenuItem
-                        className={cn(
-                          "cursor-pointer  font-semibold",
-                          pathname === "/credentials" && "bg-accent"
-                        )}
-                        onClick={() => router.push("/credentials")}
-                      >
-                        <KeyIcon
-                          className={cn(
-                            "size-4",
-                            pathname === "/credentials" &&
-                              "text-accent-foreground"
-                          )}
-                        />
-                        CREDENTIALS
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                    </>
-                  )}
-                  <DropdownMenuItem
-                    onClick={handleSignOut}
-                    className="text-gray-900 dark:text-white hover:text-gray-900 cursor-pointer  font-semibold"
-                  >
-                    <LogOut className="size-4" />
-                    LOGOUT
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-
-            {/* Mobile menu button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="lg:hidden"
-              onClick={toggleMobileMenu}
-            >
-              {mobileMenuOpen ? (
-                <XIcon className="size-6" />
-              ) : (
-                <MenuIcon className="size-6" />
+        {/* Desktop Navigation */}
+        <nav className="hidden lg:flex space-x-8 ml-8">
+          {userNavigationItems.map((item) => (
+            <Link
+              key={item.name}
+              href={{ pathname: item.href }}
+              className={cn(
+                "flex items-center space-x-1 px-3 py-2 rounded-md text-sm text-gray-900 dark:text-white font-semibold transition-colors hover:text-blue-500 hover:dark:text-blue-700",
+                pathname === item.href && "text-blue-500 dark:text-blue-700"
               )}
-            </Button>
+            >
+              <div className="relative flex items-center space-x-1">
+                {pathname === item.href && (
+                  <div className="absolute h-1 w-full bg-blue-500 dark:bg-blue-700 rounded-sm -bottom-2 left-0" />
+                )}
+                <item.icon className="size-4" />
+                <span>{item.name.toUpperCase()}</span>
+              </div>
+            </Link>
+          ))}
+        </nav>
+
+        {/* Right side items */}
+        <div className="flex items-center ml-auto">
+          {/* Theme toggle */}
+          <ModeToggle />
+
+          {/* Notifications */}
+          <Button variant="ghost" size="sm" className="relative">
+            <BellIcon className="size-6 text-gray-600 dark:text-gray-200" />
+          </Button>
+
+          {/* Mobile menu button */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                className="size-8 lg:hidden"
+                variant="ghost"
+                size="icon"
+                onClick={toggleSidebar}
+              >
+                {open ? (
+                  <SidebarCloseIcon className="size-6" />
+                ) : (
+                  <MenuIcon className="size-6" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="bg-background text-foreground">
+              {open ? "Close menu" : "Open menu"}
+            </TooltipContent>
+          </Tooltip>
+
+          {/* Desktop User menu */}
+          <div className="hidden lg:flex items-center space-x-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="flex items-center space-x-2 hover:bg-transparent hover:dark:bg-transparent focus-visible:ring-0"
+                >
+                  <div className="size-8 bg-gray-300 rounded-full flex items-center justify-center">
+                    <UserIcon className="size-4 text-gray-600" />
+                  </div>
+                  <div className="text-sm text-left max-w-[80px]">
+                    <p className="text-gray-900 dark:text-white font-medium truncate">
+                      {session.user.name}
+                    </p>
+                    <p className="text-gray-700 dark:text-gray-100 text-xs font-semibold italic capitalize">
+                      {session.user.role?.toLowerCase().replace("_", " ")}
+                    </p>
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  className={cn(
+                    "cursor-pointer font-semibold",
+                    pathname === "/profile" && "bg-accent"
+                  )}
+                  onClick={() => router.push("/profile")}
+                >
+                  <UserIcon className="size-4" />
+                  PROFILE
+                </DropdownMenuItem>
+                {(session.user.role === UserRole.ADMIN ||
+                  session.user.role === UserRole.OWNER) && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className={cn(
+                        "cursor-pointer font-semibold",
+                        pathname === "/admin/appeal-decision" && "bg-accent"
+                      )}
+                      onClick={() => router.push("/admin/appeal-decision")}
+                    >
+                      <GavelIcon className="size-4" />
+                      APPEAL DECISION
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className={cn(
+                        "cursor-pointer font-semibold",
+                        pathname === "/credentials" && "bg-accent"
+                      )}
+                      onClick={() => router.push("/credentials")}
+                    >
+                      <KeyIcon className="size-4" />
+                      CREDENTIALS
+                    </DropdownMenuItem>
+                  </>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleSignOut}
+                  className="cursor-pointer font-semibold"
+                >
+                  <LogOut className="size-4" />
+                  LOGOUT
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
-
-        {/* Mobile Navigation */}
-        {mobileMenuOpen && (
-          <>
-            <div
-              className="fixed inset-0 bg-black/20 lg:hidden z-40"
-              onClick={() => setMobileMenuOpen(false)}
-            />
-            <div
-              className={cn(
-                "lg:hidden absolute top-16 left-0 right-0 border-t bg-secondary py-4 shadow-lg z-50",
-                "transition-all duration-300 ease-in-out",
-                mobileMenuOpen
-                  ? "opacity-100 translate-y-0"
-                  : "opacity-0 -translate-y-4 pointer-events-none"
-              )}
-            >
-              <nav className="space-y-2">
-                {userNavigationItems.map((item) => (
-                  <Link
-                    key={item.name}
-                    href={{ pathname: item.href }}
-                    className={cn(
-                      "flex items-center space-x-2 hover:bg-accent px-3 py-2 rounded-md text-base font-semibold hover:text-gray-900 dark:hover:text-white",
-                      pathname === item.href &&
-                        "bg-blue-500 text-white dark:text-gray-900"
-                    )}
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <item.icon className="size-5" />
-                    <span>{item.name.toUpperCase()}</span>
-                  </Link>
-                ))}
-                <div className="border-t pt-4 mt-4">
-                  <div className="flex items-center space-x-3 px-3 py-2">
-                    <div className="size-8 bg-gray-300 rounded-full flex items-center justify-center">
-                      <UserIcon className="size-4 text-gray-600" />
-                    </div>
-                    <div className="text-sm">
-                      <p className="text-gray-900 dark:text-white font-medium">
-                        {session.user.name}
-                      </p>
-                      <p className="text-gray-700 dark:text-gray-100 text-xs font-semibold italic capitalize">
-                        {session.user.role?.toUpperCase().replace("_", " ")}
-                      </p>
-                    </div>
-                  </div>
-                  <Separator className="my-2" />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      router.push("/profile");
-                      setMobileMenuOpen(false);
-                    }}
-                    className={cn(
-                      "w-full justify-start px-3 py-3 text-base font-semibold",
-                      pathname === "/profile" && "bg-blue-500"
-                    )}
-                  >
-                    <UserIcon className="size-5" />
-                    PROFILE
-                  </Button>
-                  {(session.user.role === UserRole.ADMIN ||
-                    session.user.role === UserRole.OWNER) && (
-                    <>
-                      <Separator className="my-2" />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={cn(
-                          "w-full justify-start px-3 py-3 text-base font-semibold",
-                          pathname === "/admin/appeal-decision" && "bg-blue-500"
-                        )}
-                        onClick={() => {
-                          router.push("/admin/appeal-decision");
-                          setMobileMenuOpen(false);
-                        }}
-                      >
-                        <GavelIcon className="size-4" />
-                        APPEAL DECISION
-                      </Button>
-                      <Separator className="my-2" />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={cn(
-                          "w-full justify-start px-3 py-3 text-base font-semibold",
-                          pathname === "/credentials" && "bg-blue-500"
-                        )}
-                        onClick={() => {
-                          router.push("/credentials");
-                          setMobileMenuOpen(false);
-                        }}
-                      >
-                        <KeyIcon className="size-4" />
-                        CREDENTIALS
-                      </Button>
-                    </>
-                  )}
-                  <Separator className="my-2" />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleSignOut}
-                    className="w-full justify-start text-gray-600 dark:text-white hover:text-gray-900 dark:hover:text-white px-3 py-2 text-base font-semibold"
-                  >
-                    <LogOut className="size-5" />
-                    LOGOUT
-                  </Button>
-                </div>
-              </nav>
-            </div>
-          </>
-        )}
       </div>
     </header>
   );

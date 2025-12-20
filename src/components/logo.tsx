@@ -9,12 +9,12 @@ export const ActsOnWheelsLogo = () => {
           <CarIcon className="size-5 text-white" />
         </div>
         <div className="hidden sm:block">
-          <div className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
+          <div className="text-xl font-bold text-gray-900 dark:text-white tracking-tight whitespace-nowrap">
             Acts
             <span className="text-blue-600">On</span>
             Wheels
           </div>
-          <div className="text-[10px] text-gray-500 dark:text-gray-100 font-medium tracking-widest uppercase -mt-0.5">
+          <div className="text-[10px] text-gray-500 dark:text-gray-100 font-medium tracking-widest uppercase -mt-0.5 whitespace-nowrap">
             Church Transportation
           </div>
         </div>
