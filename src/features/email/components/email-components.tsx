@@ -30,7 +30,7 @@ interface AppealRequestEmailProps {
   username?: string;
 }
 
-interface AppealDecisonEmailProps {
+interface AppealDecisionEmailProps {
   status?: string;
 }
 
@@ -195,7 +195,7 @@ export const CreationEmailTemplate = ({
         {link}
       </Text>
       <Text className="text-[#333] font-serif text-base my-6">
-        It is important to change your passowrd immediately for security
+        It is important to change your password immediately for security
         concerns.
       </Text>
     </Section>
@@ -373,7 +373,7 @@ export const UserRejectionEmailTemplate = ({
 
 export const AppealDecisionEmailTemplate = ({
   status,
-}: AppealDecisonEmailProps) => {
+}: AppealDecisionEmailProps) => {
   const rejectMessage =
     "Thank you for submitting your appeal regarding your sign-up request. After a careful and comprehensive review, we regret to inform you that we are unable to approve your appeal at this time.";
   const approveMessage =

@@ -22,6 +22,7 @@ export function ModeToggle() {
   const { setTheme, theme, systemTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [tooltipOpen, setTooltipOpen] = useState(false);
   const [isLongPress, setIsLongPress] = useState(false);
   const [spin, setSpin] = useState(false);
 
@@ -57,6 +58,7 @@ export function ModeToggle() {
 
   const handlePointerDown = (e: PointerEvent) => {
     e.preventDefault(); // Prevent dropdown from opening
+    setTooltipOpen(false); // Close tooltip when pressing
     longPressTimeout.current = setTimeout(() => {
       setIsLongPress(true);
       setDropdownOpen(true);
@@ -78,11 +80,22 @@ export function ModeToggle() {
 
   const handlePointerLeave = (e: PointerEvent) => {
     e.preventDefault(); // Prevent dropdown from opening
+    setTooltipOpen(false); // Close tooltip when leaving
     if (longPressTimeout.current) {
       clearTimeout(longPressTimeout.current);
       longPressTimeout.current = null;
     }
     setIsLongPress(false);
+  };
+
+  const handleMouseEnter = () => {
+    if (!dropdownOpen && !isLongPress) {
+      setTooltipOpen(true);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setTooltipOpen(false);
   };
 
   // Function to select theme from dropdown
@@ -104,9 +117,9 @@ export function ModeToggle() {
 
   return (
     <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
-      <Tooltip>
-        <DropdownMenuTrigger asChild>
-          <TooltipTrigger asChild>
+      <Tooltip open={tooltipOpen && !dropdownOpen}>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
             <Button
               variant="outline"
               size="icon"
@@ -114,34 +127,44 @@ export function ModeToggle() {
               onPointerDown={handlePointerDown}
               onPointerUp={handlePointerUp}
               onPointerLeave={handlePointerLeave}
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
             >
               <SunIcon
                 className={cn(
                   "absolute size-[1.2rem] transition-all duration-300 ease-in-out text-shadow-yellow-300 opacity-0 scale-75 -rotate-45",
                   spin && "animate-spin-slow",
-                  activeTheme === "light" && "opacity-100 scale-100 rotate-0"
+                  activeTheme === "light" &&
+                    theme === "light" &&
+                    "opacity-100 scale-100 rotate-0"
                 )}
               />
               <MoonIcon
                 className={cn(
                   "absolute size-[1.2rem] transition-all duration-300 ease-in-out text-slate-600 dark:text-slate-300 opacity-0 scale-75 rotate-45",
                   spin && "animate-spin-slow",
-                  activeTheme === "dark" && "opacity-100 scale-100 rotate-0"
+                  activeTheme === "dark" &&
+                    theme === "dark" &&
+                    "opacity-100 scale-100 rotate-0"
                 )}
               />
               <MonitorIcon
                 className={cn(
                   "absolute size-[1.2rem] transition-all duration-300 ease-in-out text-neutral-500 dark:text-neutral-300 opacity-0 scale-75 rotate-45",
                   spin && "animate-spin-slow",
-                  activeTheme === "system" && "opacity-100 scale-100 rotate-0"
+                  theme === "system" && "opacity-100 scale-100 rotate-0"
                 )}
               />
               <span className="sr-only">Toggle theme</span>
             </Button>
-          </TooltipTrigger>
-        </DropdownMenuTrigger>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
 
-        <TooltipContent side="bottom" className="bg-background text-foreground">
+        <TooltipContent
+          side="bottom"
+          className="bg-secondary dark:bg-background text-gray-900 dark:text-white border border-primary"
+          arrowClassName="bg-primary fill-primary"
+        >
           <div className="flex items-center gap-2">
             {nextTheme === "light" && (
               <SunIcon className="mr-2 size-[1.2rem] text-yellow-300" />

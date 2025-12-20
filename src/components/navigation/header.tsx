@@ -143,7 +143,10 @@ export const Header = ({
                 )}
               </Button>
             </TooltipTrigger>
-            <TooltipContent className="bg-background text-foreground">
+            <TooltipContent
+              className="bg-secondary dark:bg-background text-gray-900 dark:text-white border border-primary"
+              arrowClassName="bg-primary fill-primary"
+            >
               {open ? "Close menu" : "Open menu"}
             </TooltipContent>
           </Tooltip>
