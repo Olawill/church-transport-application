@@ -1,3 +1,7 @@
+import { LockIcon } from "lucide-react";
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+
 import { Button } from "@/components/ui/button";
 import {
   Empty,
@@ -8,8 +12,16 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { requireAuth } from "@/lib/session/server-session";
-import { LockIcon } from "lucide-react";
-import { redirect } from "next/navigation";
+
+export const metadata: Metadata = {
+  title: "Credentials",
+  description:
+    "Manage your church credentials, by updating, deleting or adding new credentials to your ActsOnWheels account",
+  openGraph: {
+    title: "Credentials | ActsOnWheels",
+    description: "Manage your church transportation account credentials",
+  },
+};
 
 const CredentialsPage = async () => {
   const session = await requireAuth();

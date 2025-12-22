@@ -25,9 +25,86 @@ const firaCode = Fira_Code({
 });
 
 export const metadata: Metadata = {
-  title: "Church Transportation Team",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL || "https://actsonwheels.com"
+  ),
+  title: {
+    default: "ActsOnWheels - Church Transportation Service",
+    template: "%s | ActsOnWheels",
+  },
   description:
-    "Connecting church members with reliable transportation services",
+    "Connecting church members with reliable transportation services for church events and services. Request rides, manage pickups, and coordinate transportation for your church community.",
+  keywords: [
+    "church transportation",
+    "ride sharing",
+    "church services",
+    "pickup requests",
+    "community transport",
+    "church rides",
+  ],
+  authors: [{ name: "ActsOnWheels Team" }],
+  creator: "ActsOnWheels",
+  publisher: "ActsOnWheels",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "/",
+    title: "ActsOnWheels - Church Transportation Service",
+    description:
+      "Connecting church members with reliable transportation services",
+    siteName: "ActsOnWheels",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "ActsOnWheels - Church Transportation Service",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ActsOnWheels - Church Transportation Service",
+    description:
+      "Connecting church members with reliable transportation services",
+    images: ["/twitter-image.png"],
+    creator: "@actsonwheels", // Update with your actual Twitter handle
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
+  manifest: "/manifest.webmanifest",
+  verification: {
+    // google: 'your-google-verification-code', // Add when you have it
+    // yandex: 'your-yandex-verification-code',
+    // bing: 'your-bing-verification-code',
+  },
+  alternates: {
+    canonical: "/",
+  },
+  category: "technology",
 };
 
 const RootLayout = async ({

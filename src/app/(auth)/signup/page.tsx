@@ -1,4 +1,5 @@
 import { requireNoAuth } from "@/lib/session/server-session";
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 
@@ -9,6 +10,16 @@ import {
   SignupForm,
   SignupFormSkeleton,
 } from "@/features/auth/components/signup-form";
+
+export const metadata: Metadata = {
+  title: "Sign Up",
+  description:
+    "Create an ActsOnWheels account to start requesting rides to church services",
+  openGraph: {
+    title: "Sign Up | ActsOnWheels",
+    description: "Join our church transportation community",
+  },
+};
 
 const SignupPage = async () => {
   await requireNoAuth();

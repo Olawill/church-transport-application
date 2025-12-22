@@ -1,5 +1,8 @@
 import { UserRole } from "@/generated/prisma/enums";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
+import { ErrorBoundary } from "react-error-boundary";
 
 import { ErrorState } from "@/components/screen-states/error-state";
 import { LoadingState } from "@/components/screen-states/loading-state";
@@ -7,8 +10,19 @@ import AdminNewUserRequest from "@/features/admin/components/admin-new-user-requ
 import { NewRequestForm } from "@/features/requests/components/new-request-form";
 import { requireAuth } from "@/lib/session/server-session";
 import { HydrateClient, prefetch, trpc } from "@/trpc/server";
-import { Suspense } from "react";
-import { ErrorBoundary } from "react-error-boundary";
+
+export const metadata: Metadata = {
+  title: "New Pickup Requests",
+  description: "Manage your pickup requests for church services and events",
+  openGraph: {
+    title: "New Pickup Requests | ActsOnWheels",
+    description: "Create new ride requests",
+  },
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 const NewRequestPage = async () => {
   const session = await requireAuth();

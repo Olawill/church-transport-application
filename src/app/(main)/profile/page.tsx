@@ -1,8 +1,19 @@
+import type { Metadata } from "next";
+import { ErrorBoundary } from "react-error-boundary";
+
 import { ErrorState } from "@/components/screen-states/error-state";
 import { ProfileManagement } from "@/features/profile/components/profile-management";
 import { requireAuth } from "@/lib/session/server-session";
 import { HydrateClient, prefetch, trpc } from "@/trpc/server";
-import { ErrorBoundary } from "react-error-boundary";
+
+export const metadata: Metadata = {
+  title: "Profile Settings",
+  description: "Manage your account settings, addresses, and preferences",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 const ProfilePage = async () => {
   const session = await requireAuth();

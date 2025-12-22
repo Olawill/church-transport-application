@@ -1,4 +1,5 @@
 import { UserRole } from "@/generated/prisma/enums";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { SearchParams } from "nuqs/server";
 import { ErrorBoundary } from "react-error-boundary";
@@ -11,6 +12,15 @@ import { HydrateClient, prefetch, trpc } from "@/trpc/server";
 
 type Props = {
   searchParams: Promise<SearchParams>;
+};
+
+export const metadata: Metadata = {
+  title: "User Management",
+  description: "Manage user accounts, roles, and permissions",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 const AdminUsersPage = async ({ searchParams }: Props) => {

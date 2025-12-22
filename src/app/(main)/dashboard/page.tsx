@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { SearchParams } from "nuqs/server";
 import { Suspense } from "react";
 import { ErrorBoundary } from "react-error-boundary";
@@ -16,6 +17,20 @@ import { HydrateClient, prefetch, trpc } from "@/trpc/server";
 // export const dynamic = "force-dynamic";
 type Props = {
   searchParams: Promise<SearchParams>;
+};
+
+export const metadata: Metadata = {
+  title: "Dashboard",
+  description:
+    "View your pickup requests, upcoming rides, and transportation statistics",
+  openGraph: {
+    title: "Dashboard | ActsOnWheels",
+    description: "Manage your church transportation needs",
+  },
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 const DashboardPage = async ({ searchParams }: Props) => {

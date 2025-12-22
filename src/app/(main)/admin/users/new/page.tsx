@@ -1,4 +1,5 @@
 import { UserRole } from "@/generated/prisma/enums";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { ErrorBoundary } from "react-error-boundary";
@@ -8,6 +9,15 @@ import { LoadingState } from "@/components/screen-states/loading-state";
 import { NewUserCreationForm } from "@/features/admin/components/new-user-creation";
 import { requireAuth } from "@/lib/session/server-session";
 import { HydrateClient, prefetch, trpc } from "@/trpc/server";
+
+export const metadata: Metadata = {
+  title: "Admin User Management",
+  description: "Admin can manage user accounts, roles, and permissions",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 const NewUserPage = async () => {
   const session = await requireAuth();
