@@ -3,13 +3,13 @@ import { ReactNode, SetStateAction, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { FieldValues, UseFormReturn } from "react-hook-form";
 import { Form } from "@/components/ui/form";
 
@@ -115,12 +115,12 @@ export function useConfirm<T extends FieldValues = never, Extra = undefined>({
   const isThreeButtonMode = Boolean(primaryText && secondaryText);
 
   const ConfirmDialog = () => (
-    <Dialog open={promise !== null} onOpenChange={handleClose}>
-      <DialogContent className="mx-8 max-h-[90vh] overflow-y-auto overflow-x-hidden">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{message}</DialogDescription>
-        </DialogHeader>
+    <AlertDialog open={promise !== null} onOpenChange={handleClose}>
+      <AlertDialogContent className="mx-8 max-h-[90vh] overflow-y-auto overflow-x-hidden">
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{message}</AlertDialogDescription>
+        </AlertDialogHeader>
         {/* Render custom content */}
         {renderContent && (
           <div className="py-4">
@@ -142,7 +142,7 @@ export function useConfirm<T extends FieldValues = never, Extra = undefined>({
             >
               {renderForm(form)}
 
-              <DialogFooter className="pt-2">
+              <AlertDialogFooter className="pt-2">
                 <Button
                   variant="outline"
                   type="button"
@@ -189,11 +189,11 @@ export function useConfirm<T extends FieldValues = never, Extra = undefined>({
                     {secondaryText || primaryText || "Confirm"}
                   </Button>
                 )}
-              </DialogFooter>
+              </AlertDialogFooter>
             </form>
           </Form>
         ) : (
-          <DialogFooter className="pt-2">
+          <AlertDialogFooter className="pt-2">
             <Button
               variant="outline"
               type="button"
@@ -243,10 +243,10 @@ export function useConfirm<T extends FieldValues = never, Extra = undefined>({
                 {secondaryText || primaryText || "Confirm"}
               </Button>
             )}
-          </DialogFooter>
+          </AlertDialogFooter>
         )}
-      </DialogContent>
-    </Dialog>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 
   // Return proper tuple based on overload
