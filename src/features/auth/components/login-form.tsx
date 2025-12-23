@@ -198,7 +198,7 @@ export const LoginForm = () => {
    * Mutations
    */
   const updateFirstTimeLogin = useMutation(
-    trpc.auth.updateFirstLogin.mutationOptions()
+    trpc.auth.updateFirstLogin.mutationOptions({})
   );
 
   const toggle2FA = useMutation(trpc.profile.toggle2FA.mutationOptions({}));
@@ -209,11 +209,11 @@ export const LoginForm = () => {
   const login = useMutation(
     trpc.auth.login.mutationOptions({
       onSuccess: async (data) => {
-        await queryClient.invalidateQueries(trpc.auth.session.queryOptions());
         const { isFirstLogin } = data;
+        await queryClient.invalidateQueries(trpc.auth.session.queryOptions());
 
         // ✅ Handle first-time login 2FA setup
-        if (isFirstLogin) {
+        if (isFirstLogin && data.twoFactorMethod === null) {
           const result = await confirmTwoFactor();
 
           if (result.action === "confirm") {
@@ -229,12 +229,12 @@ export const LoginForm = () => {
           } else {
             // User clicked "Skip" on first login
             // Still redirect to dashboard even if they skip 2FA setup
-            toast.success("Logged in successfully");
+            // toast.success("Logged in successfully");
             router.push(redirectUrl as Route);
           }
           // Update first time login at
           await updateFirstTimeLogin.mutateAsync({
-            email: data.user.email,
+            email: data.user.email ?? currentEmail,
           });
           return;
         }
@@ -276,7 +276,7 @@ export const LoginForm = () => {
 
     if (result.action === "cancel") {
       toast.warning("Two-Factor Authentication cancelled");
-      return;
+      throw new Error("2FA setup cancelled");
     }
 
     // Set two factor method in database
