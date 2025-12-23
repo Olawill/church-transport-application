@@ -11,7 +11,6 @@ import {
   SidebarCloseIcon,
   UserIcon,
 } from "lucide-react";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 import { UserRole } from "@/generated/prisma/enums";
@@ -36,6 +35,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { navigationItems } from "./navigation-items";
+import { CustomLink as Link } from "../custom-link";
+import { useNavigationBlocker } from "../contexts/navigation-blocker";
+import { Route } from "next";
 
 export const Header = ({
   initialSession,
@@ -44,6 +46,7 @@ export const Header = ({
 }) => {
   const { data: clientSession, isPending } = useSession();
   const { toggleSidebar, open } = useSidebar();
+  const { isBlocked, setIsBlocked, confirmExit } = useNavigationBlocker();
 
   const session = (clientSession as ExtendedSession) || initialSession;
   const router = useRouter();
@@ -57,6 +60,19 @@ export const Header = ({
         },
       },
     });
+  };
+
+  // To alert user when there is unsaved changes in a form
+  const handleUnsavedChanges = async (href: string) => {
+    if (isBlocked) {
+      const result = await confirmExit();
+
+      if (result.action !== "confirm" && result.action !== "primary") {
+        return; // Stay on page
+      }
+      setIsBlocked(false);
+    }
+    router.push(href as Route);
   };
 
   if (isPending && !session) {
@@ -97,6 +113,7 @@ export const Header = ({
             <Link
               key={item.name}
               href={{ pathname: item.href }}
+              prefetch
               className={cn(
                 "flex items-center space-x-1 px-3 py-2 rounded-md text-sm text-gray-900 dark:text-white font-semibold transition-colors hover:text-blue-500 hover:dark:text-blue-700",
                 pathname === item.href && "text-blue-500 dark:text-blue-700"
@@ -178,7 +195,8 @@ export const Header = ({
                     "cursor-pointer font-semibold",
                     pathname === "/profile" && "bg-accent"
                   )}
-                  onClick={() => router.push("/profile")}
+                  // onClick={() => router.push("/profile")}
+                  onClick={() => handleUnsavedChanges("/profile")}
                 >
                   <UserIcon className="size-4" />
                   PROFILE
@@ -192,7 +210,9 @@ export const Header = ({
                         "cursor-pointer font-semibold",
                         pathname === "/admin/appeal-decision" && "bg-accent"
                       )}
-                      onClick={() => router.push("/admin/appeal-decision")}
+                      onClick={() =>
+                        handleUnsavedChanges("/admin/appeal-decision")
+                      }
                     >
                       <GavelIcon className="size-4" />
                       APPEAL DECISION
@@ -202,7 +222,7 @@ export const Header = ({
                         "cursor-pointer font-semibold",
                         pathname === "/credentials" && "bg-accent"
                       )}
-                      onClick={() => router.push("/credentials")}
+                      onClick={() => handleUnsavedChanges("/credentials")}
                     >
                       <KeyIcon className="size-4" />
                       CREDENTIALS

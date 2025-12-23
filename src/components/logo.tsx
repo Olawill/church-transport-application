@@ -1,5 +1,5 @@
 import { CarIcon } from "lucide-react";
-import Link from "next/link";
+import { CustomLink as Link } from "./custom-link";
 
 export const ActsOnWheelsLogo = () => {
   return (

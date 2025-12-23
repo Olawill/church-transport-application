@@ -50,6 +50,7 @@ interface ServiceListProps {
   onEdit: (service: GetServiceType) => void;
   // onDelete: () => void;
   onShowForm: () => void;
+  locale: string;
 }
 
 export const ServiceList = ({
@@ -58,6 +59,7 @@ export const ServiceList = ({
   onEdit,
   // onDelete,
   onShowForm,
+  locale,
 }: ServiceListProps) => {
   const [DeleteDialog, confirmDelete] = useConfirm({
     title: "Delete Service",
@@ -317,9 +319,9 @@ export const ServiceList = ({
                     {service.startDate && (
                       <div className="text-xs text-muted-foreground mb-2">
                         Start:{" "}
-                        {new Date(service.startDate).toLocaleDateString()}
+                        {new Date(service.startDate).toLocaleDateString(locale)}
                         {service.endDate &&
-                          ` - End: ${new Date(service.endDate).toLocaleDateString()}`}
+                          ` - End: ${new Date(service.endDate).toLocaleDateString(locale)}`}
                       </div>
                     )}
 

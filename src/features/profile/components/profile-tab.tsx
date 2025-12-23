@@ -19,6 +19,7 @@ import { CustomFormLabel } from "@/components/custom-form-label";
 import { CustomPhoneInput } from "@/components/custom-phone-input";
 import { GetUserProfile } from "@/features/user/types";
 import { ProfileUpdateSchema } from "@/schemas/adminCreateNewUserSchema";
+import { useNavigationBlocker } from "@/components/contexts/navigation-blocker";
 
 interface ProfileTabProps {
   isProfileEditing: boolean;
@@ -41,6 +42,8 @@ export const ProfileTab = ({
   imagePreview,
   handleImageChange,
 }: ProfileTabProps) => {
+  const { setIsBlocked } = useNavigationBlocker();
+
   return (
     <Card>
       <CardHeader>
@@ -60,6 +63,7 @@ export const ProfileTab = ({
           <form
             className="space-y-6"
             onSubmit={profileForm.handleSubmit(handleProfileUpdate)}
+            onChange={() => setIsBlocked(true)}
           >
             {/* Profile Picture */}
             <div className="flex items-center space-x-4">

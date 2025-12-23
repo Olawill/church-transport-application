@@ -16,7 +16,6 @@ import {
   User,
   UserCheck,
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm, UseFormReturn, useWatch } from "react-hook-form";
@@ -94,6 +93,8 @@ import {
 } from "@tanstack/react-query";
 import { GetServiceType } from "../types";
 import { ServiceDaySelector } from "./services/service-day-selector";
+import { useNavigationBlocker } from "@/components/contexts/navigation-blocker";
+import { CustomLink as Link } from "@/components/custom-link";
 
 interface AdminNewUserRequestProps {
   isNewUser: boolean;
@@ -119,6 +120,7 @@ const AdminNewUserRequest = ({
   const router = useRouter();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
+  const { setIsBlocked } = useNavigationBlocker();
 
   const [usersOpen, setUsersOpen] = useState(false);
   const [servicesOpen, setServicesOpen] = useState(false);
@@ -344,6 +346,7 @@ const AdminNewUserRequest = ({
           trpc.userRequests.getUserRequests.queryOptions({})
         );
 
+        setIsBlocked(false);
         router.push("/requests");
       },
       onError: (error) => {
@@ -366,7 +369,7 @@ const AdminNewUserRequest = ({
         );
 
         setShowDialog?.(false);
-
+        setIsBlocked(false);
         router.push("/requests");
       },
       onError: (error) => {
@@ -761,7 +764,8 @@ const AdminNewUserRequest = ({
                       ? newRequestForm.handleSubmit(handleUpdate)
                       : newRequestForm.handleSubmit(handleSubmit)
                   }
-                  className="space-y-6 w-full min-w-0"
+                  onChange={() => setIsBlocked(true)}
+                  className="space-y-1 w-full min-w-0"
                 >
                   {/* User Selection */}
                   <FormField
@@ -1124,7 +1128,7 @@ const AdminNewUserRequest = ({
                   </div>
 
                   {/* Group Ride */}
-                  <div className="flex flex-col justify-between rounded-lg border p-3 shadow-sm">
+                  <div className="flex flex-col justify-between rounded-lg border p-3 shadow-sm my-4">
                     <FormField
                       control={newRequestForm.control}
                       name="isGroupRide"
@@ -1189,7 +1193,7 @@ const AdminNewUserRequest = ({
 
                   {/* Recurring Request */}
                   {!newRequestData && (
-                    <div className="flex flex-col justify-between rounded-lg border p-3 shadow-sm">
+                    <div className="flex flex-col justify-between rounded-lg border p-3 shadow-sm mb-4">
                       <FormField
                         control={newRequestForm.control}
                         name="isRecurring"
@@ -1241,7 +1245,7 @@ const AdminNewUserRequest = ({
                             const maxEndMonth = addMonths(today, 4);
 
                             return (
-                              <FormItem className="space-y-2">
+                              <FormItem className="space-y-1">
                                 <CustomFormLabel title="End Date" />
                                 <Popover>
                                   <PopoverTrigger
@@ -1316,7 +1320,7 @@ const AdminNewUserRequest = ({
                     control={newRequestForm.control}
                     name="notes"
                     render={({ field }) => (
-                      <FormItem className="space-y-2">
+                      <FormItem className="space-y-1">
                         <FormLabel>Additional Notes</FormLabel>
                         <FormControl>
                           <Textarea

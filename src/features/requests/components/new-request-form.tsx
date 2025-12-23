@@ -74,6 +74,8 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
+import { CustomLink } from "@/components/custom-link";
+import { useNavigationBlocker } from "@/components/contexts/navigation-blocker";
 
 interface NewRequestFormProps {
   newRequestData?: NewRequestSchema & {
@@ -115,9 +117,9 @@ export const NewRequestForm = ({
                 </Button>
               ) : (
                 <Button asChild variant="ghost" size="sm">
-                  <Link href="/requests">
+                  <CustomLink href="/requests">
                     <ArrowLeft className="size-4" />
-                  </Link>
+                  </CustomLink>
                 </Button>
               )}
               <h1 className="text-2xl font-bold">
@@ -162,6 +164,7 @@ const RequestForm = ({
   const router = useRouter();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
+  const { setIsBlocked } = useNavigationBlocker();
 
   const [selectedService, setSelectedService] = useState<GetServiceType | null>(
     null
@@ -294,6 +297,7 @@ const RequestForm = ({
           trpc.userRequests.getUserRequests.queryOptions({})
         );
 
+        setIsBlocked(false);
         router.push("/requests");
       },
       onError: (error) => {
@@ -316,6 +320,7 @@ const RequestForm = ({
         );
 
         setShowDialog?.(false);
+        setIsBlocked(false);
 
         router.push("/requests");
       },
@@ -390,6 +395,7 @@ const RequestForm = ({
             ? form.handleSubmit(handleUpdate)
             : form.handleSubmit(handleSubmit)
         }
+        onChange={() => setIsBlocked(true)}
         className="space-y-6 w-full min-w-0"
       >
         {/* Service Selection */}

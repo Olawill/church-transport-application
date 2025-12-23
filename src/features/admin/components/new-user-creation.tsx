@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, Key, Loader2Icon, UserPlus2Icon } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -37,11 +36,14 @@ import {
 } from "@/schemas/adminCreateNewUserSchema";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTRPC } from "@/trpc/client";
+import { CustomLink as Link } from "@/components/custom-link";
+import { useNavigationBlocker } from "@/components/contexts/navigation-blocker";
 
 export const NewUserCreationForm = () => {
   const router = useRouter();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
+  const { setIsBlocked } = useNavigationBlocker();
 
   const form = useForm<NewUserSchema>({
     resolver: zodResolver(newUserSchema),
@@ -96,6 +98,8 @@ export const NewUserCreationForm = () => {
     trpc.adminUsers.createUser.mutationOptions({
       onSuccess: () => {
         queryClient.invalidateQueries(trpc.adminUsers.getUsers.queryOptions());
+
+        setIsBlocked(false);
         toast.success("User Created Successfully!");
         router.push("/admin/users");
       },
@@ -123,6 +127,7 @@ export const NewUserCreationForm = () => {
           trpc.userRequests.getUserRequests.queryOptions({})
         );
 
+        setIsBlocked(false);
         toast.success("User and ride request(s) created Successfully!");
         router.push("/admin/users");
       },
@@ -195,7 +200,11 @@ export const NewUserCreationForm = () => {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              onChange={() => setIsBlocked(true)}
+              className="space-y-8"
+            >
               {/* Name */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField

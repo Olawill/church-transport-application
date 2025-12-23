@@ -57,7 +57,7 @@ type FormSchema =
   | OnetimeMultiDaySchema
   | FrequentMultiDaySchema;
 
-export const ServiceManagement = () => {
+export const ServiceManagement = ({ locale }: { locale: string }) => {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
@@ -453,6 +453,7 @@ export const ServiceManagement = () => {
         onEdit={handleEdit}
         // onDelete={fetchServiceDays}
         onShowForm={() => setShowForm({ showForm: true })}
+        locale={locale}
       />
     </div>
   );

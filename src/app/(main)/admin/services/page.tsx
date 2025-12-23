@@ -9,6 +9,7 @@ import { ServiceManagement } from "@/features/admin/components/service-managemen
 import { servicesParamsLoader } from "@/features/admin/server/services/params-loader";
 import { requireAuth } from "@/lib/session/server-session";
 import { HydrateClient, prefetch, trpc } from "@/trpc/server";
+import { headers } from "next/headers";
 
 type Props = {
   searchParams: Promise<SearchParams>;
@@ -35,6 +36,9 @@ const AdminServicesPage = async ({ searchParams }: Props) => {
 
   prefetch(trpc.services.getPaginatedServices.queryOptions(params));
 
+  const locale =
+    (await headers()).get("accept-language")?.split(",")[0] ?? "en-CA";
+
   return (
     <HydrateClient>
       <ErrorBoundary
@@ -45,7 +49,7 @@ const AdminServicesPage = async ({ searchParams }: Props) => {
           />
         }
       >
-        <ServiceManagement />
+        <ServiceManagement locale={locale} />
       </ErrorBoundary>
     </HydrateClient>
   );

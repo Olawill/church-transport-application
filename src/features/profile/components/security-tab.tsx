@@ -79,6 +79,7 @@ import { toast } from "sonner";
 import { APP_NAME } from "@/config/constants";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { MdOutlineCameraswitch } from "react-icons/md";
+import { useNavigationBlocker } from "@/components/contexts/navigation-blocker";
 
 interface SecurityTabProps {
   securityForm: UseFormReturn<SecurityUpdateSchema>;
@@ -807,96 +808,101 @@ const ChangePassword = ({
   securityForm,
   handleChangePassword,
   isChangingPassword,
-}: ChangePasswordProps) => (
-  <Form {...securityForm}>
-    <form
-      className="space-y-4"
-      onSubmit={securityForm.handleSubmit(handleChangePassword)}
-    >
-      {/* Current Password */}
-      <FormField
-        control={securityForm.control}
-        name="currentPassword"
-        render={({ field }) => (
-          <FormItem className="space-y-1">
-            <CustomFormLabel title="Current Password" />
-            <FormControl>
-              <Input
-                {...field}
-                type="password"
-                name="currentPassword"
-                onChange={(e) => field.onChange(e)}
-                placeholder="Enter Current Password"
-                disabled={isChangingPassword}
-              />
-            </FormControl>
-            <div className="min-h-[1.25rem]">
-              <FormMessage />
-            </div>
-          </FormItem>
-        )}
-      />
+}: ChangePasswordProps) => {
+  const { setIsBlocked } = useNavigationBlocker();
 
-      {/* New Password */}
-      <FormField
-        control={securityForm.control}
-        name="newPassword"
-        render={({ field }) => (
-          <FormItem className="space-y-1">
-            <CustomFormLabel title="New Password" />
-            <FormControl>
-              <Input
-                {...field}
-                type="password"
-                name="newPassword"
-                onChange={(e) => field.onChange(e)}
-                placeholder="Enter New Password"
-                disabled={isChangingPassword}
-              />
-            </FormControl>
-            <div className="min-h-[1.25rem]">
-              <FormMessage />
-            </div>
-          </FormItem>
-        )}
-      />
-
-      {/* Confirm New Password */}
-      <FormField
-        control={securityForm.control}
-        name="confirmPassword"
-        render={({ field }) => (
-          <FormItem className="space-y-1">
-            <CustomFormLabel title="Confirm New Password" />
-            <FormControl>
-              <Input
-                {...field}
-                type="password"
-                name="confirmPassword"
-                onChange={(e) => field.onChange(e)}
-                placeholder="Confirm New password"
-                disabled={isChangingPassword}
-              />
-            </FormControl>
-            <div className="min-h-[1.25rem]">
-              <FormMessage />
-            </div>
-          </FormItem>
-        )}
-      />
-
-      {/* Update Button */}
-      <Button
-        type="submit"
-        className="w-full"
-        disabled={!securityForm.formState.isDirty || isChangingPassword}
+  return (
+    <Form {...securityForm}>
+      <form
+        className="space-y-1"
+        onSubmit={securityForm.handleSubmit(handleChangePassword)}
+        onChange={() => setIsBlocked(true)}
       >
-        <KeyRoundIcon className="size-4" />
-        Update Password
-      </Button>
-    </form>
-  </Form>
-);
+        {/* Current Password */}
+        <FormField
+          control={securityForm.control}
+          name="currentPassword"
+          render={({ field }) => (
+            <FormItem className="space-y-1">
+              <CustomFormLabel title="Current Password" />
+              <FormControl>
+                <Input
+                  {...field}
+                  type="password"
+                  name="currentPassword"
+                  onChange={(e) => field.onChange(e)}
+                  placeholder="Enter Current Password"
+                  disabled={isChangingPassword}
+                />
+              </FormControl>
+              <div className="min-h-[1.25rem]">
+                <FormMessage />
+              </div>
+            </FormItem>
+          )}
+        />
+
+        {/* New Password */}
+        <FormField
+          control={securityForm.control}
+          name="newPassword"
+          render={({ field }) => (
+            <FormItem className="space-y-1">
+              <CustomFormLabel title="New Password" />
+              <FormControl>
+                <Input
+                  {...field}
+                  type="password"
+                  name="newPassword"
+                  onChange={(e) => field.onChange(e)}
+                  placeholder="Enter New Password"
+                  disabled={isChangingPassword}
+                />
+              </FormControl>
+              <div className="min-h-[1.25rem]">
+                <FormMessage />
+              </div>
+            </FormItem>
+          )}
+        />
+
+        {/* Confirm New Password */}
+        <FormField
+          control={securityForm.control}
+          name="confirmPassword"
+          render={({ field }) => (
+            <FormItem className="space-y-1">
+              <CustomFormLabel title="Confirm New Password" />
+              <FormControl>
+                <Input
+                  {...field}
+                  type="password"
+                  name="confirmPassword"
+                  onChange={(e) => field.onChange(e)}
+                  placeholder="Confirm New password"
+                  disabled={isChangingPassword}
+                />
+              </FormControl>
+              <div className="min-h-[1.25rem]">
+                <FormMessage />
+              </div>
+            </FormItem>
+          )}
+        />
+
+        {/* Update Button */}
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={!securityForm.formState.isDirty || isChangingPassword}
+        >
+          <KeyRoundIcon className="size-4" />
+          Update Password
+        </Button>
+      </form>
+    </Form>
+  );
+};
 
 const GetTotpURI = () => {
   const { data: session } = useSession();

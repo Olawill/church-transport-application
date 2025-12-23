@@ -38,6 +38,7 @@ import { ProfileTab } from "@/features/profile/components/profile-tab";
 import { SecurityTab } from "@/features/profile/components/security-tab";
 import { GetUserAddress } from "@/features/user/types";
 import { useProfileParams } from "../hooks/use-profile-params";
+import { useNavigationBlocker } from "@/components/contexts/navigation-blocker";
 
 export interface Address {
   id: string;
@@ -79,6 +80,7 @@ export const ProfileManagement = () => {
   const [isChangingPassword, startPasswordTransition] = useTransition();
 
   const { data: session } = useSession();
+  const { isBlocked, setIsBlocked, confirmExit } = useNavigationBlocker();
 
   const [params, setParams] = useProfileParams();
   const { tab } = params;
@@ -188,6 +190,7 @@ export const ProfileManagement = () => {
         );
         setIsProfileEditing(false);
         setImagePreview("");
+        setIsBlocked(false);
         toast.success("Profile updated successfully");
       },
       onError: (error) => {
@@ -493,6 +496,7 @@ export const ProfileManagement = () => {
         {
           onSuccess: () => {
             securityForm.reset();
+            setIsBlocked(false);
             toast.success("Password updated successfully");
           },
           onError: ({ error }) => {
@@ -536,6 +540,26 @@ export const ProfileManagement = () => {
     }
   };
 
+  const handleUnsavedChanges = async (value: string) => {
+    if (isBlocked) {
+      const result = await confirmExit();
+      if (result.action !== "confirm" && result.action !== "primary") {
+        return; // User cancelled, stay on page
+      }
+      setIsBlocked(false); // User confirmed, unblock and navigate
+
+      if (params.tab === "security") {
+        securityForm.reset();
+      }
+
+      if (params.tab === "profile") {
+        setIsProfileEditing(false);
+        profileForm.reset();
+      }
+    }
+    setParams({ ...params, tab: value });
+  };
+
   const isLoading =
     updateUserProfile.isPending ||
     addUserAddress.isPending ||
@@ -561,9 +585,7 @@ export const ProfileManagement = () => {
           className="w-full"
           defaultValue={tab}
           value={tab}
-          onValueChange={(value) => {
-            setParams({ ...params, tab: value });
-          }}
+          onValueChange={(value) => handleUnsavedChanges(value)}
         >
           <TabsList
             className={cn(

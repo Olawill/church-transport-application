@@ -1,4 +1,10 @@
-import { CalendarIcon, CarIcon, HomeIcon, UsersIcon } from "lucide-react";
+import {
+  Calendar1Icon,
+  CalendarIcon,
+  CarIcon,
+  HomeIcon,
+  UsersIcon,
+} from "lucide-react";
 
 export const navigationItems = [
   {
@@ -17,7 +23,7 @@ export const navigationItems = [
   {
     name: "Services",
     href: "/admin/services",
-    icon: CalendarIcon,
+    icon: Calendar1Icon,
     roles: ["ADMIN"],
   },
   {

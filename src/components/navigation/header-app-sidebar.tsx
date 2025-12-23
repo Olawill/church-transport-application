@@ -1,7 +1,7 @@
 "use client";
 
+import { Route } from "next";
 import { GavelIcon, KeyIcon, LogOut, UserIcon } from "lucide-react";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 import { UserRole } from "@/generated/prisma/enums";
@@ -28,7 +28,8 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Route } from "next";
+
+import { CustomLink as Link } from "@/components/custom-link";
 import { ActsOnWheelsLogo } from "../logo";
 import { navigationItems } from "./navigation-items";
 
@@ -79,7 +80,7 @@ export const NavAppSidebar = ({
               {userNavigationItems.map((item) => (
                 <SidebarMenuItem key={item.name} onClick={toggleSidebar}>
                   <SidebarMenuButton asChild isActive={pathname === item.href}>
-                    <Link href={item.href as Route}>
+                    <Link href={item.href as Route} prefetch>
                       <item.icon className="size-5" />
                       <span className="font-semibold">
                         {item.name.toUpperCase()}
@@ -100,7 +101,7 @@ export const NavAppSidebar = ({
             <SidebarMenu>
               <SidebarMenuItem onClick={toggleSidebar}>
                 <SidebarMenuButton asChild isActive={pathname === "/profile"}>
-                  <Link href="/profile">
+                  <Link href="/profile" prefetch>
                     <UserIcon className="size-5" />
                     <span className="font-semibold">PROFILE</span>
                   </Link>
@@ -115,7 +116,7 @@ export const NavAppSidebar = ({
                       asChild
                       isActive={pathname === "/admin/appeal-decision"}
                     >
-                      <Link href="/admin/appeal-decision">
+                      <Link href="/admin/appeal-decision" prefetch>
                         <GavelIcon className="size-5" />
                         <span className="font-semibold">APPEAL DECISION</span>
                       </Link>
@@ -127,7 +128,7 @@ export const NavAppSidebar = ({
                       asChild
                       isActive={pathname === "/credentials"}
                     >
-                      <Link href="/credentials">
+                      <Link href="/credentials" prefetch>
                         <KeyIcon className="size-5" />
                         <span className="font-semibold">CREDENTIALS</span>
                       </Link>

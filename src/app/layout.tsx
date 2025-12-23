@@ -5,6 +5,7 @@ import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { ThemeProvider } from "@/components/theming/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TRPCReactProvider } from "@/trpc/client";
+import { NavigationBlockerProvider } from "@/components/contexts/navigation-blocker";
 
 import "./globals.css";
 
@@ -120,7 +121,7 @@ const RootLayout = async ({
         >
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
             <NuqsAdapter>
-              {children}
+              <NavigationBlockerProvider>{children}</NavigationBlockerProvider>
               <Toaster position="bottom-right" richColors closeButton />
             </NuqsAdapter>
           </ThemeProvider>

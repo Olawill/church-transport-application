@@ -54,12 +54,12 @@ export const PickUpDropOffField = <T extends PickUpDropOffFormFields>({
               </FormControl>
               <FormLabel>Pickup Service</FormLabel>
             </div>
-            <div className="min-h-[1.25rem]">
-              <FormMessage />
-            </div>
             <FormDescription className="text-xs text-gray-500 dark:text-gray-200">
               Select if you need a pickup service to the church
             </FormDescription>
+            <div className="min-h-[1.25rem]">
+              <FormMessage />
+            </div>
           </FormItem>
         )}
       />
@@ -91,12 +91,12 @@ export const PickUpDropOffField = <T extends PickUpDropOffFormFields>({
               </FormControl>
               <FormLabel>Drop-off Service</FormLabel>
             </div>
-            <div className="min-h-[1.25rem]">
-              <FormMessage />
-            </div>
             <FormDescription className="text-xs text-gray-500 dark:text-gray-200">
               Select if you need a drop off after service from church
             </FormDescription>
+            <div className="min-h-[1.25rem]">
+              <FormMessage />
+            </div>
           </FormItem>
         )}
       />
