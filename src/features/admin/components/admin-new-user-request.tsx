@@ -63,7 +63,9 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
+import { useNavigationBlocker } from "@/components/contexts/navigation-blocker";
 import { CustomFormLabel } from "@/components/custom-form-label";
+import { CustomLink as Link } from "@/components/custom-link";
 import { PickUpDropOffField } from "@/features/requests/components/pickup-dropoff-field";
 import { UserType } from "@/features/users/types";
 import { useConfirm } from "@/hooks/use-confirm";
@@ -93,8 +95,6 @@ import {
 } from "@tanstack/react-query";
 import { GetServiceType } from "../types";
 import { ServiceDaySelector } from "./services/service-day-selector";
-import { useNavigationBlocker } from "@/components/contexts/navigation-blocker";
-import { CustomLink as Link } from "@/components/custom-link";
 
 interface AdminNewUserRequestProps {
   isNewUser: boolean;
@@ -126,13 +126,13 @@ const AdminNewUserRequest = ({
   const [servicesOpen, setServicesOpen] = useState(false);
 
   const [selectedService, setSelectedService] = useState<GetServiceType | null>(
-    null
+    null,
   );
   const [dayOptions, setDayOptions] = useState<
     Array<{ value: string; label: string; dayOfWeek: number }>
   >([]);
   const [selectedDayOfWeek, setSelectedDayOfWeek] = useState<number | null>(
-    null
+    null,
   );
 
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
@@ -150,17 +150,17 @@ const AdminNewUserRequest = ({
   const { data: serviceDays, isLoading: servicesLoading } = useSuspenseQuery(
     trpc.services.getServices.queryOptions({
       status: "active",
-    })
+    }),
   );
 
   const { data: users, isLoading: usersLoading } = useSuspenseQuery(
-    trpc.users.getUsers.queryOptions({})
+    trpc.users.getUsers.queryOptions({}),
   );
 
   const { data: addresses = [], isLoading: userAddressesLoading } = useQuery(
     trpc.adminUser.getUserAddresses.queryOptions(
-      selectedUser ? { id: selectedUser.id } : skipToken
-    )
+      selectedUser ? { id: selectedUser.id } : skipToken,
+    ),
   );
 
   const newRequestForm = useForm<NewAdminRequestSchema>({
@@ -339,11 +339,11 @@ const AdminNewUserRequest = ({
         toast.success(
           data.length > 1
             ? "Request series was created successfully"
-            : "Request was created successfully"
+            : "Request was created successfully",
         );
 
         queryClient.invalidateQueries(
-          trpc.userRequests.getUserRequests.queryOptions({})
+          trpc.userRequests.getUserRequests.queryOptions({}),
         );
 
         setIsBlocked(false);
@@ -352,7 +352,7 @@ const AdminNewUserRequest = ({
       onError: (error) => {
         toast.error(error.message || `Failed to create request`);
       },
-    })
+    }),
   );
 
   const updateRequest = useMutation(
@@ -361,11 +361,11 @@ const AdminNewUserRequest = ({
         toast.success(
           data.length === 1
             ? `Request was updated successfully.`
-            : `${data.length} request in the series was updated successfully.`
+            : `${data.length} request in the series was updated successfully.`,
         );
 
         queryClient.invalidateQueries(
-          trpc.userRequests.getUserRequests.queryOptions({})
+          trpc.userRequests.getUserRequests.queryOptions({}),
         );
 
         setShowDialog?.(false);
@@ -375,7 +375,7 @@ const AdminNewUserRequest = ({
       onError: (error) => {
         toast.error(error.message || `Failed to update request`);
       },
-    })
+    }),
   );
 
   const handleSubmit = async (values: NewAdminRequestSchema) => {
@@ -383,7 +383,7 @@ const AdminNewUserRequest = ({
 
     if (!validatedFields.success) {
       toast.error(
-        validatedFields.error.message || "Please fill in all required fields"
+        validatedFields.error.message || "Please fill in all required fields",
       );
       return;
     }
@@ -399,7 +399,7 @@ const AdminNewUserRequest = ({
 
     if (!validatedFields.success) {
       toast.error(
-        validatedFields.error.message || "Please fill in all required fields"
+        validatedFields.error.message || "Please fill in all required fields",
       );
       return;
     }
@@ -450,7 +450,7 @@ const AdminNewUserRequest = ({
                   <CustomFormLabel title="Church Service" />
                   <Select value={field.value} onValueChange={field.onChange}>
                     <FormControl>
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger className="w-full truncate overflow-hidden">
                         <SelectValue placeholder="Select a service" />
                       </SelectTrigger>
                     </FormControl>
@@ -468,7 +468,7 @@ const AdminNewUserRequest = ({
                     </SelectContent>
                   </Select>
                   {selectedService && selectedDayOfWeek != null && (
-                    <FormDescription className="mt-2 p-3 bg-blue-50 rounded-lg">
+                    <FormDescription className="mt-2 rounded-lg bg-blue-50 p-3">
                       <span className="flex items-center space-x-2 text-sm text-blue-700">
                         <Clock className="size-4" />
                         <span>
@@ -514,13 +514,13 @@ const AdminNewUserRequest = ({
                           variant={"outline"}
                           className={cn(
                             "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
+                            !field.value && "text-muted-foreground",
                           )}
                         >
                           {field.value ? (
                             format(
                               new Date(formatDate(new Date(field.value))),
-                              "PPP"
+                              "PPP",
                             )
                           ) : (
                             <span>Select a date</span>
@@ -555,12 +555,12 @@ const AdminNewUserRequest = ({
           />
 
           {/* Pickup and Dropoff Options */}
-          <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="mt-2 grid grid-cols-1 gap-4 md:grid-cols-2">
             <PickUpDropOffField form={form!} />
           </div>
 
           {/* Group Ride */}
-          <div className="flex flex-col justify-between rounded-lg border p-3 shadow-sm mt-4">
+          <div className="mt-4 flex flex-col justify-between rounded-lg border p-3 shadow-sm">
             <FormField
               control={form.control}
               name="isGroupRide"
@@ -617,7 +617,7 @@ const AdminNewUserRequest = ({
           </div>
 
           {/* Recurring Request */}
-          <div className="flex flex-col justify-between rounded-lg border p-3 shadow-sm mt-4">
+          <div className="mt-4 flex flex-col justify-between rounded-lg border p-3 shadow-sm">
             <FormField
               control={form.control}
               name="isRecurring"
@@ -639,7 +639,7 @@ const AdminNewUserRequest = ({
                         const maxEndDate = addMonths(startDate as Date, 3);
                         form?.setValue(
                           "endDate",
-                          !checked ? undefined : maxEndDate
+                          !checked ? undefined : maxEndDate,
                         );
                         field.onChange(checked);
                       }}
@@ -674,13 +674,13 @@ const AdminNewUserRequest = ({
                               variant={"outline"}
                               className={cn(
                                 "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
+                                !field.value && "text-muted-foreground",
                               )}
                             >
                               {field.value ? (
                                 format(
                                   new Date(formatDate(new Date(field.value))),
-                                  "PPP"
+                                  "PPP",
                                 )
                               ) : (
                                 <span>Select a date</span>
@@ -723,10 +723,10 @@ const AdminNewUserRequest = ({
           </div>
         </>
       ) : (
-        <div className="space-y-6 w-full">
+        <div className="w-full space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <div className="flex items-center space-x-3 mb-2">
+              <div className="mb-2 flex items-center space-x-3">
                 {newRequestData ? (
                   <Button variant="ghost" size="icon" className="cursor-none">
                     <Pencil className="size-4" />
@@ -765,7 +765,7 @@ const AdminNewUserRequest = ({
                       : newRequestForm.handleSubmit(handleSubmit)
                   }
                   onChange={() => setIsBlocked(true)}
-                  className="space-y-1 w-full min-w-0"
+                  className="w-full min-w-0 space-y-1"
                 >
                   {/* User Selection */}
                   <FormField
@@ -787,12 +787,12 @@ const AdminNewUserRequest = ({
                                 aria-expanded={usersOpen}
                                 disabled={!!newRequestData || usersLoading}
                                 className={cn(
-                                  "justify-between",
-                                  !field.value && "text-muted-foreground"
+                                  "justify-between overflow-hidden",
+                                  !field.value && "text-muted-foreground",
                                 )}
                               >
-                                <span className="flex items-center gap-x-2">
-                                  <UserCheck className="size-4 text-muted-foreground" />
+                                <span className="flex items-center gap-x-2 truncate">
+                                  <UserCheck className="text-muted-foreground size-4" />
                                   {field.value
                                     ? users.find((s) => s.id === field.value)
                                         ?.name
@@ -815,13 +815,13 @@ const AdminNewUserRequest = ({
                                       onSelect={() => {
                                         newRequestForm.setValue(
                                           "userId",
-                                          user.id
+                                          user.id,
                                         );
                                         setUsersOpen(false);
                                       }}
                                       className={cn(
                                         field.value === user.id &&
-                                          "font-semibold"
+                                          "font-semibold",
                                       )}
                                     >
                                       {field.value === user.id ? (
@@ -837,7 +837,7 @@ const AdminNewUserRequest = ({
                                           "ml-auto size-4",
                                           field.value === user.id
                                             ? "opacity-100"
-                                            : "opacity-0"
+                                            : "opacity-0",
                                         )}
                                       />
                                     </CommandItem>
@@ -848,20 +848,20 @@ const AdminNewUserRequest = ({
                           </PopoverContent>
                         </Popover>
                         {selectedUser && (
-                          <FormDescription className="mt-2 p-3 bg-blue-50 rounded-lg">
+                          <FormDescription className="mt-2 rounded-lg bg-blue-50 p-3">
                             {!newRequestData ? (
                               <>
                                 <span className="flex items-center space-x-2 text-sm text-gray-700">
                                   <UserCheck className="size-4" />
                                   <span>{selectedUser.name}</span>
                                 </span>
-                                <span className="text-xs text-gray-500 dark:text-gray-900 mt-1">
+                                <span className="mt-1 text-xs text-gray-500 dark:text-gray-900">
                                   Please ensure this is the person you want to
                                   request a ride on behalf of
                                 </span>
                               </>
                             ) : (
-                              <span className="text-xs text-gray-500 dark:text-gray-900 mt-1">
+                              <span className="mt-1 text-xs text-gray-500 dark:text-gray-900">
                                 You cannot change the user for this request
                               </span>
                             )}
@@ -897,16 +897,16 @@ const AdminNewUserRequest = ({
                                 aria-expanded={servicesOpen}
                                 disabled={!!newRequestData || servicesLoading}
                                 className={cn(
-                                  "justify-between",
-                                  !field.value && "text-muted-foreground"
+                                  "justify-between overflow-hidden",
+                                  !field.value && "text-muted-foreground",
                                 )}
                               >
-                                <span className="flex items-center gap-x-2">
-                                  <CalendarIcon className="size-4 text-muted-foreground" />
+                                <span className="flex items-center gap-x-2 truncate">
+                                  <CalendarIcon className="text-muted-foreground size-4" />
                                   {field.value
                                     ? (() => {
                                         const service = serviceDays.find(
-                                          (s) => s.id === field.value
+                                          (s) => s.id === field.value,
                                         );
                                         if (!service?.time) {
                                           return service?.name;
@@ -932,13 +932,13 @@ const AdminNewUserRequest = ({
                                       onSelect={() => {
                                         newRequestForm.setValue(
                                           "serviceDayId",
-                                          service.id
+                                          service.id,
                                         );
                                         setServicesOpen(false);
                                       }}
                                       className={cn(
                                         field.value === service.id &&
-                                          "font-semibold"
+                                          "font-semibold",
                                       )}
                                     >
                                       <CalendarIcon className={cn("size-4")} />
@@ -949,7 +949,7 @@ const AdminNewUserRequest = ({
                                           "ml-auto size-4",
                                           field.value === service.id
                                             ? "opacity-100"
-                                            : "opacity-0"
+                                            : "opacity-0",
                                         )}
                                       />
                                     </CommandItem>
@@ -960,7 +960,7 @@ const AdminNewUserRequest = ({
                           </PopoverContent>
                         </Popover>
                         {selectedService && selectedDayOfWeek != null && (
-                          <FormDescription className="mt-2 p-3 bg-blue-50 rounded-lg">
+                          <FormDescription className="mt-2 rounded-lg bg-blue-50 p-3">
                             <span className="flex items-center space-x-2 text-sm text-blue-700">
                               <Clock className="size-4" />
                               <span>
@@ -1011,15 +1011,15 @@ const AdminNewUserRequest = ({
                                   variant={"outline"}
                                   className={cn(
                                     "w-full pl-3 text-left font-normal",
-                                    !field.value && "text-muted-foreground"
+                                    !field.value && "text-muted-foreground",
                                   )}
                                 >
                                   {field.value ? (
                                     format(
                                       new Date(
-                                        formatDate(new Date(field.value))
+                                        formatDate(new Date(field.value)),
                                       ),
-                                      "PPP"
+                                      "PPP",
                                     )
                                   ) : (
                                     <span>Select a date</span>
@@ -1071,12 +1071,13 @@ const AdminNewUserRequest = ({
                             userAddressesLoading
                           }
                         >
-                          <FormControl>
+                          <FormControl className="">
                             <SelectTrigger
                               className={cn(
+                                "truncate overflow-hidden",
                                 !newRequestData
                                   ? "w-full"
-                                  : "max-w-[min(calc(100vw-4rem),430px)]"
+                                  : "max-w-[min(calc(100vw-4rem),430px)]",
                               )}
                               disabled={isLoading}
                             >
@@ -1088,11 +1089,11 @@ const AdminNewUserRequest = ({
                               <SelectItem key={address.id} value={address.id}>
                                 <div className="flex items-center space-x-2 overflow-hidden">
                                   <MapPin className="size-4 shrink-0" />
-                                  <span className="truncate flex-1">
+                                  <span className="flex-1 truncate">
                                     {formatAddress(address)}
                                   </span>
                                   {address.isDefault && (
-                                    <span className="text-xs text-blue-600 shrink-0 whitespace-nowrap">
+                                    <span className="shrink-0 text-xs whitespace-nowrap text-blue-600">
                                       (Default)
                                     </span>
                                   )}
@@ -1102,14 +1103,14 @@ const AdminNewUserRequest = ({
                           </SelectContent>
                         </Select>
                         {selectedAddress && (
-                          <FormDescription className="mt-2 p-3 bg-gray-50 rounded-lg">
-                            <span className="flex items-center space-x-2 text-sm text-gray-700 min-w-0">
+                          <FormDescription className="mt-2 rounded-lg bg-gray-50 p-3">
+                            <span className="flex min-w-0 items-center space-x-2 text-sm text-gray-700">
                               <MapPin className="size-4" />
                               <span className="break-words">
                                 {formatAddress(selectedAddress)}
                               </span>
                             </span>
-                            <span className="text-xs text-gray-500 dark:text-gray-900  mt-1 block">
+                            <span className="mt-1 block text-xs text-gray-500 dark:text-gray-900">
                               Please ensure this address is correct before
                               submitting your request
                             </span>
@@ -1123,12 +1124,12 @@ const AdminNewUserRequest = ({
                   />
 
                   {/* Pickup and Dropoff Options */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <PickUpDropOffField form={newRequestForm} />
                   </div>
 
                   {/* Group Ride */}
-                  <div className="flex flex-col justify-between rounded-lg border p-3 shadow-sm my-4">
+                  <div className="my-4 flex flex-col justify-between rounded-lg border p-3 shadow-sm">
                     <FormField
                       control={newRequestForm.control}
                       name="isGroupRide"
@@ -1146,7 +1147,7 @@ const AdminNewUserRequest = ({
                               onCheckedChange={(checked) => {
                                 newRequestForm.setValue(
                                   "numberOfGroup",
-                                  !checked ? null : 2
+                                  !checked ? null : 2,
                                 );
                                 field.onChange(checked);
                               }}
@@ -1176,7 +1177,7 @@ const AdminNewUserRequest = ({
                                   const val = e.target.value;
                                   // Convert empty string to null, otherwise to integer
                                   field.onChange(
-                                    val === "" ? null : parseInt(val, 10)
+                                    val === "" ? null : parseInt(val, 10),
                                   );
                                 }}
                                 disabled={isLoading}
@@ -1193,7 +1194,7 @@ const AdminNewUserRequest = ({
 
                   {/* Recurring Request */}
                   {!newRequestData && (
-                    <div className="flex flex-col justify-between rounded-lg border p-3 shadow-sm mb-4">
+                    <div className="mb-4 flex flex-col justify-between rounded-lg border p-3 shadow-sm">
                       <FormField
                         control={newRequestForm.control}
                         name="isRecurring"
@@ -1215,11 +1216,11 @@ const AdminNewUserRequest = ({
                                     newRequestForm.getValues("requestDate");
                                   const maxEndDate = addMonths(
                                     startDate as Date,
-                                    3
+                                    3,
                                   );
                                   newRequestForm.setValue(
                                     "endDate",
-                                    !checked ? undefined : maxEndDate
+                                    !checked ? undefined : maxEndDate,
                                   );
                                   field.onChange(checked);
                                 }}
@@ -1259,15 +1260,15 @@ const AdminNewUserRequest = ({
                                         className={cn(
                                           "w-full pl-3 text-left font-normal",
                                           !field.value &&
-                                            "text-muted-foreground"
+                                            "text-muted-foreground",
                                         )}
                                       >
                                         {field.value ? (
                                           format(
                                             new Date(
-                                              formatDate(new Date(field.value))
+                                              formatDate(new Date(field.value)),
                                             ),
-                                            "PPP"
+                                            "PPP",
                                           )
                                         ) : (
                                           <span>Select a date</span>
@@ -1327,7 +1328,7 @@ const AdminNewUserRequest = ({
                             {...field}
                             id="notes"
                             placeholder="Any special instructions or requirements..."
-                            className="resize-none w-full"
+                            className="w-full resize-none"
                             rows={5}
                             disabled={isLoading}
                           />
@@ -1344,11 +1345,11 @@ const AdminNewUserRequest = ({
                   />
 
                   {/* Important Information */}
-                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <h4 className="font-semibold text-yellow-800 mb-2">
+                  <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+                    <h4 className="mb-2 font-semibold text-yellow-800">
                       Important Information
                     </h4>
-                    <ul className="text-sm text-yellow-700 space-y-1">
+                    <ul className="space-y-1 text-sm text-yellow-700">
                       <li>
                         • Pickup requests must be submitted latest 2 hour before
                         the service

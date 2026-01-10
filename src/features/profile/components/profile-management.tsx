@@ -1,7 +1,6 @@
 "use client";
 
 import { changePassword, useSession } from "@/lib/auth-client";
-import { cn } from "@/lib/utils";
 import { useTRPC } from "@/trpc/client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -32,13 +31,13 @@ import {
 
 import { AddressesTab } from "@/features/profile/components/addresses-tab";
 // import { ChurchTab } from "@/features/profile/components/church-tab";
+import { useNavigationBlocker } from "@/components/contexts/navigation-blocker";
 import { NotificationsTab } from "@/features/profile/components/notifications-tab";
 import { ProfileManagementSkeleton } from "@/features/profile/components/profile-management-skeleton";
 import { ProfileTab } from "@/features/profile/components/profile-tab";
 import { SecurityTab } from "@/features/profile/components/security-tab";
 import { GetUserAddress } from "@/features/user/types";
 import { useProfileParams } from "../hooks/use-profile-params";
-import { useNavigationBlocker } from "@/components/contexts/navigation-blocker";
 
 export interface Address {
   id: string;
@@ -90,7 +89,7 @@ export const ProfileManagement = () => {
   const [isAddressEditing, setIsAddressEditing] = useState(false);
   const [addressDialogOpen, setAddressDialogOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState<GetUserAddress | null>(
-    null
+    null,
   );
 
   const [imagePreview, setImagePreview] = useState<string>("");
@@ -104,10 +103,10 @@ export const ProfileManagement = () => {
     session?.user?.role === "ADMIN" || session?.user?.role === "OWNER";
 
   const { data: profile } = useSuspenseQuery(
-    trpc.userProfile.getUserProfile.queryOptions()
+    trpc.userProfile.getUserProfile.queryOptions(),
   );
   const { data: addresses, isLoading: loading } = useSuspenseQuery(
-    trpc.userAddresses.getUserAddresses.queryOptions()
+    trpc.userAddresses.getUserAddresses.queryOptions(),
   );
 
   // const { data: organization, isLoading: organizationLoading } = useQuery(
@@ -186,7 +185,7 @@ export const ProfileManagement = () => {
     trpc.userProfile.updateUserProfile.mutationOptions({
       onSuccess: () => {
         queryClient.invalidateQueries(
-          trpc.userProfile.getUserProfile.queryOptions()
+          trpc.userProfile.getUserProfile.queryOptions(),
         );
         setIsProfileEditing(false);
         setImagePreview("");
@@ -196,7 +195,7 @@ export const ProfileManagement = () => {
       onError: (error) => {
         toast.error(error.message || "Failed to update profile");
       },
-    })
+    }),
   );
 
   // User address mutations
@@ -204,7 +203,7 @@ export const ProfileManagement = () => {
     trpc.userAddresses.createUserAddress.mutationOptions({
       onSuccess: () => {
         queryClient.invalidateQueries(
-          trpc.userAddresses.getUserAddresses.queryOptions()
+          trpc.userAddresses.getUserAddresses.queryOptions(),
         );
         setAddressDialogOpen(false);
         addressForm.reset();
@@ -213,14 +212,14 @@ export const ProfileManagement = () => {
       onError: (error) => {
         toast.error(error.message || "Failed to add address");
       },
-    })
+    }),
   );
 
   const updateUserAddress = useMutation(
     trpc.userAddress.updateUserAddress.mutationOptions({
       onSuccess: () => {
         queryClient.invalidateQueries(
-          trpc.userAddresses.getUserAddresses.queryOptions()
+          trpc.userAddresses.getUserAddresses.queryOptions(),
         );
         setAddressDialogOpen(false);
         setEditingAddress(null);
@@ -230,14 +229,14 @@ export const ProfileManagement = () => {
       onError: (error) => {
         toast.error(error.message || "Failed to update address");
       },
-    })
+    }),
   );
 
   const deleteUserAddress = useMutation(
     trpc.userAddress.deleteUserAddress.mutationOptions({
       onSuccess: () => {
         queryClient.invalidateQueries(
-          trpc.userAddresses.getUserAddresses.queryOptions()
+          trpc.userAddresses.getUserAddresses.queryOptions(),
         );
 
         toast.success("Address deleted successfully");
@@ -245,14 +244,14 @@ export const ProfileManagement = () => {
       onError: (error) => {
         toast.error(error.message || "Failed to delete address");
       },
-    })
+    }),
   );
 
   const setDefaultUserAddress = useMutation(
     trpc.userAddress.setDefaultAddress.mutationOptions({
       onSuccess: () => {
         queryClient.invalidateQueries(
-          trpc.userAddresses.getUserAddresses.queryOptions()
+          trpc.userAddresses.getUserAddresses.queryOptions(),
         );
 
         toast.success("Default address updated successfully");
@@ -260,7 +259,7 @@ export const ProfileManagement = () => {
       onError: (error) => {
         toast.error(error.message || "Failed to set default address");
       },
-    })
+    }),
   );
 
   // Organization address mutations
@@ -502,7 +501,7 @@ export const ProfileManagement = () => {
           onError: ({ error }) => {
             toast.error(error.message || "Failed to update password");
           },
-        }
+        },
       );
     });
   };
@@ -512,18 +511,18 @@ export const ProfileManagement = () => {
     trpc.user.toggleSettings.mutationOptions({
       onSuccess: (data) => {
         toast.success(
-          `${data.field} ${data.value ? "enabled" : "disabled"} successfully`
+          `${data.field} ${data.value ? "enabled" : "disabled"} successfully`,
         );
       },
       onError: (error) => {
         toast.error(error.message || `Failed to update setting`);
       },
-    })
+    }),
   );
 
   const toggleUserSettings = async (
     field: "emailNotifications" | "smsNotifications" | "whatsAppNotifications",
-    currentValue: boolean
+    currentValue: boolean,
   ) => {
     await toggleSettings.mutateAsync({
       field,
@@ -578,7 +577,7 @@ export const ProfileManagement = () => {
     <>
       <DeleteAddressDialog />
 
-      <div className="w-full p-6 space-y-6">
+      <div className="w-full space-y-6 p-6">
         <h1 className="text-3xl font-bold">Profile Management</h1>
 
         <Tabs
@@ -587,19 +586,14 @@ export const ProfileManagement = () => {
           value={tab}
           onValueChange={(value) => handleUnsavedChanges(value)}
         >
-          <TabsList
-            className={cn(
-              "grid w-full grid-cols-4 [&_button]:data-[state=active]:shadow-none"
-              // isAdminOrOwner && "grid-cols-5"
-            )}
-          >
+          <TabsList className="flex h-auto w-full flex-nowrap items-center justify-start overflow-x-auto sm:w-fit [&_button]:data-[state=active]:shadow-none">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="addresses">Addresses</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            {/* {isAdminOrOwner && (
-              <TabsTrigger value="church">Church Settings</TabsTrigger>
-            )} */}
+            {/* {isAdminOrOwner && ( */}
+            {/* <TabsTrigger value="church">Church Settings</TabsTrigger> */}
+            {/* )} */}
           </TabsList>
 
           <TabsContent value="profile">

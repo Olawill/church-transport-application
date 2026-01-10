@@ -75,10 +75,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { PAGINATION } from "@/config/constants";
-import { adminGetUsers } from "@/features/admin/types";
-import { useAdminDashboardParams } from "../hooks/use-admin-dashboard-params";
-import { authClient } from "@/lib/auth-client";
 import { env } from "@/env/client";
+import { adminGetUsers } from "@/features/admin/types";
+import { authClient } from "@/lib/auth-client";
+import { useAdminDashboardParams } from "../hooks/use-admin-dashboard-params";
 
 const generateChartConfig = (tooltipLabel: string, chartLabel: string) => {
   return {
@@ -108,18 +108,18 @@ export const AdminDashboard = () => {
   const [debouncedNameInput] = useDebounce(search, 300);
 
   const { data: stats } = useSuspenseQuery(
-    trpc.adminStats.getStats.queryOptions()
+    trpc.adminStats.getStats.queryOptions(),
   );
 
   const { data: usersData } = useSuspenseQuery(
     trpc.users.getPaginatedUsers.queryOptions({
       ...otherParams,
       search: debouncedNameInput || "",
-    })
+    }),
   );
 
   const { data: analytics } = useSuspenseQuery(
-    trpc.adminAnalytics.getAnalytics.queryOptions()
+    trpc.adminAnalytics.getAnalytics.queryOptions(),
   );
 
   // rejection email functiom
@@ -131,7 +131,7 @@ export const AdminDashboard = () => {
       onError: (error) => {
         toast.error(error.message || "Failed to send rejection message");
       },
-    })
+    }),
   );
 
   // Logic to approve, reject, ban and unban users
@@ -157,27 +157,27 @@ export const AdminDashboard = () => {
                   onError: ({ error }) => {
                     toast.error(error.message || "Failed to send email");
                   },
-                }
+                },
               );
             },
             onError: async ({ error }) => {
               await authClient.admin.stopImpersonating();
               toast.error(
                 error.message ||
-                  `Error sending verification email to ${data.user.name}`
+                  `Error sending verification email to ${data.user.name}`,
               );
             },
-          }
+          },
         );
 
         queryClient.invalidateQueries(
-          trpc.users.getPaginatedUsers.queryOptions({})
+          trpc.users.getPaginatedUsers.queryOptions({}),
         );
       },
       onError: (error) => {
         toast.error(error.message || `Failed to approve user`);
       },
-    })
+    }),
   );
 
   const rejectUser = useMutation(
@@ -194,13 +194,13 @@ export const AdminDashboard = () => {
         toast.success(`User ${data.user.name} has been rejected.`);
 
         queryClient.invalidateQueries(
-          trpc.users.getPaginatedUsers.queryOptions({})
+          trpc.users.getPaginatedUsers.queryOptions({}),
         );
       },
       onError: (error) => {
         toast.error(error.message || `Failed to reject user`);
       },
-    })
+    }),
   );
 
   const banUser = useMutation(
@@ -212,13 +212,13 @@ export const AdminDashboard = () => {
         toast.success(`User ${data.user.name}'s account has been deactivated.`);
 
         queryClient.invalidateQueries(
-          trpc.users.getPaginatedUsers.queryOptions({})
+          trpc.users.getPaginatedUsers.queryOptions({}),
         );
       },
       onError: (error) => {
         toast.error(error.message || `Failed to ban user`);
       },
-    })
+    }),
   );
 
   const unBanUser = useMutation(
@@ -227,13 +227,13 @@ export const AdminDashboard = () => {
         toast.success(`User ${data.user.name}'s account has been reactivated.`);
 
         queryClient.invalidateQueries(
-          trpc.users.getPaginatedUsers.queryOptions({})
+          trpc.users.getPaginatedUsers.queryOptions({}),
         );
       },
       onError: (error) => {
         toast.error(error.message || `Failed to unban user`);
       },
-    })
+    }),
   );
 
   const handleNameFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -283,14 +283,14 @@ export const AdminDashboard = () => {
     () => ({
       registrations: analytics?.registrations.reduce(
         (acc, reg) => acc + reg.count,
-        0
+        0,
       ),
       pickupRequests: analytics?.pickupRequests.reduce(
         (acc, req) => acc + req.count,
-        0
+        0,
       ),
     }),
-    [analytics?.pickupRequests, analytics?.registrations]
+    [analytics?.pickupRequests, analytics?.registrations],
   );
 
   const statCards = [
@@ -334,7 +334,7 @@ export const AdminDashboard = () => {
   const isFiltered = nameInput !== "";
 
   return (
-    <div className="space-y-6 w-full">
+    <div className="w-full space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Admin Dashboard</h1>
         <p className="mt-1">
@@ -357,7 +357,7 @@ export const AdminDashboard = () => {
         }}
         className="w-full"
       >
-        <TabsList className="grid w-full grid-cols-4 [&_button]:data-[state=active]:shadow-none">
+        <TabsList className="flex h-auto w-full flex-nowrap items-center justify-start overflow-x-auto sm:w-fit [&_button]:data-[state=active]:shadow-none">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="users">User Management</TabsTrigger>
@@ -366,9 +366,9 @@ export const AdminDashboard = () => {
 
         <TabsContent value="overview" className="space-y-6">
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             {statCards.map((stat, index) => (
-              <Card key={index} className="hover:shadow-md transition-shadow">
+              <Card key={index} className="transition-shadow hover:shadow-md">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -376,12 +376,12 @@ export const AdminDashboard = () => {
                       <p className="text-2xl font-bold">{stat.value}</p>
                     </div>
                     <div
-                      className={`p-3 rounded-full bg-gray-100 ${stat.color}`}
+                      className={`rounded-full bg-gray-100 p-3 ${stat.color}`}
                     >
                       <stat.icon className="size-6" />
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-300 mt-2">
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-300">
                     {stat.description}
                   </p>
                 </CardContent>
@@ -390,23 +390,23 @@ export const AdminDashboard = () => {
           </div>
 
           {/* Quick Actions */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Quick Actions</CardTitle>
                 <CardDescription>Common administrative tasks</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Button
                     variant="outline"
-                    className="h-auto p-4 justify-start"
+                    className="h-auto justify-start p-4"
                     onClick={() => router.push("/admin/users")}
                   >
-                    <Users className="size-5 mr-3 text-blue-600" />
+                    <Users className="mr-3 size-5 text-blue-600" />
                     <div className="text-left">
                       <p className="font-medium">Manage Users</p>
-                      <p className="text-xs text-primary/80">
+                      <p className="text-primary/80 text-xs">
                         Approve & ban users
                       </p>
                     </div>
@@ -414,13 +414,13 @@ export const AdminDashboard = () => {
 
                   <Button
                     variant="outline"
-                    className="h-auto p-4 justify-start"
+                    className="h-auto justify-start p-4"
                     onClick={() => router.push("/admin/services")}
                   >
-                    <Calendar className="size-5 mr-3 text-green-600" />
+                    <Calendar className="mr-3 size-5 text-green-600" />
                     <div className="text-left">
                       <p className="font-medium">Service Schedule</p>
-                      <p className="text-xs text-primary/80">
+                      <p className="text-primary/80 text-xs">
                         Configure services
                       </p>
                     </div>
@@ -428,25 +428,25 @@ export const AdminDashboard = () => {
 
                   <Button
                     variant="outline"
-                    className="h-auto p-4 justify-start"
+                    className="h-auto justify-start p-4"
                     onClick={() => router.push("/requests")}
                   >
-                    <Car className="size-5 mr-3 text-purple-600" />
+                    <Car className="mr-3 size-5 text-purple-600" />
                     <div className="text-left">
                       <p className="font-medium">View Requests</p>
-                      <p className="text-xs text-primary/80">Monitor pickups</p>
+                      <p className="text-primary/80 text-xs">Monitor pickups</p>
                     </div>
                   </Button>
 
                   <Button
                     variant="outline"
-                    className="h-auto p-4 justify-start"
+                    className="h-auto justify-start p-4"
                     onClick={() => setParams({ ...params, tab: "analytics" })}
                   >
-                    <BarChart3 className="size-5 mr-3 text-orange-600" />
+                    <BarChart3 className="mr-3 size-5 text-orange-600" />
                     <div className="text-left">
                       <p className="font-medium">Analytics</p>
-                      <p className="text-xs text-primary/80">View insights</p>
+                      <p className="text-primary/80 text-xs">View insights</p>
                     </div>
                   </Button>
                 </div>
@@ -463,24 +463,24 @@ export const AdminDashboard = () => {
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-center space-x-3 text-sm">
-                    <div className="size-2 bg-blue-600 rounded-full"></div>
+                    <div className="size-2 rounded-full bg-blue-600"></div>
                     <span className="text-gray-600 dark:text-gray-300">
                       System initialized with default data
                     </span>
                   </div>
                   <div className="flex items-center space-x-3 text-sm">
-                    <div className="size-2 bg-green-600 rounded-full"></div>
+                    <div className="size-2 rounded-full bg-green-600"></div>
                     <span className="text-gray-600 dark:text-gray-300">
                       Service days configured
                     </span>
                   </div>
                   <div className="flex items-center space-x-3 text-sm">
-                    <div className="size-2 bg-purple-600 rounded-full"></div>
+                    <div className="size-2 rounded-full bg-purple-600"></div>
                     <span className="text-gray-600 dark:text-gray-300">
                       Transportation team members added
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-200 mt-4">
+                  <p className="mt-4 text-xs text-gray-500 dark:text-gray-200">
                     Activity log will populate as users interact with the system
                   </p>
                 </div>
@@ -527,12 +527,12 @@ export const AdminDashboard = () => {
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <Card>
               <CardHeader className="flex flex-col items-stretch border-b !p-0 sm:flex-row">
                 <div className="flex flex-1 flex-col justify-start gap-1 px-6 pb-3 sm:pb-0">
                   <CardTitle className="flex items-center">
-                    <TrendingUp className="size-5 mr-2" />
+                    <TrendingUp className="mr-2 size-5" />
                     User Registrations (Last 30 Days)
                   </CardTitle>
                 </div>
@@ -547,7 +547,7 @@ export const AdminDashboard = () => {
                         <span className="text-muted-foreground text-xs">
                           Total Registrations
                         </span>
-                        <span className="text-lg leading-none font-bold sm:text-3xl text-primary">
+                        <span className="text-primary text-lg leading-none font-bold sm:text-3xl">
                           {total[chart]?.toLocaleString() || 0}
                         </span>
                       </div>
@@ -565,7 +565,7 @@ export const AdminDashboard = () => {
                   <ChartContainer
                     config={generateChartConfig(
                       "Registrations",
-                      "30 days View"
+                      "30 days View",
                     )}
                     className="aspect-auto h-[250px] w-full"
                   >
@@ -607,7 +607,7 @@ export const AdminDashboard = () => {
                                   day: "numeric",
                                   year: "numeric",
                                   timeZone: "UTC",
-                                }
+                                },
                               );
                             }}
                           />
@@ -631,7 +631,7 @@ export const AdminDashboard = () => {
               <CardHeader className="flex flex-col items-stretch border-b !p-0 sm:flex-row">
                 <div className="flex flex-1 flex-col justify-start gap-1 px-6 pb-3 sm:pb-0">
                   <CardTitle className="flex items-center">
-                    <Activity className="size-5 mr-2" />
+                    <Activity className="mr-2 size-5" />
                     Pickup Requests (Last 30 Days)
                   </CardTitle>
                 </div>
@@ -646,7 +646,7 @@ export const AdminDashboard = () => {
                         <span className="text-muted-foreground text-xs">
                           Total Requests
                         </span>
-                        <span className="text-lg leading-none font-bold sm:text-3xl text-primary">
+                        <span className="text-primary text-lg leading-none font-bold sm:text-3xl">
                           {total[chart]?.toLocaleString() || 0}
                         </span>
                       </div>
@@ -704,7 +704,7 @@ export const AdminDashboard = () => {
                                   day: "numeric",
                                   year: "numeric",
                                   timeZone: "UTC",
-                                }
+                                },
                               );
                             }}
                           />
@@ -725,7 +725,7 @@ export const AdminDashboard = () => {
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle>Driver Activity</CardTitle>
@@ -750,7 +750,7 @@ export const AdminDashboard = () => {
                       <Badge variant="outline">
                         {driver.completions > 0
                           ? Math.round(
-                              (driver.completions / driver.acceptances) * 100
+                              (driver.completions / driver.acceptances) * 100,
                             )
                           : 0}
                         % rate
@@ -800,20 +800,20 @@ export const AdminDashboard = () => {
         <TabsContent value="users" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
+              <CardTitle className="flex flex-col items-center gap-4 md:flex-row md:justify-between">
                 User Management
                 <div className="flex items-center space-x-2">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-gray-400" />
+                    <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 transform text-gray-400" />
                     <Input
                       placeholder="Search users..."
                       value={nameInput}
                       onChange={handleNameFilterChange}
-                      className="pl-9 w-64"
+                      className="w-64 pl-9"
                     />
                     {isFiltered && (
                       <XCircleIcon
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 size-4 text-gray-400 cursor-pointer"
+                        className="absolute top-1/2 right-3 size-4 -translate-y-1/2 transform cursor-pointer text-gray-400"
                         onClick={clearFilters}
                       />
                     )}
@@ -959,7 +959,7 @@ export const AdminDashboard = () => {
                   {users.length === 0 && (
                     <TableRow>
                       <TableCell
-                        className="font-medium text-center"
+                        className="text-center font-medium"
                         colSpan={6}
                       >
                         No users found
@@ -994,7 +994,7 @@ export const AdminDashboard = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                <DollarSign className="size-4 mr-2" />
+                <DollarSign className="mr-2 size-4" />
                 Subscription Management
               </CardTitle>
               <CardDescription>
@@ -1011,7 +1011,7 @@ export const AdminDashboard = () => {
                 </AlertDescription>
               </Alert>
 
-              <div className="mt-6 p-4 border rounded-lg">
+              <div className="mt-6 rounded-lg border p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-semibold">Current Organization</h3>

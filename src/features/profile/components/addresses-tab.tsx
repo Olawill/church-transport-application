@@ -111,7 +111,7 @@ export const AddressesTab = ({
                 Add Address
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-h-[80vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
                   {isAddressEditing && editingAddress
@@ -184,15 +184,15 @@ export const AddressesTab = ({
       <CardContent>
         <div className="space-y-4">
           {paginatedAddresses.map((address) => (
-            <div key={address.id} className="border rounded-lg p-4">
+            <div key={address.id} className="rounded-lg border p-4">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-2">
+                  <div className="mb-2 flex items-center space-x-2">
                     <h3 className="font-semibold">{address.name}</h3>
                     {address.isDefault && (
                       <Badge variant="default" className="text-xs">
-                        <Star className="w-3 h-3 mr-1" />
-                        Default
+                        <Star className="mr-1 size-3" />
+                        <span className="hidden sm:inline">Default</span>
                       </Badge>
                     )}
                   </div>
@@ -231,7 +231,7 @@ export const AddressesTab = ({
                           handleAddressEdit(address);
                         }}
                       >
-                        <Edit className="w-4 h-4" />
+                        <Edit className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent className="bg-background text-foreground">
@@ -247,7 +247,7 @@ export const AddressesTab = ({
                         onClick={() => handleDeleteAddress(address.id)}
                         className="text-red-600 hover:text-red-700"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent className="bg-background text-foreground">
@@ -259,8 +259,8 @@ export const AddressesTab = ({
             </div>
           ))}
           {addresses.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              <MapPin className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <div className="py-8 text-center text-gray-500">
+              <MapPin className="mx-auto mb-4 h-12 w-12 opacity-50" />
               <p>No addresses added yet</p>
               <p className="text-sm">Add your first address to get started</p>
             </div>

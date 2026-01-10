@@ -1,4 +1,5 @@
 // components/admin/service-forms/OnetimeOneDayForm.tsx
+import { CustomFormLabel } from "@/components/custom-form-label";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -49,22 +50,21 @@ export const OnetimeOneDayForm = ({
 }: OnetimeOneDayFormProps) => {
   const isEditing = !!service;
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <form onSubmit={form.handleSubmit(onSubmit)} className="mt-4 space-y-1">
+      <div className="grid grid-cols-1 gap-1 md:grid-cols-2">
         {/* Service Name */}
         <FormField
           control={form.control}
           name="name"
           render={({ field }) => (
             <FormItem className="col-span-2">
-              <FormLabel>
-                Service Name<span className="text-red-400">*</span>
-              </FormLabel>
+              <CustomFormLabel title="Service Name" />
               <FormControl>
                 <Input
                   {...field}
-                  placeholder="e.g., Easter Service"
+                  placeholder="e.g. Easter Service"
                   disabled={loading}
+                  className="placeholder:text-sm"
                 />
               </FormControl>
               <div className="min-h-[1.25rem]">
@@ -80,9 +80,7 @@ export const OnetimeOneDayForm = ({
           name="dayOfWeek"
           render={({ field }) => (
             <FormItem className={cn("col-span-1", !isEditing && "col-span-2")}>
-              <FormLabel>
-                Day of Week<span className="text-red-400">*</span>
-              </FormLabel>
+              <CustomFormLabel title="Day of Week" />
               <Select
                 value={field.value}
                 onValueChange={field.onChange}
@@ -119,7 +117,7 @@ export const OnetimeOneDayForm = ({
                     checked={field.value}
                     onCheckedChange={field.onChange}
                     disabled={!canRestore(service)}
-                    className="disabled:cursor-not-allowed cursor-pointer"
+                    className="cursor-pointer disabled:cursor-not-allowed"
                   />
                 </FormControl>
                 <FormLabel className="!mt-0">
@@ -131,7 +129,7 @@ export const OnetimeOneDayForm = ({
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-1 md:grid-cols-2">
         {/* Start Date */}
         <FormField
           control={form.control}
@@ -143,9 +141,7 @@ export const OnetimeOneDayForm = ({
 
             return (
               <FormItem>
-                <FormLabel>
-                  Start Date<span className="text-red-400">*</span>
-                </FormLabel>
+                <CustomFormLabel title="Start Date" />
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
@@ -153,13 +149,13 @@ export const OnetimeOneDayForm = ({
                         variant="outline"
                         className={cn(
                           "w-full pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
+                          !field.value && "text-muted-foreground",
                         )}
                       >
                         {field.value ? (
                           format(
                             new Date(formatDate(new Date(field.value))),
-                            "PPP"
+                            "PPP",
                           )
                         ) : (
                           <span>Select a date</span>
@@ -201,15 +197,13 @@ export const OnetimeOneDayForm = ({
           name="time"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>
-                Start Time<span className="text-red-400">*</span>
-              </FormLabel>
+              <CustomFormLabel title="Start Time" />
               <FormControl>
                 <Input
                   {...field}
                   type="time"
                   disabled={loading}
-                  className="bg-background appearance-none relative [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-2 [&::-webkit-calendar-picker-indicator]:top-1/2 [&::-webkit-calendar-picker-indicator]:-translate-y-1/2"
+                  className="bg-background relative appearance-none [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:top-1/2 [&::-webkit-calendar-picker-indicator]:right-2 [&::-webkit-calendar-picker-indicator]:-translate-y-1/2"
                 />
               </FormControl>
               <FormDescription>Service start time</FormDescription>

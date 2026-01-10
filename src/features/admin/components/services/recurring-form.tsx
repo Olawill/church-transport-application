@@ -6,6 +6,7 @@ import { Frequency, Ordinal } from "@/generated/prisma/enums";
 import { DAYS_OF_WEEK, frequencyOptions } from "@/lib/types";
 import { RecurringSchema } from "@/schemas/serviceDaySchema";
 
+import { CustomFormLabel } from "@/components/custom-form-label";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -71,22 +72,21 @@ export const RecurringForm = ({
   }, [form, frequency]);
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+    <form onSubmit={form.handleSubmit(onSubmit)} className="mt-4 space-y-1">
+      <div className="grid grid-cols-1 gap-1 md:grid-cols-3">
         {/* Service Name */}
         <FormField
           control={form.control}
           name="name"
           render={({ field }) => (
-            <FormItem className="col-span-3 mb-4">
-              <FormLabel>
-                Service Name<span className="text-red-400">*</span>
-              </FormLabel>
+            <FormItem className="col-span-3 mb-2">
+              <CustomFormLabel title="Service Name" />
               <FormControl>
                 <Input
                   {...field}
-                  placeholder="e.g., Sunday Morning Service"
+                  placeholder="e.g. Sunday Morning Service"
                   disabled={loading}
+                  className="placeholder:text-sm"
                 />
               </FormControl>
               <div className="min-h-[1.25rem]">
@@ -101,10 +101,8 @@ export const RecurringForm = ({
           control={form.control}
           name="dayOfWeek"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                Day of Week<span className="text-red-400">*</span>
-              </FormLabel>
+            <FormItem className="col-span-3 md:col-span-1">
+              <CustomFormLabel title="Day of Week" />
               <Select
                 value={field.value}
                 onValueChange={field.onChange}
@@ -136,9 +134,7 @@ export const RecurringForm = ({
           name="frequency"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>
-                Frequency<span className="text-red-400">*</span>
-              </FormLabel>
+              <CustomFormLabel title="Frequency" />
               <Select
                 value={field.value}
                 onValueChange={field.onChange}
@@ -170,9 +166,7 @@ export const RecurringForm = ({
           name="ordinal"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>
-                Ordinal<span className="text-red-400">*</span>
-              </FormLabel>
+              <CustomFormLabel title="Ordinal" />
               <Select
                 value={field.value}
                 onValueChange={field.onChange}
@@ -200,7 +194,7 @@ export const RecurringForm = ({
 
         {isEditing && (
           <>
-            <Separator className="my-4 col-span-3" />
+            <Separator className="col-span-3 my-4" />
             <FormField
               control={form.control}
               name="isActive"
@@ -214,19 +208,19 @@ export const RecurringForm = ({
                         checked={field.value}
                         onCheckedChange={field.onChange}
                         disabled={!canRestore(service)}
-                        className="disabled:cursor-not-allowed cursor-pointer"
+                        className="cursor-pointer disabled:cursor-not-allowed"
                       />
                     </div>
                   </FormControl>
                 </FormItem>
               )}
             />
-            <Separator className="my-4 col-span-3" />
+            <Separator className="col-span-3 my-4" />
           </>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-1 md:grid-cols-2">
         {/* Start Date */}
         <FormField
           control={form.control}
@@ -246,13 +240,13 @@ export const RecurringForm = ({
                         variant="outline"
                         className={cn(
                           "w-full pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
+                          !field.value && "text-muted-foreground",
                         )}
                       >
                         {field.value ? (
                           format(
                             new Date(formatDate(new Date(field.value))),
-                            "PPP"
+                            "PPP",
                           )
                         ) : (
                           <span>Select a date</span>
@@ -294,15 +288,13 @@ export const RecurringForm = ({
           name="time"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>
-                Start Time<span className="text-red-400">*</span>
-              </FormLabel>
+              <CustomFormLabel title="Start Time" />
               <FormControl>
                 <Input
                   {...field}
                   type="time"
                   disabled={loading}
-                  className="bg-background appearance-none relative [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-2 [&::-webkit-calendar-picker-indicator]:top-1/2 [&::-webkit-calendar-picker-indicator]:-translate-y-1/2"
+                  className="bg-background relative appearance-none [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:top-1/2 [&::-webkit-calendar-picker-indicator]:right-2 [&::-webkit-calendar-picker-indicator]:-translate-y-1/2"
                 />
               </FormControl>
               <FormDescription>Service start time</FormDescription>

@@ -1,4 +1,5 @@
 // components/admin/service-forms/FrequentMultiDayForm.tsx
+import { CustomFormLabel } from "@/components/custom-form-label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -32,8 +33,8 @@ import { addMonths, format } from "date-fns";
 import { CalendarIcon, CheckCircle, Loader2Icon, X } from "lucide-react";
 import { useEffect } from "react";
 import { UseFormReturn } from "react-hook-form";
-import { canRestore } from "../../utils";
 import { GetServiceType } from "../../types";
+import { canRestore } from "../../utils";
 
 interface FrequentMultiDayFormProps {
   form: UseFormReturn<FrequentMultiDaySchema>;
@@ -75,7 +76,7 @@ export const FrequentMultiDayForm = ({
     if (currentDays.includes(dayValue)) {
       form.setValue(
         "dayOfWeek",
-        currentDays.filter((d) => d !== dayValue)
+        currentDays.filter((d) => d !== dayValue),
       );
     } else {
       form.setValue("dayOfWeek", [...currentDays, dayValue]);
@@ -90,22 +91,21 @@ export const FrequentMultiDayForm = ({
   };
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <form onSubmit={form.handleSubmit(onSubmit)} className="mt-4 space-y-1">
+      <div className="grid grid-cols-1 gap-1 md:grid-cols-4">
         {/* Service Name */}
         <FormField
           control={form.control}
           name="name"
           render={({ field }) => (
-            <FormItem className="col-span-4 mb-4">
-              <FormLabel>
-                Service Name<span className="text-red-400">*</span>
-              </FormLabel>
+            <FormItem className="col-span-4 mb-1">
+              <CustomFormLabel title="Service Name" />
               <FormControl>
                 <Input
                   {...field}
-                  placeholder="e.g., Monthly Youth Program"
+                  placeholder="e.g. Monthly Youth Program"
                   disabled={loading}
+                  className="placeholder:text-sm"
                 />
               </FormControl>
               <div className="min-h-[1.25rem]">
@@ -121,9 +121,7 @@ export const FrequentMultiDayForm = ({
           name="dayOfWeek"
           render={() => (
             <FormItem className="col-span-4">
-              <FormLabel>
-                Days of Week<span className="text-red-400">*</span>
-              </FormLabel>
+              <CustomFormLabel title="Days of Week" />
               <Popover>
                 <PopoverTrigger asChild>
                   <FormControl>
@@ -132,7 +130,7 @@ export const FrequentMultiDayForm = ({
                       role="combobox"
                       className={cn(
                         "w-full justify-between",
-                        !selectedDays.length && "text-muted-foreground"
+                        !selectedDays.length && "text-muted-foreground",
                       )}
                     >
                       {selectedDays.length > 0
@@ -149,21 +147,21 @@ export const FrequentMultiDayForm = ({
                         key={day.value}
                         role="button"
                         className={cn(
-                          "flex items-center space-x-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent",
+                          "hover:bg-accent flex cursor-pointer items-center space-x-2 rounded-sm px-2 py-1.5 text-sm",
                           selectedDays.includes(day.value.toString()) &&
-                            "bg-accent"
+                            "bg-accent",
                         )}
                         onClick={() => toggleDay(day.value.toString())}
                       >
                         <div
                           className={cn(
-                            "size-4 border rounded-sm flex items-center justify-center",
+                            "flex size-4 items-center justify-center rounded-sm border",
                             selectedDays.includes(day.value.toString()) &&
-                              "bg-primary border-primary"
+                              "bg-primary border-primary",
                           )}
                         >
                           {selectedDays.includes(day.value.toString()) && (
-                            <CheckCircle className="size-3 text-primary-foreground" />
+                            <CheckCircle className="text-primary-foreground size-3" />
                           )}
                         </div>
                         <span>{day.label}</span>
@@ -173,7 +171,7 @@ export const FrequentMultiDayForm = ({
                 </PopoverContent>
               </Popover>
               {selectedDays.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                   {selectedDays.map((day) => (
                     <Badge key={day} variant="secondary" className="gap-1 pr-0">
                       {getDayName(day)}
@@ -186,7 +184,7 @@ export const FrequentMultiDayForm = ({
                         }}
                         size="icon"
                         variant="ghost"
-                        className="h-full pr-0 hover:bg-gray-200 rounded-sm cursor-pointer"
+                        className="h-full cursor-pointer rounded-sm pr-0 hover:bg-gray-200"
                       >
                         <X className="size-3" />
                       </Button>
@@ -206,10 +204,8 @@ export const FrequentMultiDayForm = ({
           control={form.control}
           name="cycle"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                Frequency Cycle<span className="text-red-400">*</span>
-              </FormLabel>
+            <FormItem className="col-span-4 md:col-span-1">
+              <CustomFormLabel title="Frequency Cycle" />
               <FormControl>
                 <Input
                   {...field}
@@ -220,9 +216,10 @@ export const FrequentMultiDayForm = ({
                   value={field.value || ""}
                   onChange={(e) =>
                     field.onChange(
-                      e.target.value ? parseInt(e.target.value, 10) : undefined
+                      e.target.value ? parseInt(e.target.value, 10) : undefined,
                     )
                   }
+                  className="tabular-nums placeholder:text-sm"
                 />
               </FormControl>
               <FormDescription>Number of cycles</FormDescription>
@@ -239,9 +236,7 @@ export const FrequentMultiDayForm = ({
           name="frequency"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>
-                Frequency<span className="text-red-400">*</span>
-              </FormLabel>
+              <CustomFormLabel title="Frequency" />
               <Select
                 value={field.value}
                 onValueChange={field.onChange}
@@ -274,9 +269,7 @@ export const FrequentMultiDayForm = ({
           name="ordinal"
           render={({ field }) => (
             <FormItem className={cn(!isEditing && "col-span-2")}>
-              <FormLabel>
-                Ordinal<span className="text-red-400">*</span>
-              </FormLabel>
+              <CustomFormLabel title="Ordinal" />
               <Select
                 value={field.value}
                 onValueChange={field.onChange}
@@ -314,7 +307,7 @@ export const FrequentMultiDayForm = ({
                     checked={field.value}
                     onCheckedChange={field.onChange}
                     disabled={!canRestore(service)}
-                    className="disabled:cursor-not-allowed cursor-pointer"
+                    className="cursor-pointer disabled:cursor-not-allowed"
                   />
                 </FormControl>
                 <FormLabel className="!mt-0">
@@ -326,7 +319,7 @@ export const FrequentMultiDayForm = ({
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-1 md:grid-cols-2">
         {/* Start Date */}
         <FormField
           control={form.control}
@@ -338,9 +331,7 @@ export const FrequentMultiDayForm = ({
 
             return (
               <FormItem>
-                <FormLabel>
-                  Start Date<span className="text-red-400">*</span>
-                </FormLabel>
+                <CustomFormLabel title="Start Date" />
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
@@ -348,13 +339,13 @@ export const FrequentMultiDayForm = ({
                         variant="outline"
                         className={cn(
                           "w-full pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
+                          !field.value && "text-muted-foreground",
                         )}
                       >
                         {field.value ? (
                           format(
                             new Date(formatDate(new Date(field.value))),
-                            "PPP"
+                            "PPP",
                           )
                         ) : (
                           <span>Select a date</span>
@@ -394,15 +385,13 @@ export const FrequentMultiDayForm = ({
           name="time"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>
-                Start Time<span className="text-red-400">*</span>
-              </FormLabel>
+              <CustomFormLabel title="Start Time" />
               <FormControl>
                 <Input
                   {...field}
                   type="time"
                   disabled={loading}
-                  className="bg-background appearance-none relative [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-2 [&::-webkit-calendar-picker-indicator]:top-1/2 [&::-webkit-calendar-picker-indicator]:-translate-y-1/2"
+                  className="bg-background relative appearance-none [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:top-1/2 [&::-webkit-calendar-picker-indicator]:right-2 [&::-webkit-calendar-picker-indicator]:-translate-y-1/2"
                 />
               </FormControl>
               <FormDescription>Service start time</FormDescription>

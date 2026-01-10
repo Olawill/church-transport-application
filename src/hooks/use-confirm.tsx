@@ -1,7 +1,6 @@
 import { cn } from "@/lib/utils";
 import { ReactNode, SetStateAction, useState } from "react";
 
-import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -10,8 +9,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FieldValues, UseFormReturn } from "react-hook-form";
+import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
+import { FieldValues, UseFormReturn } from "react-hook-form";
 
 type ConfirmAction = "cancel" | "primary" | "secondary" | "confirm";
 
@@ -43,7 +43,7 @@ interface UseConfirmProps<T extends FieldValues, Extra> {
 
 // Overload for exposeValue = true
 export function useConfirm<T extends FieldValues = never, Extra = undefined>(
-  props: UseConfirmProps<T, Extra> & { exposeValue: true }
+  props: UseConfirmProps<T, Extra> & { exposeValue: true },
 ): [
   Dialog: () => React.ReactNode,
   confirm: () => Promise<ConfirmResult<T, Extra>>,
@@ -52,7 +52,7 @@ export function useConfirm<T extends FieldValues = never, Extra = undefined>(
 
 // Overload for exposeValue not true or undefined
 export function useConfirm<T extends FieldValues = never, Extra = undefined>(
-  props: UseConfirmProps<T, Extra> & { exposeValue?: false }
+  props: UseConfirmProps<T, Extra> & { exposeValue?: false },
 ): [
   Dialog: () => React.ReactNode,
   confirm: () => Promise<ConfirmResult<T, Extra>>,
@@ -78,7 +78,7 @@ export function useConfirm<T extends FieldValues = never, Extra = undefined>({
   } | null>(null);
 
   const [extraValue, setExtraValue] = useState<Extra>(
-    initialValue ?? ({} as Extra)
+    initialValue ?? ({} as Extra),
   );
 
   const confirm = (): Promise<ConfirmResult<FieldValues, Extra>> => {
@@ -116,7 +116,7 @@ export function useConfirm<T extends FieldValues = never, Extra = undefined>({
 
   const ConfirmDialog = () => (
     <AlertDialog open={promise !== null} onOpenChange={handleClose}>
-      <AlertDialogContent className="mx-8 max-h-[90vh] overflow-y-auto overflow-x-hidden">
+      <AlertDialogContent className="max-h-[90vh] overflow-x-hidden overflow-y-auto">
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{message}</AlertDialogDescription>
@@ -159,8 +159,9 @@ export function useConfirm<T extends FieldValues = never, Extra = undefined>({
                       type="button"
                       onClick={() => void handleAction("primary")}
                       className={cn(
-                        "border-blue-500 text-blue-600 hover:bg-blue-50 cursor-pointer",
-                        !update && "border-red-500 text-red-500 hover:bg-red-50"
+                        "cursor-pointer border-blue-500 text-blue-600 hover:bg-blue-50",
+                        !update &&
+                          "border-red-500 text-red-500 hover:bg-red-50",
                       )}
                     >
                       {primaryText}
@@ -171,7 +172,7 @@ export function useConfirm<T extends FieldValues = never, Extra = undefined>({
                       className={cn(
                         "cursor-pointer",
                         update &&
-                          "bg-[#007A5A] hover:bg-[#007A5A]/80 text-white"
+                          "bg-[#007A5A] text-white hover:bg-[#007A5A]/80",
                       )}
                     >
                       {secondaryText}
@@ -183,7 +184,7 @@ export function useConfirm<T extends FieldValues = never, Extra = undefined>({
                     variant={update ? "default" : "destructive"}
                     type="submit"
                     className={cn(
-                      update && "bg-[#007A5A] hover:bg-[#007A5A]/80 text-white"
+                      update && "bg-[#007A5A] text-white hover:bg-[#007A5A]/80",
                     )}
                   >
                     {secondaryText || primaryText || "Confirm"}
@@ -211,8 +212,8 @@ export function useConfirm<T extends FieldValues = never, Extra = undefined>({
                   type="button"
                   onClick={() => void handleAction("primary")}
                   className={cn(
-                    "border-blue-500 text-blue-600 hover:bg-blue-50 cursor-pointer",
-                    !update && "border-red-500 text-red-500 hover:bg-red-50"
+                    "cursor-pointer border-blue-500 text-blue-600 hover:bg-blue-50",
+                    !update && "border-red-500 text-red-500 hover:bg-red-50",
                   )}
                 >
                   {primaryText}
@@ -223,7 +224,7 @@ export function useConfirm<T extends FieldValues = never, Extra = undefined>({
                   onClick={() => void handleAction("secondary")}
                   className={cn(
                     "cursor-pointer",
-                    update && "bg-[#007A5A] hover:bg-[#007A5A]/80 text-white"
+                    update && "bg-[#007A5A] text-white hover:bg-[#007A5A]/80",
                   )}
                 >
                   {secondaryText}
@@ -237,7 +238,7 @@ export function useConfirm<T extends FieldValues = never, Extra = undefined>({
                 onClick={() => void handleAction("confirm")}
                 className={cn(
                   "cursor-pointer",
-                  update && "bg-[#007A5A] hover:bg-[#007A5A]/80 text-white"
+                  update && "bg-[#007A5A] text-white hover:bg-[#007A5A]/80",
                 )}
               >
                 {secondaryText || primaryText || "Confirm"}

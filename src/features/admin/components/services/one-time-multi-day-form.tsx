@@ -1,4 +1,5 @@
 // components/admin/service-forms/OnetimeMultiDayForm.tsx
+import { CustomFormLabel } from "@/components/custom-form-label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -30,8 +31,8 @@ import { OnetimeMultiDaySchema } from "@/schemas/serviceDaySchema";
 import { addMonths, format } from "date-fns";
 import { CalendarIcon, CheckCircle, Loader2Icon, X } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
-import { canRestore } from "../../utils";
 import { GetServiceType } from "../../types";
+import { canRestore } from "../../utils";
 
 interface OnetimeMultiDayFormProps {
   form: UseFormReturn<OnetimeMultiDaySchema>;
@@ -59,7 +60,7 @@ export const OnetimeMultiDayForm = ({
     if (currentDays.includes(dayValue)) {
       form.setValue(
         "dayOfWeek",
-        currentDays.filter((d) => d !== dayValue)
+        currentDays.filter((d) => d !== dayValue),
       );
     } else {
       form.setValue("dayOfWeek", [...currentDays, dayValue]);
@@ -74,22 +75,21 @@ export const OnetimeMultiDayForm = ({
   };
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <form onSubmit={form.handleSubmit(onSubmit)} className="mt-4 space-y-1">
+      <div className="grid grid-cols-1 gap-1 md:grid-cols-3">
         {/* Service Name */}
         <FormField
           control={form.control}
           name="name"
           render={({ field }) => (
             <FormItem className="col-span-3 mb-4">
-              <FormLabel>
-                Service Name<span className="text-red-400">*</span>
-              </FormLabel>
+              <CustomFormLabel title="Service Name" />
               <FormControl>
                 <Input
                   {...field}
-                  placeholder="e.g., VBS Week"
+                  placeholder="e.g. VBS Week"
                   disabled={loading}
+                  className="placeholder:text-sm"
                 />
               </FormControl>
               <div className="min-h-[1.25rem]">
@@ -105,9 +105,7 @@ export const OnetimeMultiDayForm = ({
           name="dayOfWeek"
           render={({ field }) => (
             <FormItem className="col-span-3">
-              <FormLabel>
-                Days of Week<span className="text-red-400">*</span>
-              </FormLabel>
+              <CustomFormLabel title="Days of Week" />
               <Popover>
                 <PopoverTrigger asChild>
                   <FormControl>
@@ -116,7 +114,7 @@ export const OnetimeMultiDayForm = ({
                       role="combobox"
                       className={cn(
                         "w-full justify-between",
-                        !selectedDays.length && "text-muted-foreground"
+                        !selectedDays.length && "text-muted-foreground",
                       )}
                     >
                       {selectedDays.length > 0
@@ -132,21 +130,21 @@ export const OnetimeMultiDayForm = ({
                       <div
                         key={day.value}
                         className={cn(
-                          "flex items-center space-x-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent",
+                          "hover:bg-accent flex cursor-pointer items-center space-x-2 rounded-sm px-2 py-1.5 text-sm",
                           selectedDays.includes(day.value.toString()) &&
-                            "bg-accent"
+                            "bg-accent",
                         )}
                         onClick={() => toggleDay(day.value.toString())}
                       >
                         <div
                           className={cn(
-                            "size-4 border rounded-sm flex items-center justify-center",
+                            "flex size-4 items-center justify-center rounded-sm border",
                             selectedDays.includes(day.value.toString()) &&
-                              "bg-primary border-primary"
+                              "bg-primary border-primary",
                           )}
                         >
                           {selectedDays.includes(day.value.toString()) && (
-                            <CheckCircle className="size-3 text-primary-foreground" />
+                            <CheckCircle className="text-primary-foreground size-3" />
                           )}
                         </div>
                         <span>{day.label}</span>
@@ -156,7 +154,7 @@ export const OnetimeMultiDayForm = ({
                 </PopoverContent>
               </Popover>
               {selectedDays.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                   {selectedDays.map((day) => (
                     <Badge key={day} variant="secondary" className="gap-1 pr-0">
                       {getDayName(day)}
@@ -169,7 +167,7 @@ export const OnetimeMultiDayForm = ({
                         }}
                         size="icon"
                         variant="ghost"
-                        className="h-full pr-0 hover:bg-gray-200 rounded-sm cursor-pointer"
+                        className="h-full cursor-pointer rounded-sm pr-0 hover:bg-gray-200"
                       >
                         <X className="size-3" />
                       </Button>
@@ -196,14 +194,15 @@ export const OnetimeMultiDayForm = ({
                   {...field}
                   type="number"
                   min={1}
-                  placeholder="e.g., 2"
+                  placeholder="e.g. 2"
                   disabled={loading}
                   value={field.value || ""}
                   onChange={(e) =>
                     field.onChange(
-                      e.target.value ? parseInt(e.target.value) : undefined
+                      e.target.value ? parseInt(e.target.value) : undefined,
                     )
                   }
+                  className="tabular-nums placeholder:text-sm"
                 />
               </FormControl>
               <FormDescription>Number of cycles</FormDescription>
@@ -220,9 +219,7 @@ export const OnetimeMultiDayForm = ({
           name="frequency"
           render={({ field }) => (
             <FormItem className={cn("col-span-1", !isEditing && "col-span-2")}>
-              <FormLabel>
-                Frequency<span className="text-red-400">*</span>
-              </FormLabel>
+              <CustomFormLabel title="Frequency" />
               <Select
                 value={field.value}
                 onValueChange={field.onChange}
@@ -260,7 +257,7 @@ export const OnetimeMultiDayForm = ({
                     checked={field.value}
                     onCheckedChange={field.onChange}
                     disabled={!canRestore(service)}
-                    className="disabled:cursor-not-allowed cursor-pointer"
+                    className="cursor-pointer disabled:cursor-not-allowed"
                   />
                 </FormControl>
                 <FormLabel className="!mt-0">
@@ -273,7 +270,7 @@ export const OnetimeMultiDayForm = ({
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-1 md:grid-cols-3">
         {/* Start Date */}
         <FormField
           control={form.control}
@@ -285,9 +282,7 @@ export const OnetimeMultiDayForm = ({
 
             return (
               <FormItem>
-                <FormLabel>
-                  Start Date<span className="text-red-400">*</span>
-                </FormLabel>
+                <CustomFormLabel title="Start Date" />
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
@@ -295,13 +290,13 @@ export const OnetimeMultiDayForm = ({
                         variant="outline"
                         className={cn(
                           "w-full pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
+                          !field.value && "text-muted-foreground",
                         )}
                       >
                         {field.value ? (
                           format(
                             new Date(formatDate(new Date(field.value))),
-                            "PPP"
+                            "PPP",
                           )
                         ) : (
                           <span>Select a date</span>
@@ -355,13 +350,13 @@ export const OnetimeMultiDayForm = ({
                         variant="outline"
                         className={cn(
                           "w-full pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
+                          !field.value && "text-muted-foreground",
                         )}
                       >
                         {field.value ? (
                           format(
                             new Date(formatDate(new Date(field.value))),
-                            "PPP"
+                            "PPP",
                           )
                         ) : (
                           <span>Select a date</span>
@@ -403,15 +398,13 @@ export const OnetimeMultiDayForm = ({
           name="time"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>
-                Start Time<span className="text-red-400">*</span>
-              </FormLabel>
+              <CustomFormLabel title="Start Time" />
               <FormControl>
                 <Input
                   {...field}
                   type="time"
                   disabled={loading}
-                  className="bg-background appearance-none relative [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-2 [&::-webkit-calendar-picker-indicator]:top-1/2 [&::-webkit-calendar-picker-indicator]:-translate-y-1/2"
+                  className="bg-background relative appearance-none [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:top-1/2 [&::-webkit-calendar-picker-indicator]:right-2 [&::-webkit-calendar-picker-indicator]:-translate-y-1/2"
                 />
               </FormControl>
               <FormDescription>Service start time</FormDescription>

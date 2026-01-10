@@ -25,7 +25,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 
+import { useNavigationBlocker } from "@/components/contexts/navigation-blocker";
 import { CustomFormLabel } from "@/components/custom-form-label";
+import { CustomLink as Link } from "@/components/custom-link";
 import { CustomPhoneInput } from "@/components/custom-phone-input";
 import AdminNewUserRequest from "@/features/admin/components/admin-new-user-request";
 import { AddressFields } from "@/features/auth/components/signup-form";
@@ -34,10 +36,8 @@ import {
   newUserSchema,
   NewUserSchema,
 } from "@/schemas/adminCreateNewUserSchema";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTRPC } from "@/trpc/client";
-import { CustomLink as Link } from "@/components/custom-link";
-import { useNavigationBlocker } from "@/components/contexts/navigation-blocker";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export const NewUserCreationForm = () => {
   const router = useRouter();
@@ -106,7 +106,7 @@ export const NewUserCreationForm = () => {
       onError: (error) => {
         toast.error(error.message || "Failed to create user");
       },
-    })
+    }),
   );
 
   const adminCreateUserAndRequest = useMutation(
@@ -114,17 +114,17 @@ export const NewUserCreationForm = () => {
       onSuccess: () => {
         queryClient.invalidateQueries(trpc.adminUsers.getUsers.queryOptions());
         queryClient.invalidateQueries(
-          trpc.adminAnalytics.getAnalytics.queryOptions()
+          trpc.adminAnalytics.getAnalytics.queryOptions(),
         );
         queryClient.invalidateQueries(
-          trpc.driverRequests.getRequestStats.queryOptions()
+          trpc.driverRequests.getRequestStats.queryOptions(),
         );
         queryClient.invalidateQueries(trpc.users.getUsers.queryOptions({}));
         queryClient.invalidateQueries(
-          trpc.users.getPaginatedUsers.queryOptions({})
+          trpc.users.getPaginatedUsers.queryOptions({}),
         );
         queryClient.invalidateQueries(
-          trpc.userRequests.getUserRequests.queryOptions({})
+          trpc.userRequests.getUserRequests.queryOptions({}),
         );
 
         setIsBlocked(false);
@@ -134,7 +134,7 @@ export const NewUserCreationForm = () => {
       onError: (error) => {
         toast.error(error.message || "Failed to create user and request");
       },
-    })
+    }),
   );
 
   const loading =
@@ -175,7 +175,7 @@ export const NewUserCreationForm = () => {
     <div className="w-full">
       <div className="flex items-center justify-between">
         <div>
-          <div className="flex items-center space-x-3 mb-2">
+          <div className="mb-2 flex items-center space-x-3">
             <Link href="/admin/users">
               <Button variant="ghost" size="sm">
                 <ArrowLeft className="size-4" />
@@ -206,7 +206,7 @@ export const NewUserCreationForm = () => {
               className="space-y-8"
             >
               {/* Name */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="firstName"
@@ -253,7 +253,7 @@ export const NewUserCreationForm = () => {
               </div>
 
               {/* Email & Phone number */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="email"
@@ -305,7 +305,7 @@ export const NewUserCreationForm = () => {
               </div>
 
               {/* Login */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="isLoginRequired"
@@ -347,7 +347,7 @@ export const NewUserCreationForm = () => {
                               className="pr-32"
                             />
                             <Button
-                              className="absolute right-1 top-1 h-7 px-3 shadow-none"
+                              className="absolute top-1 right-1 h-7 px-3 shadow-none"
                               type="button"
                               onClick={generatePassword}
                               disabled={loading}
@@ -371,7 +371,7 @@ export const NewUserCreationForm = () => {
 
               {/* New Request */}
               <div>
-                <div className="flex items-center space-x-2 mb-4">
+                <div className="mb-4 flex items-center space-x-2">
                   <FormField
                     control={form.control}
                     name="createPickUpRequest"
@@ -408,9 +408,13 @@ export const NewUserCreationForm = () => {
               </div>
 
               {/* Submit Button */}
-              <div className="flex justify-end space-x-3 pt-4">
+              <div className="flex flex-col justify-end gap-3 pt-4 md:flex-row">
                 <Link href="/admin/users">
-                  <Button type="button" variant="outline">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full md:w-fit"
+                  >
                     Cancel
                   </Button>
                 </Link>

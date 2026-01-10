@@ -59,13 +59,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { PAGINATION } from "@/config/constants";
+import { env } from "@/env/client";
 import { useUsersParams } from "@/features/users/hooks/use-users-params";
+import { UserRole } from "@/generated/prisma/enums";
 import { useConfirm } from "@/hooks/use-confirm";
 import { useTRPC } from "@/trpc/client";
+import { formatDate } from "date-fns";
 import { CustomPagination } from "../../../components/custom-pagination";
-import { UserRole } from "@/generated/prisma/enums";
-import { env } from "@/env/client";
 
 export const UserManagement = () => {
   const { data: session } = useSession();
@@ -91,7 +97,7 @@ export const UserManagement = () => {
       search: debouncedNameInput || "",
       status,
       role,
-    })
+    }),
   );
 
   // Extract data from query result
@@ -101,7 +107,7 @@ export const UserManagement = () => {
   const hasNextPage = usersData?.hasNextPage || false;
   const hasPreviousPage = usersData?.hasPreviousPage || false;
 
-  // rejection email functiom
+  // rejection email function
   const sendRejectionMessage = useMutation(
     trpc.emails.sendMail.mutationOptions({
       onSuccess: () => {
@@ -110,7 +116,7 @@ export const UserManagement = () => {
       onError: (error) => {
         toast.error(error.message || "Failed to send rejection message");
       },
-    })
+    }),
   );
 
   // Logic to approve, reject, or change users' role
@@ -137,27 +143,27 @@ export const UserManagement = () => {
                     await authClient.admin.stopImpersonating();
                     toast.error(error.message || "Failed to send email");
                   },
-                }
+                },
               );
             },
             onError: async ({ error }) => {
               await authClient.admin.stopImpersonating();
               toast.error(
                 error.message ||
-                  `Error sending verification email to ${data.user.name}`
+                  `Error sending verification email to ${data.user.name}`,
               );
             },
-          }
+          },
         );
 
         queryClient.invalidateQueries(
-          trpc.users.getPaginatedUsers.queryOptions({})
+          trpc.users.getPaginatedUsers.queryOptions({}),
         );
       },
       onError: (error) => {
         toast.error(error.message || `Failed to approve user`);
       },
-    })
+    }),
   );
 
   const rejectUser = useMutation(
@@ -174,13 +180,13 @@ export const UserManagement = () => {
         toast.success(`User ${data.user.name} has been rejected.`);
 
         queryClient.invalidateQueries(
-          trpc.users.getPaginatedUsers.queryOptions({})
+          trpc.users.getPaginatedUsers.queryOptions({}),
         );
       },
       onError: (error) => {
         toast.error(error.message || `Failed to reject user`);
       },
-    })
+    }),
   );
 
   const updateUserRole = useMutation(
@@ -189,13 +195,13 @@ export const UserManagement = () => {
         toast.success(`User ${data.user.name}'s role has been updated.`);
 
         queryClient.invalidateQueries(
-          trpc.users.getPaginatedUsers.queryOptions({})
+          trpc.users.getPaginatedUsers.queryOptions({}),
         );
       },
       onError: (error) => {
         toast.error(error.message || `Failed to update user role`);
       },
-    })
+    }),
   );
 
   const handleStatusUpdate = async (userId: string, newStatus: string) => {
@@ -267,7 +273,7 @@ export const UserManagement = () => {
   const pendingUsers = users.filter((u) => u.status === "PENDING").length;
   const approvedUsers = users.filter((u) => u.status === "APPROVED").length;
   const transportationMembers = users.filter(
-    (u) => u.role === "TRANSPORTATION_TEAM"
+    (u) => u.role === "TRANSPORTATION_TEAM",
   ).length;
 
   const isFiltered = role !== "ALL" || status !== "ALL" || nameInput !== "";
@@ -276,7 +282,7 @@ export const UserManagement = () => {
     <>
       <UpdateRoleDialog />
 
-      <div className="space-y-6 w-full">
+      <div className="w-full space-y-6">
         <div className="flex flex-row justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold">User Management</h1>
@@ -294,7 +300,7 @@ export const UserManagement = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -302,7 +308,7 @@ export const UserManagement = () => {
                   <p className="text-sm font-medium">Pending Approval</p>
                   <p className="text-2xl font-bold">{pendingUsers}</p>
                 </div>
-                <div className="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                <div className="rounded-full bg-yellow-100 p-3 text-yellow-600">
                   <Users className="size-6" />
                 </div>
               </div>
@@ -316,7 +322,7 @@ export const UserManagement = () => {
                   <p className="text-sm font-medium">Approved Users</p>
                   <p className="text-2xl font-bold">{approvedUsers}</p>
                 </div>
-                <div className="p-3 rounded-full bg-green-100 text-green-600">
+                <div className="rounded-full bg-green-100 p-3 text-green-600">
                   <CheckCircle className="size-6" />
                 </div>
               </div>
@@ -330,7 +336,7 @@ export const UserManagement = () => {
                   <p className="text-sm font-medium">Drivers</p>
                   <p className="text-2xl font-bold">{transportationMembers}</p>
                 </div>
-                <div className="p-3 rounded-full bg-blue-100 text-blue-600">
+                <div className="rounded-full bg-blue-100 p-3 text-blue-600">
                   <Users className="size-6" />
                 </div>
               </div>
@@ -341,8 +347,8 @@ export const UserManagement = () => {
         {/* Filters */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg flex items-center">
-              <div className="flex items-center justify-between w-full">
+            <CardTitle className="flex items-center text-lg">
+              <div className="flex w-full items-center justify-between">
                 <span className="flex items-center">
                   <Filter className="mr-2 size-5" />
                   Filters
@@ -358,10 +364,10 @@ export const UserManagement = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
               {/* Role filter */}
               <div>
-                <Label className="text-sm font-medium mb-2 block">Role</Label>
+                <Label className="mb-2 block text-sm font-medium">Role</Label>
                 <Select
                   value={role}
                   onValueChange={(value) =>
@@ -384,7 +390,7 @@ export const UserManagement = () => {
 
               {/* Status Filter */}
               <div>
-                <Label className="text-sm font-medium mb-2 block">Status</Label>
+                <Label className="mb-2 block text-sm font-medium">Status</Label>
                 <Select
                   value={status}
                   onValueChange={(value) =>
@@ -405,7 +411,7 @@ export const UserManagement = () => {
 
               {/* Name Filter */}
               <div>
-                <Label className="text-sm font-medium mb-2 block">Name</Label>
+                <Label className="mb-2 block text-sm font-medium">Name</Label>
                 <Input
                   placeholder="Filter by member's name..."
                   value={nameInput}
@@ -431,10 +437,10 @@ export const UserManagement = () => {
             {loading ? (
               <div className="space-y-4">
                 {[...Array(5)].map((_, i) => (
-                  <div key={i} className="animate-pulse p-6 border rounded-lg">
-                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                  <div key={i} className="animate-pulse rounded-lg border p-6">
+                    <div className="mb-2 h-4 w-3/4 rounded bg-gray-200"></div>
+                    <div className="mb-2 h-3 w-1/2 rounded bg-gray-200"></div>
+                    <div className="h-3 w-2/3 rounded bg-gray-200"></div>
                   </div>
                 ))}
               </div>
@@ -484,11 +490,11 @@ export const UserManagement = () => {
             ) : (
               <div className="space-y-4">
                 {users.map((user) => (
-                  <div key={user.id} className="border rounded-lg p-6">
-                    <div className="flex justify-between items-start mb-4">
+                  <div key={user.id} className="rounded-lg border p-6">
+                    <div className="mb-4 flex flex-col items-start justify-between gap-4 md:flex-row">
                       <div>
                         <h3 className="text-lg font-semibold">{user.name}</h3>
-                        <div className="flex flex-col md:flex-row md:items-center gap-2 mt-2 text-sm">
+                        <div className="mt-2 flex flex-col gap-2 text-sm md:flex-row md:items-center">
                           <div className="flex items-center space-x-1 overflow-hidden">
                             <Mail className="size-4" />
                             <span className="truncate">{user.email}</span>
@@ -501,7 +507,7 @@ export const UserManagement = () => {
                           )}
                         </div>
                         {user.addresses && user.addresses[0] && (
-                          <div className="flex items-center space-x-1 mt-1 text-sm">
+                          <div className="mt-1 flex items-center space-x-1 text-sm">
                             <MapPin className="size-4" />
                             <span>
                               {user.addresses[0].street},{" "}
@@ -511,7 +517,7 @@ export const UserManagement = () => {
                           </div>
                         )}
                       </div>
-                      <div className="flex flex-col items-end space-y-2">
+                      <div className="flex flex-col items-end space-y-2 self-end">
                         <Badge className={getStatusColor(user.status)}>
                           {user.status.toLowerCase()}
                         </Badge>
@@ -521,32 +527,57 @@ export const UserManagement = () => {
                       </div>
                     </div>
 
-                    <div className="flex justify-between items-center pt-4 border-t">
-                      <div className="text-sm">
-                        Joined: {new Date(user.createdAt).toLocaleDateString()}
+                    <div className="flex items-center justify-between border-t pt-4">
+                      <div className="text-xs">
+                        Joined: {formatDate(user.createdAt, "MMM d, yyyy")}
                       </div>
                       <div className="flex space-x-2">
                         {user.status === "PENDING" && (
                           <>
-                            <Button
-                              onClick={() =>
-                                handleStatusUpdate(user.id, "APPROVED")
-                              }
-                              size="sm"
-                            >
-                              <CheckCircle className="size-4 mr-1" />
-                              Approve
-                            </Button>
-                            <Button
-                              onClick={() =>
-                                handleStatusUpdate(user.id, "REJECTED")
-                              }
-                              size="sm"
-                              variant="outline"
-                            >
-                              <XCircle className="size-4 mr-1" />
-                              Reject
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  onClick={() =>
+                                    handleStatusUpdate(user.id, "APPROVED")
+                                  }
+                                  size="sm"
+                                >
+                                  <CheckCircle className="mr-1 size-4" />
+                                  <span className="hidden sm:inline">
+                                    Approve
+                                  </span>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent
+                                className="bg-secondary dark:bg-background border-primary border text-gray-900 dark:text-white"
+                                arrowClassName="bg-primary fill-primary"
+                              >
+                                Approve user
+                              </TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  onClick={() =>
+                                    handleStatusUpdate(user.id, "REJECTED")
+                                  }
+                                  size="sm"
+                                  variant="outline"
+                                >
+                                  <XCircle className="mr-1 size-4" />
+                                  <span className="hidden sm:inline">
+                                    Reject
+                                  </span>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent
+                                className="bg-secondary dark:bg-background border-primary border text-gray-900 dark:text-white"
+                                arrowClassName="bg-primary fill-primary"
+                              >
+                                Reject user
+                              </TooltipContent>
+                            </Tooltip>
                           </>
                         )}
 

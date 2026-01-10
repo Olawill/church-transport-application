@@ -1,7 +1,6 @@
-import React from "react";
-import { templates } from "./template";
 import { EmailLayout } from "@/features/email/components/email-section";
 import { EmailTypes } from "@/features/email/emailSchema";
+import { templates } from "./template";
 
 export type EmailType = (typeof EmailTypes)[number];
 

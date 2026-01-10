@@ -62,10 +62,10 @@ export const ServiceManagement = ({ locale }: { locale: string }) => {
   const queryClient = useQueryClient();
 
   const [editingService, setEditingService] = useState<GetServiceType | null>(
-    null
+    null,
   );
   const [activeTab, setActiveTab] = useState<ServiceCategory>(
-    ServiceCategory.RECURRING
+    ServiceCategory.RECURRING,
   );
 
   // Schema map for each tab
@@ -76,7 +76,7 @@ export const ServiceManagement = ({ locale }: { locale: string }) => {
       [ServiceCategory.ONETIME_MULTIDAY]: onetimeMultiDaySchema,
       [ServiceCategory.FREQUENT_MULTIDAY]: frequentMultiDaySchema,
     }),
-    []
+    [],
   );
 
   const [params] = useServiceDayParams();
@@ -89,7 +89,7 @@ export const ServiceManagement = ({ locale }: { locale: string }) => {
       status,
       page,
       pageSize,
-    })
+    }),
   );
 
   // Default values map
@@ -210,7 +210,7 @@ export const ServiceManagement = ({ locale }: { locale: string }) => {
           };
       }
     },
-    []
+    [],
   );
 
   // Single form with dynamic resolver
@@ -241,7 +241,7 @@ export const ServiceManagement = ({ locale }: { locale: string }) => {
       // const values = getDefaultValues(activeTab, editingService || undefined);
       const values = getDefaultValues(
         editingService.serviceCategory,
-        editingService
+        editingService,
       );
       form.reset(values);
     }
@@ -260,17 +260,17 @@ export const ServiceManagement = ({ locale }: { locale: string }) => {
         resetForm();
 
         queryClient.invalidateQueries(
-          trpc.services.getPaginatedServices.queryOptions({})
+          trpc.services.getPaginatedServices.queryOptions({}),
         );
 
         queryClient.invalidateQueries(
-          trpc.services.getServices.queryOptions({})
+          trpc.services.getServices.queryOptions({}),
         );
       },
       onError: (error) => {
         toast.error(error.message || `Failed to create service`);
       },
-    })
+    }),
   );
 
   const editService = useMutation(
@@ -281,17 +281,17 @@ export const ServiceManagement = ({ locale }: { locale: string }) => {
         resetForm();
 
         queryClient.invalidateQueries(
-          trpc.services.getPaginatedServices.queryOptions({})
+          trpc.services.getPaginatedServices.queryOptions({}),
         );
 
         queryClient.invalidateQueries(
-          trpc.services.getServices.queryOptions({})
+          trpc.services.getServices.queryOptions({}),
         );
       },
       onError: (error) => {
         toast.error(error.message || `Failed to update service`);
       },
-    })
+    }),
   );
 
   const handleSubmit = useCallback(
@@ -324,7 +324,7 @@ export const ServiceManagement = ({ locale }: { locale: string }) => {
         toast.error("An error occurred");
       }
     },
-    [editingService, resetForm, schemaMap]
+    [editingService, resetForm, schemaMap],
   );
 
   const handleEdit = useCallback(
@@ -338,14 +338,14 @@ export const ServiceManagement = ({ locale }: { locale: string }) => {
         form.reset(getDefaultValues(service.serviceCategory, service));
       }, 0);
     },
-    [form, getDefaultValues]
+    [form, getDefaultValues],
   );
 
   const formLoading = addService.isPending || editService.isPending;
 
   return (
-    <div className="space-y-6 w-full">
-      <div className="flex justify-between items-center">
+    <div className="w-full space-y-6">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Service Management</h1>
           <p className="mt-1">
@@ -376,7 +376,7 @@ export const ServiceManagement = ({ locale }: { locale: string }) => {
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={handleTabChange}>
-              <TabsList className="[&_button]:data-[state=active]:shadow-none">
+              <TabsList className="flex h-auto w-full flex-nowrap items-center justify-start overflow-x-auto sm:w-fit [&_button]:data-[state=active]:shadow-none">
                 <TabsTrigger
                   value={ServiceCategory.RECURRING}
                   disabled={!!editingService}

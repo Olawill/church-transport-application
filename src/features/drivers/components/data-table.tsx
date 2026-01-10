@@ -61,7 +61,7 @@ export const DataTable = <TData, TValue>({
 
   return (
     <div>
-      <div className="flex items-center gap-x-4 py-4">
+      <div className="flex flex-col gap-4 py-4 md:flex-row md:items-center">
         <Input
           placeholder="Filter name..."
           value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
@@ -70,14 +70,16 @@ export const DataTable = <TData, TValue>({
           }
           className="max-w-sm"
         />
-        <DataTableFacetedFilter
-          column={table.getColumn("maxDistance")}
-          title="Max Distance"
-          options={DISTANCE_OPTIONS}
-        />
-        <DataTableViewOptions table={table} />
+        <div className="flex items-center justify-between gap-x-4">
+          <DataTableFacetedFilter
+            column={table.getColumn("maxDistance")}
+            title="Max Distance"
+            options={DISTANCE_OPTIONS}
+          />
+          <DataTableViewOptions table={table} />
+        </div>
       </div>
-      <div className="overflow-hidden rounded-md border mt-2">
+      <div className="mt-2 overflow-hidden rounded-md border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -89,7 +91,7 @@ export const DataTable = <TData, TValue>({
                         ? null
                         : flexRender(
                             header.column.columnDef.header,
-                            header.getContext()
+                            header.getContext(),
                           )}
                     </TableHead>
                   );
@@ -108,7 +110,7 @@ export const DataTable = <TData, TValue>({
                     <TableCell key={cell.id}>
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </TableCell>
                   ))}
@@ -128,7 +130,7 @@ export const DataTable = <TData, TValue>({
         </Table>
       </div>
 
-      <div className="flex items-center w-full space-x-2 py-4">
+      <div className="flex w-full items-center space-x-2 py-4">
         <DataTablePagination table={table} />
       </div>
     </div>
