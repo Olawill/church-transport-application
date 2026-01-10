@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import { Fira_Code, Lora, Poppins } from "next/font/google";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
+import { NavigationBlockerProvider } from "@/components/contexts/navigation-blocker";
 import { ThemeProvider } from "@/components/theming/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TRPCReactProvider } from "@/trpc/client";
-import { NavigationBlockerProvider } from "@/components/contexts/navigation-blocker";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 import "./globals.css";
 
@@ -127,6 +128,7 @@ const RootLayout = async ({
           </ThemeProvider>
         </body>
       </html>
+      <ReactQueryDevtools initialIsOpen={false} />
     </TRPCReactProvider>
   );
 };
