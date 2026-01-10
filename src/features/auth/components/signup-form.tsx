@@ -105,14 +105,14 @@ export const SignupForm = () => {
       onError: (error) => {
         toast.error(error.message || "Failed to send welcome message");
       },
-    })
+    }),
   );
 
   const register = useMutation(
     trpc.auth.register.mutationOptions({
       onSuccess: async ({ user }) => {
         toast.success(
-          "Registration successful! Please wait for admin approval to access your account."
+          "Registration successful! Please wait for admin approval to access your account.",
         );
         await sendWelcomeMessage.mutateAsync({
           to: user.email,
@@ -123,10 +123,10 @@ export const SignupForm = () => {
       },
       onError: (error) => {
         toast.error(
-          error.message || "Registration failed. Please try again later."
+          error.message || "Registration failed. Please try again later.",
         );
       },
-    })
+    }),
   );
 
   const form = useForm<SignupSchema>({
@@ -198,7 +198,7 @@ export const SignupForm = () => {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-1">
             {/* Name */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <FormField
                 control={form.control}
                 name="firstName"
@@ -245,7 +245,7 @@ export const SignupForm = () => {
             </div>
 
             {/* Email & Phone Number */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <FormField
                 control={form.control}
                 name="email"
@@ -297,7 +297,7 @@ export const SignupForm = () => {
             </div>
 
             {/* whatsApp Number */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="flex items-center justify-between space-x-2">
                 <Label>Use Phone Number for whatsApp?</Label>
                 <Switch
@@ -337,7 +337,7 @@ export const SignupForm = () => {
             </div>
 
             {/* Password */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <FormField
                 control={form.control}
                 name="password"
@@ -358,7 +358,7 @@ export const SignupForm = () => {
                           variant="ghost"
                           type="button"
                           size="sm"
-                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-gray-600"
+                          className="absolute top-0 right-0 h-full px-3 py-2 text-gray-600 hover:bg-transparent"
                           onClick={() => setShowPassword(!showPassword)}
                           disabled={loading || !form.watch("password")}
                         >
@@ -373,7 +373,7 @@ export const SignupForm = () => {
 
                     {/* Password strength (mobile only) */}
                     {currentPassword && (
-                      <div className="block md:hidden mt-2">
+                      <div className="mt-2 block md:hidden">
                         <PasswordStrength strength={strength} />
                       </div>
                     )}
@@ -406,7 +406,7 @@ export const SignupForm = () => {
                           variant="ghost"
                           type="button"
                           size="sm"
-                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-gray-600"
+                          className="absolute top-0 right-0 h-full px-3 py-2 text-gray-600 hover:bg-transparent"
                           onClick={() =>
                             setShowConfirmPassword(!showConfirmPassword)
                           }
@@ -429,7 +429,7 @@ export const SignupForm = () => {
 
               {/* Password strength under both fields on large screens */}
               {currentPassword && (
-                <div className="hidden md:block col-span-2">
+                <div className="col-span-2 hidden md:block">
                   <PasswordStrength strength={strength} />
                 </div>
               )}
@@ -492,7 +492,7 @@ export const AddressFields = <T extends AddressFormFields>({
       staleTime: Infinity, // Countries never change
       refetchOnMount: false,
       refetchOnWindowFocus: false,
-    })
+    }),
   );
 
   // Fetch states for selected country
@@ -506,8 +506,8 @@ export const AddressFields = <T extends AddressFormFields>({
         refetchOnWindowFocus: false,
         // Keep previous data while fetching new data to prevent flickering
         placeholderData: (previousData) => previousData,
-      }
-    )
+      },
+    ),
   );
 
   // Fetch cities for selected state
@@ -524,8 +524,8 @@ export const AddressFields = <T extends AddressFormFields>({
         refetchOnWindowFocus: false,
         // Keep previous data while fetching new data
         placeholderData: (previousData) => previousData,
-      }
-    )
+      },
+    ),
   );
 
   // Memoize the data to prevent unnecessary re-renders
@@ -551,7 +551,7 @@ export const AddressFields = <T extends AddressFormFields>({
     if (postalCode) {
       form.setValue(
         "postalCode" as Path<T>,
-        postalCode as PathValue<T, Path<T>>
+        postalCode as PathValue<T, Path<T>>,
       );
     }
   }, [form]);
@@ -584,7 +584,7 @@ export const AddressFields = <T extends AddressFormFields>({
 
     return Object.entries(countriesByContinent).flatMap(
       ([continent, countries]) =>
-        countries.map((country) => ({ ...country, continent }))
+        countries.map((country) => ({ ...country, continent })),
     );
   }, [countriesByContinent]);
 
@@ -621,7 +621,7 @@ export const AddressFields = <T extends AddressFormFields>({
         )}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {/* Country Combobox */}
         <FormField
           control={form.control}
@@ -638,19 +638,19 @@ export const AddressFields = <T extends AddressFormFields>({
                       aria-expanded={countryOpen}
                       disabled={loading}
                       className={cn(
-                        "justify-between",
-                        !field.value && "text-muted-foreground"
+                        "justify-between overflow-hidden",
+                        !field.value && "text-muted-foreground",
                       )}
                     >
                       {field.value ? (
-                        <span className="flex items-center gap-2">
+                        <span className="flex items-center gap-2 truncate">
                           <span>
                             {
                               allCountries.find((c) => c.value === field.value)
                                 ?.flag
                             }
                           </span>
-                          <span>
+                          <span className="truncate">
                             {
                               allCountries.find((c) => c.value === field.value)
                                 ?.label
@@ -679,7 +679,7 @@ export const AddressFields = <T extends AddressFormFields>({
                                 onSelect={(value) => {
                                   form.setValue(
                                     "country" as Path<T>,
-                                    value as PathValue<T, Path<T>>
+                                    value as PathValue<T, Path<T>>,
                                   );
                                   setCountryOpen(false);
                                 }}
@@ -689,7 +689,7 @@ export const AddressFields = <T extends AddressFormFields>({
                                     "mr-2 size-4",
                                     field.value === country.value
                                       ? "opacity-100"
-                                      : "opacity-0"
+                                      : "opacity-0",
                                   )}
                                 />
                                 <span className="flex items-center gap-2">
@@ -699,7 +699,7 @@ export const AddressFields = <T extends AddressFormFields>({
                               </CommandItem>
                             ))}
                           </CommandGroup>
-                        )
+                        ),
                       )}
                     </CommandList>
                   </Command>
@@ -729,13 +729,15 @@ export const AddressFields = <T extends AddressFormFields>({
                         aria-expanded={stateOpen}
                         disabled={loading || !selectedCountry || statesLoading}
                         className={cn(
-                          "justify-between",
-                          !field.value && "text-muted-foreground"
+                          "justify-between overflow-hidden",
+                          !field.value && "text-muted-foreground",
                         )}
                       >
-                        {field.value
-                          ? states.find((s) => s.value === field.value)?.label
-                          : "Select province/state"}
+                        <span className="truncate">
+                          {field.value
+                            ? states.find((s) => s.value === field.value)?.label
+                            : "Select province/state"}
+                        </span>
                         <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
                       </Button>
                     </FormControl>
@@ -753,7 +755,7 @@ export const AddressFields = <T extends AddressFormFields>({
                               onSelect={(value) => {
                                 form.setValue(
                                   "province" as Path<T>,
-                                  value as PathValue<T, Path<T>>
+                                  value as PathValue<T, Path<T>>,
                                 );
                                 setStateOpen(false);
                               }}
@@ -763,7 +765,7 @@ export const AddressFields = <T extends AddressFormFields>({
                                   "mr-2 size-4",
                                   field.value === state.value
                                     ? "opacity-100"
-                                    : "opacity-0"
+                                    : "opacity-0",
                                 )}
                               />
                               {state.label}
@@ -791,7 +793,7 @@ export const AddressFields = <T extends AddressFormFields>({
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {/* City Combobox - Only show if state has cities */}
         <FormField
           control={form.control}
@@ -809,11 +811,13 @@ export const AddressFields = <T extends AddressFormFields>({
                         aria-expanded={cityOpen}
                         disabled={loading || !selectedState || citiesLoading}
                         className={cn(
-                          "justify-between",
-                          !field.value && "text-muted-foreground"
+                          "justify-between overflow-hidden",
+                          !field.value && "text-muted-foreground",
                         )}
                       >
-                        {field.value || "Select city"}
+                        <span className="truncate">
+                          {field.value || "Select city"}
+                        </span>
                         <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
                       </Button>
                     </FormControl>
@@ -831,7 +835,7 @@ export const AddressFields = <T extends AddressFormFields>({
                               onSelect={(value) => {
                                 form.setValue(
                                   "city" as Path<T>,
-                                  value as PathValue<T, Path<T>>
+                                  value as PathValue<T, Path<T>>,
                                 );
                                 setCityOpen(false);
                               }}
@@ -841,7 +845,7 @@ export const AddressFields = <T extends AddressFormFields>({
                                   "mr-2 size-4",
                                   field.value === city.value
                                     ? "opacity-100"
-                                    : "opacity-0"
+                                    : "opacity-0",
                                 )}
                               />
                               {city.label}
@@ -901,7 +905,7 @@ export const SignupFormSkeleton = () => {
       <CardContent>
         <div className="space-y-4">
           {/* Name Fields */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Skeleton className="size-24" /> {/* Label */}
               <Skeleton className="h-10 w-full" /> {/* Input */}
@@ -915,7 +919,7 @@ export const SignupFormSkeleton = () => {
           </div>
 
           {/* Email & Phone Number */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Skeleton className="h-4 w-32" />
               <Skeleton className="h-10 w-full" />
@@ -929,7 +933,7 @@ export const SignupFormSkeleton = () => {
           </div>
 
           {/* WhatsApp Number */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="flex items-center space-x-2">
               <Skeleton className="h-4 w-48" />
               <Skeleton className="h-6 w-11 rounded-full" /> {/* Switch */}
@@ -942,7 +946,7 @@ export const SignupFormSkeleton = () => {
           </div>
 
           {/* Password Fields */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Skeleton className="h-4 w-20" />
               <Skeleton className="h-10 w-full" />
@@ -965,7 +969,7 @@ export const SignupFormSkeleton = () => {
               <div className="min-h-[1.25rem]" />
             </div>
             {/* Country & Province */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Skeleton className="h-4 w-20" />
                 <Skeleton className="h-10 w-full" />
@@ -978,7 +982,7 @@ export const SignupFormSkeleton = () => {
               </div>
             </div>
             {/* City & Postal Code */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Skeleton className="h-4 w-16" />
                 <Skeleton className="h-10 w-full" />
@@ -998,7 +1002,7 @@ export const SignupFormSkeleton = () => {
 
         {/* Sign in link */}
         <div className="mt-6 text-center">
-          <Skeleton className="h-4 w-48 mx-auto" />
+          <Skeleton className="mx-auto h-4 w-48" />
         </div>
       </CardContent>
     </Card>
