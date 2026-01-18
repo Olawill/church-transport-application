@@ -34,15 +34,15 @@ const CredentialsPage = async () => {
   }
 
   return (
-    <div className="my-auto min-h-screen w-full flex items-center">
-      <Empty className="border border-dashed bg-sidebar backdrop-blur shadow-lg">
+    <div className="my-auto flex min-h-screen w-full items-center">
+      <Empty className="bg-sidebar border border-dashed shadow-lg backdrop-blur">
         <EmptyHeader>
           <EmptyMedia variant="icon">
             <LockIcon />
           </EmptyMedia>
           <EmptyTitle className="text-2xl">Credentials</EmptyTitle>
           <EmptyDescription className="text-lg">
-            This feature is coming soon. You’ll be able to manage your
+            This feature is coming soon. You&apos;ll be able to manage your
             credentials here.
           </EmptyDescription>
         </EmptyHeader>
