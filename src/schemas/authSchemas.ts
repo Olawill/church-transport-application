@@ -105,7 +105,7 @@ export const signupSchema = z
         },
         {
           message: "Password is too weak",
-        }
+        },
       ),
     confirmPassword: z.string().min(1, "Confirm password is required"),
 
@@ -158,7 +158,7 @@ export const signupSchema = z
 export type SignupSchema = z.infer<typeof signupSchema>;
 
 export const profileContactSchema = z.object({
-  phone: z
+  phoneNumber: z
     .string()
     .trim()
     .min(1, "Phone number is required")
@@ -174,10 +174,10 @@ export const profileContactSchema = z.object({
     .optional()
     .or(z.literal("")),
 });
-export type ProfileContactSchema = z.infer<typeof profileContactSchema>;
+export type ProfileContactValues = z.infer<typeof profileContactSchema>;
 
 export const profileAddressSchema = addressUpdateSchema;
-export type ProfileAddressSchema = z.infer<typeof profileAddressSchema>;
+export type ProfileAddressValues = z.infer<typeof profileAddressSchema>;
 
 export const resetPasswordSchema = signupSchema.pick({
   password: true,

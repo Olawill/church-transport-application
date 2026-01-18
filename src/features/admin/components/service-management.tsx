@@ -376,7 +376,7 @@ export const ServiceManagement = ({ locale }: { locale: string }) => {
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={handleTabChange}>
-              <TabsList className="flex h-auto w-full flex-nowrap items-center justify-start overflow-x-auto sm:w-fit [&_button]:data-[state=active]:shadow-none">
+              <TabsList className="flex h-auto w-full flex-nowrap items-center justify-start overflow-x-auto [&_button]:data-[state=active]:shadow-none">
                 <TabsTrigger
                   value={ServiceCategory.RECURRING}
                   disabled={!!editingService}

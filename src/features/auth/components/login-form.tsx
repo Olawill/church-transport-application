@@ -12,7 +12,7 @@ import {
 import { Route } from "next";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { FcGoogle } from "react-icons/fc";
 import { toast } from "sonner";
@@ -61,18 +61,41 @@ import { APP_NAME } from "@/config/constants";
 import { OTPChoice } from "@/generated/prisma/enums";
 import { QRBackupCodeContent } from "@/features/profile/components/security-tab";
 
+type ErrorParams = "account_status" | "pending_approval";
+
+const isErrorParam = (value: string | null): value is ErrorParams => {
+  return value === "account_status" || value === "pending_approval";
+};
+
 export const LoginForm = () => {
   const queryClient = useQueryClient();
   const trpc = useTRPC();
   const router = useRouter();
 
+  const [isPending, startTransition] = useTransition();
+
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect") || "/dashboard";
+  const urlError = searchParams.get("error");
+  const errorParams: ErrorParams | null = isErrorParam(urlError)
+    ? urlError
+    : null;
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    if (errorParams) {
+      const message =
+        errorParams === "account_status"
+          ? "Please check your account status"
+          : errorParams.split("_").join(" ");
+
+      setError(message);
+    }
+  }, [errorParams]);
 
   const [totpSetup, setTotpSetup] = useState<{
     totpURI: string;
@@ -150,9 +173,9 @@ export const LoginForm = () => {
     renderContent: ({ value }) => {
       if (!value || !value.backupCodes || !value.totpURI) {
         return (
-          <div className="py-6 flex flex-col items-center text-center gap-4">
-            <div className="size-48 bg-muted/40 animate-pulse rounded-lg" />
-            <p className="text-sm text-muted-foreground">
+          <div className="flex flex-col items-center gap-4 py-6 text-center">
+            <div className="bg-muted/40 size-48 animate-pulse rounded-lg" />
+            <p className="text-muted-foreground text-sm">
               Preparing QR code setup...
             </p>
           </div>
@@ -198,12 +221,12 @@ export const LoginForm = () => {
    * Mutations
    */
   const updateFirstTimeLogin = useMutation(
-    trpc.auth.updateFirstLogin.mutationOptions({})
+    trpc.auth.updateFirstLogin.mutationOptions({}),
   );
 
   const toggle2FA = useMutation(trpc.profile.toggle2FA.mutationOptions({}));
   const createTwoFactorToken = useMutation(
-    trpc.auth.createTwoFactorToken.mutationOptions()
+    trpc.auth.createTwoFactorToken.mutationOptions(),
   );
 
   const login = useMutation(
@@ -223,19 +246,22 @@ export const LoginForm = () => {
               await handleTwoFactorType(
                 formValues.type,
                 currentPassword,
-                isFirstLogin
+                isFirstLogin,
               );
             }
           } else {
             // User clicked "Skip" on first login
             // Still redirect to dashboard even if they skip 2FA setup
             // toast.success("Logged in successfully");
-            router.push(redirectUrl as Route);
+            startTransition(() => {
+              router.push(redirectUrl as Route);
+            });
           }
           // Update first time login at
           await updateFirstTimeLogin.mutateAsync({
             email: data.user.email ?? currentEmail,
           });
+
           return;
         }
 
@@ -246,20 +272,26 @@ export const LoginForm = () => {
             await twoFactor.sendOtp();
             toast.success("OTP Code has been sent to you");
           }
-          router.push(
-            `/two-factor?method=${data.twoFactorMethod}&redirect=${encodeURIComponent(redirectUrl)}&twoFactorRedirect=${data.twoFactorRedirect}&type=email`
-          );
+
+          startTransition(() => {
+            router.push(
+              `/two-factor?method=${data.twoFactorMethod}&redirect=${encodeURIComponent(redirectUrl)}&twoFactorRedirect=${data.twoFactorRedirect}&type=email`,
+            );
+          });
         } else {
           // ✅ No 2FA required - direct login
           toast.success("Logged in successfully");
-          router.push(redirectUrl as Route);
+
+          startTransition(() => {
+            router.push(redirectUrl as Route);
+          });
         }
       },
       onError: (error) => {
         setError(error.message);
         toast.error("An error occurred during login");
       },
-    })
+    }),
   );
 
   /**
@@ -291,17 +323,19 @@ export const LoginForm = () => {
     });
 
     // redirect to verify page with method "TOTP"
-    router.push(
-      isFirstLogin
-        ? `/two-factor?method=${method}&redirect=${encodeURIComponent(redirectUrl)}&firstLogin=${true}&type=email`
-        : `/two-factor?method=${method}&redirect=${encodeURIComponent(redirectUrl)}&type=email`
-    );
+    startTransition(() => {
+      router.push(
+        isFirstLogin
+          ? `/two-factor?method=${method}&redirect=${encodeURIComponent(redirectUrl)}&firstLogin=${true}&type=email`
+          : `/two-factor?method=${method}&redirect=${encodeURIComponent(redirectUrl)}&type=email`,
+      );
+    });
   };
 
   const handleTwoFactorType = async (
     type: OTPChoice,
     password: string,
-    isFirstLogin: boolean
+    isFirstLogin: boolean,
   ) => {
     if (type === "OTP") {
       // Enable two factor manually
@@ -321,16 +355,18 @@ export const LoginForm = () => {
             await twoFactor.sendOtp();
 
             // Route to verify-two-factor page
-            router.push(
-              isFirstLogin
-                ? `/two-factor?method=${data.twoFactorMethod}&redirect=${encodeURIComponent(redirectUrl)}&firstLogin=${true}&type=email`
-                : `/two-factor?method=${data.twoFactorMethod}&redirect=${encodeURIComponent(redirectUrl)}&type=email`
-            );
+            startTransition(() => {
+              router.push(
+                isFirstLogin
+                  ? `/two-factor?method=${data.twoFactorMethod}&redirect=${encodeURIComponent(redirectUrl)}&firstLogin=${true}&type=email`
+                  : `/two-factor?method=${data.twoFactorMethod}&redirect=${encodeURIComponent(redirectUrl)}&type=email`,
+              );
+            });
           },
           onError: (error) => {
             toast.error(error.message || "Failed to enable 2FA");
           },
-        }
+        },
       );
     }
 
@@ -389,7 +425,6 @@ export const LoginForm = () => {
     const { email, password } = validatedFields.data;
 
     login.mutate({ email, password });
-    // revert.mutate({ email });
   };
 
   // Handle OAuth Sign in/Sign up
@@ -402,6 +437,7 @@ export const LoginForm = () => {
       {
         provider,
         callbackURL: "/dashboard",
+        newUserCallbackURL: "/complete-profile",
       },
       {
         onSuccess: () => {
@@ -413,13 +449,15 @@ export const LoginForm = () => {
           setError(error.message);
           setLoading(false);
         },
-      }
+      },
     );
   };
 
   // Current values for email and password
   const currentEmail = form.watch("email");
   const currentPassword = form.watch("password");
+
+  const isLoading = login.isPending || isPending;
 
   return (
     <>
@@ -432,20 +470,20 @@ export const LoginForm = () => {
       {/* TOTP QR Code Dialog */}
       <QRDialog />
 
-      <Card className="w-full max-w-md shadow-lg min-w-md">
+      <Card className="mx-auto w-full max-w-md shadow-lg transition-all duration-300">
         <CardHeader className="space-y-2 text-center">
           <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
           <CardDescription>Sign in to access your account</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="w-full space-y-6">
           {/* OAuth Sign-in Buttons */}
-          {/* <div className="space-y-3">
+          <div className="space-y-3">
             <Button
               type="button"
               variant="outline"
               onClick={() => handleOAuthSignIn("google")}
-              disabled={loading || oauthLoading !== null}
-              className="w-full relative h-11 bg-white hover:bg-gray-50"
+              disabled={isLoading || loading || oauthLoading !== null}
+              className="relative h-11 w-full min-w-sm bg-white hover:bg-gray-50"
             >
               {oauthLoading === "google" ? (
                 <>
@@ -460,12 +498,12 @@ export const LoginForm = () => {
               )}
             </Button>
 
-            <Button
+            {/* <Button
               type="button"
               variant="outline"
               onClick={() => handleOAuthSignIn("facebook")}
-              disabled={loading || oauthLoading !== null}
-              className="w-full relative h-11 bg-white hover:bg-gray-50"
+              disabled={isLoading || loading || oauthLoading !== null}
+              className="relative h-11 w-full bg-white hover:bg-gray-50"
             >
               {oauthLoading === "facebook" ? (
                 <>
@@ -484,24 +522,24 @@ export const LoginForm = () => {
                   <span>Continue with Facebook</span>
                 </>
               )}
-            </Button>
-          </div> */}
+            </Button> */}
+          </div>
 
           {/* Divider */}
-          {/* <div className="relative">
+          <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">
+              <span className="bg-card text-muted-foreground px-2">
                 Or continue with email
               </span>
             </div>
-          </div> */}
+          </div>
 
           {!!error && (
             <Alert className="bg-destructive/10 border-none">
-              <OctagonAlertIcon className="size-4 !text-destructive" />
+              <OctagonAlertIcon className="!text-destructive size-4" />
               <p className="text-xs break-words !whitespace-normal">{error}</p>
             </Alert>
           )}
@@ -522,7 +560,7 @@ export const LoginForm = () => {
                         name="email"
                         type="email"
                         placeholder="Enter your email"
-                        disabled={login.isPending}
+                        disabled={isLoading}
                       />
                     </FormControl>
                     <div className="min-h-[1.25rem]">
@@ -543,7 +581,7 @@ export const LoginForm = () => {
                         type="button"
                         variant="link"
                         onClick={handleForgotPassword}
-                        className="ml-auto inline-block text-sm font-light underline-offset-4 hover:underline hover:text-blue-500 pr-0"
+                        className="ml-auto inline-block pr-0 text-sm font-light underline-offset-4 hover:text-blue-500 hover:underline"
                       >
                         Forgot your password?
                       </Button>
@@ -556,16 +594,16 @@ export const LoginForm = () => {
                           name="password"
                           type={showPassword ? "text" : "password"}
                           placeholder="Enter your password"
-                          disabled={login.isPending}
+                          disabled={isLoading}
                         />
 
                         <Button
                           variant="ghost"
                           type="button"
                           size="sm"
-                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-gray-600"
+                          className="absolute top-0 right-0 h-full px-3 py-2 text-gray-600 hover:bg-transparent"
                           onClick={() => setShowPassword(!showPassword)}
-                          disabled={login.isPending || !form.watch("password")}
+                          disabled={isLoading || !form.watch("password")}
                         >
                           {showPassword ? (
                             <EyeIcon className="size-4" />
@@ -584,10 +622,10 @@ export const LoginForm = () => {
 
               <Button
                 type="submit"
-                className="w-full mt-2"
-                disabled={login.isPending}
+                className="mt-2 w-full"
+                disabled={isLoading}
               >
-                {login.isPending ? (
+                {isLoading ? (
                   <>
                     <Loader2Icon className="size-4 animate-spin" />
                     Signing in...

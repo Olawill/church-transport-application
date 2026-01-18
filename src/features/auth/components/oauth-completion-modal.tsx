@@ -1,10 +1,16 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle, MapPin, Phone } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import {
+  CheckCircleIcon,
+  Loader2Icon,
+  MapPinIcon,
+  PhoneIcon,
+} from "lucide-react";
+import { redirect } from "next/navigation";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -16,12 +22,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Form,
   FormControl,
   FormDescription,
@@ -30,26 +30,26 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import { CustomPhoneInput } from "@/components/custom-phone-input";
 import { useSession } from "@/lib/auth-client";
-import { PROVINCES } from "@/lib/types";
 import {
-  ProfileAddressSchema,
+  ProfileAddressValues,
   profileAddressSchema,
   profileContactSchema,
-  ProfileContactSchema,
+  ProfileContactValues,
 } from "@/schemas/authSchemas";
+import { useTRPC } from "@/trpc/client";
+import { CustomFormLabel } from "@/components/custom-form-label";
+import { AddressFields } from "./signup-form";
 
 interface CompletionStep {
   id: string;
@@ -58,37 +58,53 @@ interface CompletionStep {
   completed: boolean;
 }
 
-interface OauthCompletionModalProps {
-  isOpen?: boolean;
-  onOpenChange?: (open: boolean) => void;
-}
-
-export const OauthCompletionModal = ({
-  isOpen: externalOpen,
-  onOpenChange,
-}: OauthCompletionModalProps) => {
+export const OauthCompletionModal = () => {
   const { data: session, isPending } = useSession();
-  const router = useRouter();
-  // const [open, setOpen] = useState(false);
-  const [internalOpen, setInternalOpen] = useState(false);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
 
-  // Use external control if provided, otherwise use internal state
-  const open = externalOpen !== undefined ? externalOpen : internalOpen;
-  const setOpen = onOpenChange || setInternalOpen;
+  const [currentStep, setCurrentStep] = useState(0);
+
+  // Mutations
+  const updateUserProfile = useMutation(
+    trpc.userProfile.updateContact.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(trpc.auth.session.queryOptions());
+        toast.success(
+          "Your contact information has been updated successfully!",
+        );
+      },
+      onError: (error) => {
+        toast.error(error.message || "Failed to update contact information");
+      },
+    }),
+  );
+
+  const createUserAddress = useMutation(
+    trpc.userAddresses.createUserAddress.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(trpc.auth.session.queryOptions());
+        toast.success(
+          "Congratulations, your first address has been added successfully!",
+        );
+      },
+      onError: (error) => {
+        toast.error(error.message || "Failed to add address");
+      },
+    }),
+  );
 
   // Form for contact info
-  const contactForm = useForm<ProfileContactSchema>({
+  const contactForm = useForm<ProfileContactValues>({
     resolver: zodResolver(profileContactSchema),
     defaultValues: {
-      phone: "",
+      phoneNumber: "",
       whatsappNumber: "",
     },
   });
 
   // Form for address info
-  const addressForm = useForm<ProfileAddressSchema>({
+  const addressForm = useForm<ProfileAddressValues>({
     resolver: zodResolver(profileAddressSchema),
     defaultValues: {
       name: "Home",
@@ -96,7 +112,7 @@ export const OauthCompletionModal = ({
       city: "",
       province: "",
       postalCode: "",
-      country: "Canada",
+      country: "CA",
     },
   });
 
@@ -114,21 +130,6 @@ export const OauthCompletionModal = ({
       completed: false,
     },
   ];
-
-  useEffect(() => {
-    // Only auto-open if not externally controlled
-    if (externalOpen === undefined) {
-      // Show modal if user needs to complete profile
-      if (
-        // session?.user?.needsCompletion &&
-        // session.user.isOAuthSignup &&
-        // status === "authenticated"
-        !isPending
-      ) {
-        setInternalOpen(true);
-      }
-    }
-  }, [session, isPending, externalOpen]);
 
   const handleNext = async () => {
     if (currentStep === 0) {
@@ -148,102 +149,82 @@ export const OauthCompletionModal = ({
   const handleComplete = async () => {
     const isContactValid = await contactForm.trigger();
     const isAddressValid = await addressForm.trigger();
-    if (!isContactValid || !isAddressValid) return;
-    setLoading(true);
+
+    if (!isContactValid || !isAddressValid) {
+      toast.error("Please fill in all required field");
+      return;
+    }
+
+    if (!session?.user) {
+      toast.error("You are not authorized. Please sign in");
+      return redirect("/login");
+    }
+
     try {
       // Get Values
       const profileData = contactForm.getValues();
       const addressData = addressForm.getValues();
 
       // Update profile
-      const profileResponse = await fetch("/api/user/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: profileData.phone,
-          whatsappNumber: profileData.whatsappNumber || null,
-        }),
-      });
+      const profile = await updateUserProfile.mutateAsync(profileData);
 
-      if (!profileResponse.ok) {
-        throw new Error("Failed to update profile");
+      if (!profile.success) {
+        toast.error("Failed to update profile");
+        return;
       }
 
       // Add address
-      const addressResponse = await fetch("/api/user/addresses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(addressData),
+      await createUserAddress.mutateAsync({
+        ...addressData,
+        isProfileCompletion: true,
       });
 
-      if (!addressResponse.ok) {
-        throw new Error("Failed to add address");
-      }
+      toast.success("Profile completed successfully.");
 
-      // Track OAuth completion and user registration
-      if (session?.user.id) {
-        try {
-          await fetch("/api/analytics/oauth-completion", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId: session.user.id }),
-          });
-        } catch (error) {
-          console.error("Failed to track OAuth completion:", error);
-        }
-      }
-
-      setOpen(false);
-      toast.success(
-        "Profile completed successfully! Your account is pending admin approval."
-      );
-      router.push("/dashboard");
+      window.location.href = "/pending-approval";
     } catch (error) {
       console.error("Completion error:", error);
       toast.error("Failed to complete profile setup");
-    } finally {
-      setLoading(false);
     }
   };
 
-  if (status === "loading") {
-    return null;
+  const isLoading = updateUserProfile.isPending || createUserAddress.isPending;
+
+  if (isPending) {
+    return <CompleteProfileSkeleton />;
   }
 
   return (
-    <Dialog open={open} onOpenChange={() => {}} modal>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-xl">Complete Your Profile</DialogTitle>
-        </DialogHeader>
-
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-xl">Complete Your Profile</CardTitle>
+        <CardDescription>
+          Enter your contact information and ride address to complete your
+          onboarding.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <div className="space-y-6">
           {/* Progress Steps */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-start">
             {steps.map((step, index) => (
               <div key={step.id} className="flex items-center">
                 <div
-                  className={`
-                  w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors
-                  ${
+                  className={`flex size-10 items-center justify-center rounded-full border-2 transition-colors ${
                     index <= currentStep
                       ? "border-blue-600 bg-blue-600 text-white"
                       : "border-gray-300 text-gray-400"
-                  }
-                `}
+                  } `}
                 >
                   {index < currentStep ? (
-                    <CheckCircle className="w-5 h-5" />
+                    <CheckCircleIcon className="size-5" />
                   ) : (
                     <span className="font-medium">{index + 1}</span>
                   )}
                 </div>
                 {index < steps.length - 1 && (
                   <div
-                    className={`
-                    w-24 h-0.5 mx-2 transition-colors
-                    ${index < currentStep ? "bg-blue-600" : "bg-gray-300"}
-                  `}
+                    className={`mx-2 h-0.5 w-24 transition-colors ${index < currentStep ? "bg-blue-600" : "bg-gray-300"} `}
                   />
                 )}
               </div>
@@ -254,8 +235,8 @@ export const OauthCompletionModal = ({
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                {currentStep === 0 && <Phone className="w-5 h-5 mr-2" />}
-                {currentStep === 1 && <MapPin className="w-5 h-5 mr-2" />}
+                {currentStep === 0 && <PhoneIcon className="mr-2 size-5" />}
+                {currentStep === 1 && <MapPinIcon className="mr-2 size-5" />}
                 {steps[currentStep].title}
               </CardTitle>
               <CardDescription>
@@ -269,13 +250,10 @@ export const OauthCompletionModal = ({
                     {/* Phone Number */}
                     <FormField
                       control={contactForm.control}
-                      name="phone"
+                      name="phoneNumber"
                       render={({ field, fieldState }) => (
                         <FormItem>
-                          <FormLabel>
-                            Phone Number
-                            <span className="text-red-500"> *</span>
-                          </FormLabel>
+                          <CustomFormLabel title="Phone Number" />
                           <FormControl>
                             <CustomPhoneInput
                               placeholder="+1 (555) 123-4567"
@@ -284,11 +262,11 @@ export const OauthCompletionModal = ({
                               onChange={field.onChange}
                               onBlur={field.onBlur}
                               error={fieldState.error}
-                              disabled={loading}
+                              disabled={isLoading}
                             />
                           </FormControl>
                           <FormDescription>
-                            <span className="text-sm text-gray-500 mt-1">
+                            <span className="mt-1 text-sm text-gray-500">
                               Required for transportation team to contact you
                             </span>
                           </FormDescription>
@@ -313,7 +291,7 @@ export const OauthCompletionModal = ({
                               onChange={field.onChange}
                               onBlur={field.onBlur}
                               error={fieldState.error}
-                              disabled={loading}
+                              disabled={isLoading}
                             />
                           </FormControl>
                           <div className="min-h-[1.25rem]">
@@ -359,145 +337,9 @@ export const OauthCompletionModal = ({
                     />
 
                     {/* Street Address */}
-                    <FormField
-                      control={addressForm.control}
-                      name="street"
-                      render={({ field }) => (
-                        <FormItem className="space-y-2">
-                          <FormLabel>Street Address</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              type="text"
-                              name="street"
-                              onChange={(e) => field.onChange(e)}
-                              placeholder="123 Main Street"
-                            />
-                          </FormControl>
-                          <div className="min-h-[1.25rem]">
-                            <FormMessage />
-                          </div>
-                        </FormItem>
-                      )}
-                    />
+                    <AddressFields form={addressForm} loading={isLoading} />
 
-                    {/* City & Province */}
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* City */}
-                      <FormField
-                        control={addressForm.control}
-                        name="city"
-                        render={({ field }) => (
-                          <FormItem className="space-y-2">
-                            <FormLabel>City</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                type="text"
-                                name="city"
-                                onChange={(e) => field.onChange(e)}
-                                placeholder="Toronto"
-                              />
-                            </FormControl>
-                            <div className="min-h-[1.25rem]">
-                              <FormMessage />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Province */}
-                      <FormField
-                        control={addressForm.control}
-                        name="province"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Province</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger
-                                  disabled={loading}
-                                  className="w-full"
-                                >
-                                  <SelectValue placeholder="Select province" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectGroup>
-                                  <SelectLabel>Canada</SelectLabel>
-                                  {PROVINCES.map((province) => (
-                                    <SelectItem value={province} key={province}>
-                                      {province}
-                                    </SelectItem>
-                                  ))}
-                                </SelectGroup>
-                              </SelectContent>
-                            </Select>
-                            <div className="min-h-[1.25rem]">
-                              <FormMessage />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    {/* Postal Code & Country */}
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* Postal Code */}
-                      <FormField
-                        control={addressForm.control}
-                        name="postalCode"
-                        render={({ field }) => (
-                          <FormItem className="space-y-2">
-                            <FormLabel>Postal Code</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                type="text"
-                                name="postalCode"
-                                placeholder="M5H 2N2"
-                                disabled={loading}
-                                onChange={(e) =>
-                                  field.onChange(e.target.value.toUpperCase())
-                                }
-                              />
-                            </FormControl>
-                            <div className="min-h-[1.25rem]">
-                              <FormMessage />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Country */}
-                      <FormField
-                        control={addressForm.control}
-                        name="country"
-                        render={({ field }) => (
-                          <FormItem className="space-y-2">
-                            <FormLabel>Country</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                type="text"
-                                name="country"
-                                placeholder="Canada"
-                                disabled={loading}
-                                onChange={(e) => field.onChange(e)}
-                              />
-                            </FormControl>
-                            <div className="min-h-[1.25rem]">
-                              <FormMessage />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                       <p className="text-sm text-blue-800">
                         <strong>Note:</strong> This will be your primary pickup
                         location. You can add more addresses and change your
@@ -522,8 +364,9 @@ export const OauthCompletionModal = ({
 
             <div className="flex space-x-2">
               {currentStep === steps.length - 1 ? (
-                <Button onClick={handleComplete} disabled={loading}>
-                  {loading ? "Completing..." : "Complete Setup"}
+                <Button onClick={handleComplete} disabled={isLoading}>
+                  {isLoading && <Loader2Icon className="size-4 animate-spin" />}
+                  {isLoading ? "Completing..." : "Complete Setup"}
                 </Button>
               ) : (
                 <Button onClick={handleNext}>Next</Button>
@@ -532,8 +375,8 @@ export const OauthCompletionModal = ({
           </div>
 
           {/* Welcome Message */}
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <h3 className="font-medium text-green-800 mb-2">
+          <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+            <h3 className="mb-2 font-medium text-green-800">
               Welcome to Church Transportation!
             </h3>
             <p className="text-sm text-green-700">
@@ -544,7 +387,79 @@ export const OauthCompletionModal = ({
             </p>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </CardContent>
+    </Card>
+  );
+};
+
+const CompleteProfileSkeleton = () => {
+  return (
+    <Card className="w-full lg:min-w-2xl">
+      <CardHeader>
+        <CardTitle className="text-xl">
+          <Skeleton className="h-7 w-64" />
+        </CardTitle>
+        <CardDescription>
+          <Skeleton className="mt-2 h-4 w-full max-w-md" />
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+        <div className="space-y-6">
+          {/* Progress Steps Skeleton */}
+          <div className="flex items-center justify-start">
+            {[1, 2].map((step, index) => (
+              <div key={step} className="flex items-center">
+                <Skeleton className="h-10 w-10 rounded-full" />
+                {index < 1 && <Skeleton className="mx-2 h-0.5 w-24" />}
+              </div>
+            ))}
+          </div>
+
+          {/* Current Step Content Skeleton */}
+          <Card className="shadow-none">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Skeleton className="mr-2 h-5 w-5 rounded" />
+                <Skeleton className="h-6 w-48" />
+              </CardTitle>
+              <CardDescription>
+                <Skeleton className="mt-2 h-4 w-full" />
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Form Fields Skeleton */}
+              <div className="space-y-4">
+                {/* Field 1 */}
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-3 w-64" />
+                </div>
+
+                {/* Field 2 */}
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Navigation Buttons Skeleton */}
+          <div className="flex justify-between">
+            <Skeleton className="h-10 w-20" />
+            <Skeleton className="h-10 w-32" />
+          </div>
+
+          {/* Welcome Message Skeleton */}
+          <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+            <Skeleton className="mb-2 h-5 w-48" />
+            <Skeleton className="mb-2 h-4 w-full" />
+            <Skeleton className="mb-2 h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };

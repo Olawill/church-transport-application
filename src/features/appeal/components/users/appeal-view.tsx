@@ -62,7 +62,7 @@ export const AppealView = () => {
     },
   });
 
-  // email functiom
+  // email function
   const sendEmail = useMutation(
     trpc.emails.sendMail.mutationOptions({
       onSuccess: () => {
@@ -71,7 +71,7 @@ export const AppealView = () => {
       onError: (error) => {
         toast.error(error.message || "Failed to send email");
       },
-    })
+    }),
   );
 
   // Decode the appeal token to get user email
@@ -81,8 +81,8 @@ export const AppealView = () => {
     isLoading: isDecoding,
   } = useQuery(
     trpc.appeal.decodeAppealToken.queryOptions(
-      appealToken ? { token: appealToken } : skipToken
-    )
+      appealToken ? { token: appealToken } : skipToken,
+    ),
   );
 
   // Determine overall status and error message
@@ -98,11 +98,11 @@ export const AppealView = () => {
     trpc.appeal.createAppeal.mutationOptions({
       onSuccess: async () => {
         toast.success(
-          "Your appeal has been submitted to the admin. Decision on appeal takes about 2-3 business days."
+          "Your appeal has been submitted to the admin. Decision on appeal takes about 2-3 business days.",
         );
         form.reset();
         queryClient.invalidateQueries(
-          trpc.appeal.getAppealedUser.queryOptions({})
+          trpc.appeal.getAppealedUser.queryOptions({}),
         );
         setStatus("success");
         setErrorMessage("");
@@ -120,7 +120,7 @@ export const AppealView = () => {
         setStatus("error");
         setErrorMessage(error.message || "Error submitting your appeal");
       },
-    })
+    }),
   );
 
   const handleSubmit = async (values: UserAppealValues) => {
@@ -142,26 +142,26 @@ export const AppealView = () => {
 
   if (status === "success") {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="bg-secondary/90 rounded-2xl shadow-xl max-w-md w-full p-8">
-          <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle2Icon className="w-10 h-10 text-green-600" />
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="bg-secondary/90 w-full max-w-md rounded-2xl p-8 shadow-xl">
+          <div className="mb-6 flex justify-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+              <CheckCircle2Icon className="h-10 w-10 text-green-600" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-center mb-4">
+          <h1 className="mb-4 text-center text-2xl font-bold">
             Appeal Submitted Successfully
           </h1>
-          <p className="text-center mb-6">
+          <p className="mb-6 text-center">
             Thank you for submitting your appeal. Our team will review your case
             and get back to you within 2-3 business days at{" "}
             <span className="font-semibold">{decoded?.email}</span>.
           </p>
-          <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
             <p className="text-sm text-blue-800">
               <strong>Reference ID:</strong> {appealToken?.slice(0, 12)}
             </p>
-            <p className="text-sm text-blue-700 mt-2">
+            <p className="mt-2 text-sm text-blue-700">
               Please save this reference ID for your records.
             </p>
           </div>
@@ -173,7 +173,7 @@ export const AppealView = () => {
   // Show loading state while decoding token
   if (isDecoding) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="flex min-h-screen items-center justify-center p-4">
         <div className="flex flex-col items-center gap-4">
           <Loader2Icon className="size-10 animate-spin text-blue-600" />
           <p className="text-2xl">Verifying appeal token...</p>
@@ -183,9 +183,9 @@ export const AppealView = () => {
   }
 
   return (
-    <Card className="rounded-2xl shadow-lg max-w-2xl w-full">
+    <Card className="w-full max-w-2xl rounded-2xl shadow-lg">
       <CardHeader className="mb-8">
-        <CardTitle className="text-3xl font-bold mb-2">
+        <CardTitle className="mb-2 text-3xl font-bold">
           Appeal Your Registration Decision
         </CardTitle>
         <CardDescription>
@@ -194,7 +194,7 @@ export const AppealView = () => {
           below.
         </CardDescription>
         {decoded && decoded.email && (
-          <CardDescription className="text-sm mt-2">
+          <CardDescription className="mt-2 text-sm">
             Appeal for: <span className="font-semibold">{decoded.email}</span>
           </CardDescription>
         )}
@@ -202,17 +202,17 @@ export const AppealView = () => {
 
       {/* Show token validation errors */}
       {hasTokenError && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 mx-4 flex items-start gap-3">
-          <AlertCircleIcon className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-          <p className="text-red-800 text-sm">{tokenErrorMessage}</p>
+        <div className="mx-4 mb-6 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
+          <AlertCircleIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
+          <p className="text-sm text-red-800">{tokenErrorMessage}</p>
         </div>
       )}
 
       {/* Show submit errors */}
       {status === "error" && errorMessage && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 mx-4 flex items-start gap-3">
-          <AlertCircleIcon className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-          <p className="text-red-800 text-sm">{errorMessage}</p>
+        <div className="mx-4 mb-6 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
+          <AlertCircleIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
+          <p className="text-sm text-red-800">{errorMessage}</p>
         </div>
       )}
 
@@ -234,7 +234,7 @@ export const AppealView = () => {
                         {...field}
                         id="reason"
                         rows={4}
-                        className="resize-none shadow-none placeholder:text-primary border-secondary"
+                        className="placeholder:text-primary border-secondary resize-none shadow-none"
                         placeholder="Please explain why you believe your registration should be reconsidered..."
                         disabled={status === "loading"}
                       />
@@ -259,7 +259,7 @@ export const AppealView = () => {
                         {...field}
                         id="additionalInfo"
                         rows={8}
-                        className="resize-none shadow-none placeholder:text-primary border-secondary"
+                        className="placeholder:text-primary border-secondary resize-none shadow-none"
                         placeholder="Provide any additional context, documents, or information that supports your appeal..."
                         disabled={status === "loading"}
                       />
@@ -273,7 +273,7 @@ export const AppealView = () => {
                 )}
               />
 
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
                 <p className="text-sm text-amber-800">
                   <strong>Please note:</strong> Appeals are typically reviewed
                   within 2-3 business days. You will receive an email
@@ -288,7 +288,7 @@ export const AppealView = () => {
                   !form.formState.isDirty ||
                   createAppeal.isPending
                 }
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400"
               >
                 {status === "loading" ? (
                   <>
@@ -303,20 +303,20 @@ export const AppealView = () => {
                 )}
               </Button>
 
-              <p className="text-xs text-center text-primary">
+              <p className="text-primary text-center text-xs">
                 By submitting this appeal, you confirm that the information
                 provided is accurate and complete.
               </p>
             </form>
           </Form>
         ) : (
-          <div className="text-center py-8 w-full">
+          <div className="w-full py-8 text-center">
             <p className="mb-4">
               Please contact support for assistance with your appeal.
             </p>
             <a
               href="mailto:support@actsonwheel.com"
-              className="text-blue-600 hover:text-blue-700 font-semibold"
+              className="font-semibold text-blue-600 hover:text-blue-700"
             >
               support@actsonwheel.com
             </a>

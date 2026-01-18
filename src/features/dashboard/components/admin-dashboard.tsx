@@ -140,35 +140,37 @@ export const AdminDashboard = () => {
       onSuccess: async (data) => {
         toast.success(`User ${data.user.name} has been approved.`);
         // Send verification email to user once approved
-        await authClient.admin.impersonateUser(
-          { userId: data.user.id },
-          {
-            onSuccess: async () => {
-              await authClient.sendVerificationEmail(
-                {
-                  email: data.user.email,
-                  callbackURL: "/",
-                },
-                {
-                  onSuccess: async () => {
-                    await authClient.admin.stopImpersonating();
-                    toast.success("Verification email sent successfully");
+        if (!data.user.emailVerified) {
+          await authClient.admin.impersonateUser(
+            { userId: data.user.id },
+            {
+              onSuccess: async () => {
+                await authClient.sendVerificationEmail(
+                  {
+                    email: data.user.email,
+                    callbackURL: "/",
                   },
-                  onError: ({ error }) => {
-                    toast.error(error.message || "Failed to send email");
+                  {
+                    onSuccess: async () => {
+                      await authClient.admin.stopImpersonating();
+                      toast.success("Verification email sent successfully");
+                    },
+                    onError: ({ error }) => {
+                      toast.error(error.message || "Failed to send email");
+                    },
                   },
-                },
-              );
+                );
+              },
+              onError: async ({ error }) => {
+                await authClient.admin.stopImpersonating();
+                toast.error(
+                  error.message ||
+                    `Error sending verification email to ${data.user.name}`,
+                );
+              },
             },
-            onError: async ({ error }) => {
-              await authClient.admin.stopImpersonating();
-              toast.error(
-                error.message ||
-                  `Error sending verification email to ${data.user.name}`,
-              );
-            },
-          },
-        );
+          );
+        }
 
         queryClient.invalidateQueries(
           trpc.users.getPaginatedUsers.queryOptions({}),
@@ -357,7 +359,7 @@ export const AdminDashboard = () => {
         }}
         className="w-full"
       >
-        <TabsList className="flex h-auto w-full flex-nowrap items-center justify-start overflow-x-auto sm:w-fit [&_button]:data-[state=active]:shadow-none">
+        <TabsList className="flex h-auto w-full flex-nowrap items-center justify-start overflow-x-auto [&_button]:data-[state=active]:shadow-none">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="users">User Management</TabsTrigger>

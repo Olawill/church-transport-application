@@ -586,7 +586,7 @@ export const ProfileManagement = () => {
           value={tab}
           onValueChange={(value) => handleUnsavedChanges(value)}
         >
-          <TabsList className="flex h-auto w-full flex-nowrap items-center justify-start overflow-x-auto sm:w-fit [&_button]:data-[state=active]:shadow-none">
+          <TabsList className="flex h-auto w-full flex-nowrap items-center justify-start overflow-x-auto [&_button]:data-[state=active]:shadow-none">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="addresses">Addresses</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>

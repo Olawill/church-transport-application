@@ -15,6 +15,7 @@ import { extendUserSession } from "./session/extend-user-session";
 import { OTP } from "@/config/constants";
 import { sendMail } from "@/features/email/actions/sendEmail";
 import { ac, CUSTOM_ROLES } from "./permissions";
+import { env } from "@/env/server";
 
 const options = {
   session: {
@@ -59,16 +60,16 @@ const options = {
       });
     },
   },
-  // socialProviders: {
-  //   facebook: {
-  //     clientId: env.FACEBOOK_CLIENT_ID,
-  //     clientSecret: env.FACEBOOK_CLIENT_SECRET,
-  //   },
-  //   google: {
-  //     clientId: env.GOOGLE_CLIENT_ID,
-  //     clientSecret: env.GOOGLE_CLIENT_SECRET,
-  //   },
-  // },
+  socialProviders: {
+    facebook: {
+      clientId: env.FACEBOOK_CLIENT_ID,
+      clientSecret: env.FACEBOOK_CLIENT_SECRET,
+    },
+    google: {
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
+    },
+  },
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),

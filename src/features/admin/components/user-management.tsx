@@ -125,36 +125,38 @@ export const UserManagement = () => {
       onSuccess: async (data) => {
         toast.success(`User ${data.user.name} has been approved.`);
         // Send verification email to user once approved
-        await authClient.admin.impersonateUser(
-          { userId: data.user.id },
-          {
-            onSuccess: async () => {
-              await authClient.sendVerificationEmail(
-                {
-                  email: data.user.email,
-                  callbackURL: "/",
-                },
-                {
-                  onSuccess: async () => {
-                    await authClient.admin.stopImpersonating();
-                    toast.success("Verification email sent successfully");
+        if (!data.user.emailVerified) {
+          await authClient.admin.impersonateUser(
+            { userId: data.user.id },
+            {
+              onSuccess: async () => {
+                await authClient.sendVerificationEmail(
+                  {
+                    email: data.user.email,
+                    callbackURL: "/",
                   },
-                  onError: async ({ error }) => {
-                    await authClient.admin.stopImpersonating();
-                    toast.error(error.message || "Failed to send email");
+                  {
+                    onSuccess: async () => {
+                      await authClient.admin.stopImpersonating();
+                      toast.success("Verification email sent successfully");
+                    },
+                    onError: async ({ error }) => {
+                      await authClient.admin.stopImpersonating();
+                      toast.error(error.message || "Failed to send email");
+                    },
                   },
-                },
-              );
+                );
+              },
+              onError: async ({ error }) => {
+                await authClient.admin.stopImpersonating();
+                toast.error(
+                  error.message ||
+                    `Error sending verification email to ${data.user.name}`,
+                );
+              },
             },
-            onError: async ({ error }) => {
-              await authClient.admin.stopImpersonating();
-              toast.error(
-                error.message ||
-                  `Error sending verification email to ${data.user.name}`,
-              );
-            },
-          },
-        );
+          );
+        }
 
         queryClient.invalidateQueries(
           trpc.users.getPaginatedUsers.queryOptions({}),
