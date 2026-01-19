@@ -14,7 +14,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { FcGoogle } from "react-icons/fc";
+import { useTRPC } from "@/trpc/client";
 import { toast } from "sonner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -43,6 +45,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 import { APP_NAME } from "@/config/constants";
 import { env } from "@/env/client";
 import { QRBackupCodeContent } from "@/features/profile/components/security-tab";
@@ -57,8 +60,7 @@ import {
   twoFactorTypeSchema,
   TwoFactorTypeValues,
 } from "@/schemas/authSchemas";
-import { useTRPC } from "@/trpc/client";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { safeRedirect } from "@/lib/session/safe-redirect";
 
 type ErrorParams = "account_status" | "pending_approval";
 
@@ -74,7 +76,7 @@ export const LoginForm = () => {
   const [isPending, startTransition] = useTransition();
 
   const searchParams = useSearchParams();
-  const redirectUrl = searchParams.get("redirect") || "/dashboard";
+  const redirectUrl = safeRedirect(searchParams.get("redirect"), "/dashboard");
   const urlError = searchParams.get("error");
   const errorParams: ErrorParams | null = isErrorParam(urlError)
     ? urlError

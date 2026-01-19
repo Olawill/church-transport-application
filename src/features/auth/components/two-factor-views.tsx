@@ -3,6 +3,14 @@
 import { MailIcon, MessageSquareIcon, ShieldIcon } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Route } from "next";
+import { z } from "zod";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTRPC } from "@/trpc/client";
+import { cn } from "@/lib/utils";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -22,23 +30,17 @@ import {
   FormItem,
   FormLabel,
 } from "@/components/ui/form";
-import { signOut, twoFactor, useSession } from "@/lib/auth-client";
 import {
   InputOTP,
   InputOTPGroup,
   InputOTPSlot,
   InputOTPSeparator,
 } from "@/components/ui/input-otp";
-import { useForm } from "react-hook-form";
+
+import { signOut, twoFactor, useSession } from "@/lib/auth-client";
 import { otpSchema, OtpValues } from "@/schemas/authSchemas";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Route } from "next";
 import { OTP } from "@/config/constants";
-import { z } from "zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useTRPC } from "@/trpc/client";
-import { cn } from "@/lib/utils";
+import { safeRedirect } from "@/lib/session/safe-redirect";
 
 interface OTPInputProps {
   type: "email" | "phone" | "whatsapp";
@@ -54,7 +56,7 @@ export const OTPInputView = ({ type }: OTPInputProps) => {
   const searchParams = useSearchParams();
   const twoFactorMethod = searchParams.get("method");
   const firstLogin = searchParams.get("firstLogin");
-  const redirectTo = searchParams.get("redirect") || "/dashboard";
+  const redirectTo = safeRedirect(searchParams.get("redirect"), "/dashboard");
 
   const [isPending, startTransition] = useTransition();
 
@@ -70,7 +72,7 @@ export const OTPInputView = ({ type }: OTPInputProps) => {
 
   const toggle2FA = useMutation(trpc.profile.toggle2FA.mutationOptions({}));
   const deleteTwoFactorToken = useMutation(
-    trpc.auth.deleteTwoFactorToken.mutationOptions({})
+    trpc.auth.deleteTwoFactorToken.mutationOptions({}),
   );
 
   useEffect(() => {
@@ -114,14 +116,14 @@ export const OTPInputView = ({ type }: OTPInputProps) => {
             const next = prev + 1;
             if (next >= OTP.ALLOWED_ATTEMPTS) {
               toast.error(
-                "Maximum attempts reached. Please request a new code."
+                "Maximum attempts reached. Please request a new code.",
               );
             }
             return next;
           });
 
           toast.error(
-            error.message || "Verification failed. Please try again."
+            error.message || "Verification failed. Please try again.",
           );
           return;
         }
@@ -147,7 +149,7 @@ export const OTPInputView = ({ type }: OTPInputProps) => {
     if (!validated.success) {
       toast.error(
         z.treeifyError(validated.error).errors.join(", ") ||
-          "Error validating your code"
+          "Error validating your code",
       );
       return;
     }
@@ -196,13 +198,13 @@ export const OTPInputView = ({ type }: OTPInputProps) => {
             setTimeout(() => {
               resolve({ message });
               router.push(redirectTo as Route);
-            }, 2000)
+            }, 2000),
           ),
         {
           loading: "Redirecting...",
           success: ({ message }) => `${message} Redirecting to ${redirectTo}`,
           error: "Error redirecting",
-        }
+        },
       );
     };
 
@@ -229,10 +231,10 @@ export const OTPInputView = ({ type }: OTPInputProps) => {
                 queryClient.invalidateQueries(trpc.auth.session.queryOptions());
 
                 showRedirectToast(
-                  "Two-Factor Authentication will be disabled, you can re-enable it in your profile."
+                  "Two-Factor Authentication will be disabled, you can re-enable it in your profile.",
                 );
               },
-            }
+            },
           );
 
           return;
@@ -248,7 +250,7 @@ export const OTPInputView = ({ type }: OTPInputProps) => {
 
           // TOTP disabling is automatic
           showRedirectToast(
-            "Two-Factor Authentication will be disabled, you can re-enable it in your profile."
+            "Two-Factor Authentication will be disabled, you can re-enable it in your profile.",
           );
 
           return;
@@ -270,14 +272,14 @@ export const OTPInputView = ({ type }: OTPInputProps) => {
               message: "You need to verify your account to login.",
             });
             handleSignOut();
-          }, 2000)
+          }, 2000),
         ),
       {
         loading: "Signing out...",
         success: () =>
           `Two-Factor Authentication is required to sign in. Redirecting to "/login"`,
         error: "Error signing out",
-      }
+      },
     );
   };
 
@@ -288,10 +290,10 @@ export const OTPInputView = ({ type }: OTPInputProps) => {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
+    <Card className="mx-auto w-full max-w-md">
       <CardHeader>
         <CardTitle className="flex items-center justify-center">
-          <ShieldIcon className="size-5 mr-2" />
+          <ShieldIcon className="mr-2 size-5" />
           Verify Your{" "}
           {type === "email"
             ? "Email"
@@ -357,7 +359,7 @@ export const OTPInputView = ({ type }: OTPInputProps) => {
               )}
             />
 
-            <div className="flex w-full items-center justify-between mt-4">
+            <div className="mt-4 flex w-full items-center justify-between">
               {firstLogin && (
                 <Button
                   type="button"
@@ -384,7 +386,7 @@ export const OTPInputView = ({ type }: OTPInputProps) => {
           </form>
         </Form>
 
-        <div className="text-center space-y-3">
+        <div className="space-y-3 text-center">
           {/* <div className="flex items-center justify-center text-sm text-gray-600">
             <Clock className="size-4 mr-1" />
             Time remaining: {formatTime(timeLeft)}
@@ -439,10 +441,10 @@ export const OTPInputView = ({ type }: OTPInputProps) => {
               disabled={isPending || !firstLogin}
               onClick={async () =>
                 router.push(
-                  `/two-factor/verify-backup-code?redirect=${encodeURIComponent(redirectTo)}`
+                  `/two-factor/verify-backup-code?redirect=${encodeURIComponent(redirectTo)}`,
                 )
               }
-              className="px-0 cursor-pointer text-xs"
+              className="cursor-pointer px-0 text-xs"
             >
               Use Backup Code
             </Button>
@@ -458,7 +460,7 @@ export const BackupCodeView = () => {
   const [isPending, startTransition] = useTransition();
 
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") || "/dashboard";
+  const redirectTo = safeRedirect(searchParams.get("redirect"), "/dashboard");
 
   const codeForm = useForm<OtpValues>({
     resolver: zodResolver(otpSchema),
@@ -497,10 +499,10 @@ export const BackupCodeView = () => {
   };
 
   return (
-    <Card className="w-full max-sm:min-w-sm min-md:min-w-md mx-auto">
+    <Card className="mx-auto w-full max-sm:min-w-sm min-md:min-w-md">
       <CardHeader>
         <CardTitle className="flex items-center justify-center">
-          <ShieldIcon className="size-5 mr-2" />
+          <ShieldIcon className="mr-2 size-5" />
           Verify Your Account
         </CardTitle>
         <CardDescription className="text-center">
@@ -511,13 +513,13 @@ export const BackupCodeView = () => {
 
       <Form {...codeForm}>
         <form onSubmit={codeForm.handleSubmit(handleVerifyBackupCode)}>
-          <CardContent className="space-y-4 w-full">
+          <CardContent className="w-full space-y-4">
             <FormField
               control={codeForm.control}
               name="code"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="justify-center text-md">
+                  <FormLabel className="text-md justify-center">
                     Backup Code
                   </FormLabel>
                   <FormControl>
