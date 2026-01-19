@@ -2,34 +2,53 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
 import { auth } from "../auth";
 import { redis } from "../redis";
 
-export const getAuthSession = async () => {
+/**
+ * -----------------------
+ * Shared, deduped helpers
+ * -----------------------
+ */
+export const getAuthSession = cache(async () => {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
 
   return session;
-};
+});
 
-const getHeadersList = async () => {
+const getPathname = cache(async () => {
   // Get current path from headers (set in middleware)
   const headersList = await headers();
   const pathname = headersList.get("x-pathname") || "/";
 
   return pathname;
-};
+});
 
+const getTwoFactorPendingToken = cache(async (userId: string) => {
+  return redis.get(`2fa-pending:${userId}`);
+});
+
+/**
+ * ---------------
+ * Guards
+ * ---------------
+ */
 export const requireAuth = async () => {
   const session = await getAuthSession();
 
-  const pathname = await getHeadersList();
+  const pathname = await getPathname();
 
   // 1. No session at all - go to login
   if (!session) {
-    redirect(`/login?redirect=${encodeURIComponent(pathname)}`);
+    redirect(
+      pathname === "/"
+        ? "/login"
+        : `/login?redirect=${encodeURIComponent(pathname)}`,
+    );
   }
 
   // 2. User needs to complete profile - go to complete-profile
@@ -65,7 +84,7 @@ export const requireNoAuth = async () => {
     return;
   }
 
-  const pathname = await getHeadersList();
+  const pathname = await getPathname();
 
   // User needs to complete profile - redirect there
   if (session.user.needsCompletion) {
@@ -80,12 +99,11 @@ export const requireNoAuth = async () => {
     if (!pathname.startsWith("/pending-approval")) {
       redirect("/pending-approval");
     }
+    return;
   }
 
   // User is fully authenticated and active - redirect to dashboard
-  if (session.user.status === "APPROVED") {
-    redirect("/dashboard");
-  }
+  redirect("/dashboard");
 };
 
 export const requireTwoFactorPending = async () => {
@@ -102,7 +120,7 @@ export const requireTwoFactorPending = async () => {
   }
 
   // Check if user has a pending 2FA verification token
-  const token = await redis.get(`2fa-pending:${session.user.id}`);
+  const token = await getTwoFactorPendingToken(session.user.id);
 
   if (!token) {
     // No pending 2FA = either already verified or never initiated
