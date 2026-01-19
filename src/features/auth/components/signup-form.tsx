@@ -459,6 +459,7 @@ export const SignupForm = () => {
             Already have an account?{" "}
             <Link
               href="/login"
+              prefetch
               className="font-medium text-blue-600 hover:text-blue-500"
             >
               Sign in

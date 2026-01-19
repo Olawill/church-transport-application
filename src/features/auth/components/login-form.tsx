@@ -1,10 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Icon } from "@iconify-icon/react";
 import {
-  EyeIcon,
   EyeClosedIcon,
+  EyeIcon,
   Loader2Icon,
   LogInIcon,
   OctagonAlertIcon,
@@ -36,6 +35,19 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 
+import { CustomFormLabel } from "@/components/custom-form-label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { APP_NAME } from "@/config/constants";
+import { env } from "@/env/client";
+import { QRBackupCodeContent } from "@/features/profile/components/security-tab";
+import { OTPChoice } from "@/generated/prisma/enums";
+import { useConfirm } from "@/hooks/use-confirm";
 import { requestPasswordReset, signIn, twoFactor } from "@/lib/auth-client";
 import {
   loginSchema,
@@ -47,19 +59,6 @@ import {
 } from "@/schemas/authSchemas";
 import { useTRPC } from "@/trpc/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useConfirm } from "@/hooks/use-confirm";
-import { CustomFormLabel } from "@/components/custom-form-label";
-import { env } from "@/env/client";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { APP_NAME } from "@/config/constants";
-import { OTPChoice } from "@/generated/prisma/enums";
-import { QRBackupCodeContent } from "@/features/profile/components/security-tab";
 
 type ErrorParams = "account_status" | "pending_approval";
 
@@ -645,6 +644,7 @@ export const LoginForm = () => {
               Don&apos;t have an account?{" "}
               <Link
                 href="/signup"
+                prefetch
                 className="font-medium text-blue-600 hover:text-blue-500"
               >
                 Sign up
