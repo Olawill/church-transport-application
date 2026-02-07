@@ -1,6 +1,8 @@
 // Geocoding utilities for address coordinate conversion
 // In production, you would use a real geocoding service like Google Maps API
 
+"use server";
+
 import { env } from "@/env/server";
 
 export interface GeocodeResult {
@@ -64,7 +66,7 @@ const geocodeAddressGoogle = async (address: {
 
   try {
     const response = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(addressString)}&key=${env.GOOGLE_MAPS_API_KEY}`
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(addressString)}&key=${env.GOOGLE_MAPS_API_KEY}`,
     );
 
     const data = await response.json();
@@ -91,11 +93,13 @@ const geocodeAddressLocationIQ = async (address: {
   postalCode: string;
   country?: string;
 }): Promise<GeocodeResult | null> => {
-  const addressString = `${address.street}, ${address.city}, ${address.province} ${address.postalCode}, ${address.country || "Canada"}`;
+  const addressString = `street=${encodeURIComponent(address.street)}&city=${encodeURIComponent(address.city)}&state=${encodeURIComponent(address.province)}&postalcode=${encodeURIComponent(address.postalCode)}&country=${encodeURIComponent(address.country || "Canada")}`;
 
   try {
+    const options = { method: "GET", headers: { accept: "application/json" } };
     const response = await fetch(
-      `https://us1.locationiq.com/v1/search.php?key=${env.LOCATIONIQ_API_KEY}&q=${encodeURIComponent(addressString)}&format=json`
+      `https://us1.locationiq.com/v1/search/structured?key=${env.LOCATIONIQ_API_KEY}&${addressString}&format=json`,
+      options,
     );
 
     const data = await response.json();
@@ -115,7 +119,7 @@ const geocodeAddressLocationIQ = async (address: {
 };
 
 export const geocodeAddress = async (
-  address: Parameters<typeof geocodeAddressGoogle>[0]
+  address: Parameters<typeof geocodeAddressGoogle>[0],
 ) => {
   if (process.env.NODE_ENV !== "production") {
     return geocodeAddressDev(address);

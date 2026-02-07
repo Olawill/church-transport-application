@@ -1,11 +1,11 @@
 import { sendEmailSchema } from "../emailSchema";
 
-import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
+import { createTRPCRouter, publicProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
 import { sendMail } from "@/features/email/actions/sendEmail";
 
 export const sendMailRouter = createTRPCRouter({
-  sendMail: protectedProcedure
+  sendMail: publicProcedure
     .input(sendEmailSchema)
     .mutation(async ({ input }) => {
       const { to, type, name, message, verifyCode, verifyLink } = input;

@@ -21,6 +21,8 @@ import {
   UseFormReturn,
 } from "react-hook-form";
 import { toast } from "sonner";
+import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useDebounce } from "use-debounce";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -62,8 +64,6 @@ import { CustomPhoneInput } from "@/components/custom-phone-input";
 import { Separator } from "@/components/ui/separator";
 import { signupSchema, SignupSchema } from "@/schemas/authSchemas";
 import { useTRPC } from "@/trpc/client";
-import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { useDebounce } from "use-debounce";
 import { passwordStrength } from "../lib/utils";
 import { PasswordStrength } from "./password-strength";
 
@@ -212,6 +212,7 @@ export const SignupForm = () => {
                         name="firstName"
                         placeholder="First name"
                         disabled={loading}
+                        className="text-sm"
                       />
                     </FormControl>
                     <div className="min-h-[1.25rem]">
@@ -234,6 +235,7 @@ export const SignupForm = () => {
                         name="lastName"
                         placeholder="Last name"
                         disabled={loading}
+                        className="text-sm"
                       />
                     </FormControl>
                     <div className="min-h-[1.25rem]">
@@ -260,6 +262,7 @@ export const SignupForm = () => {
                         type="email"
                         placeholder="your.email@example.com"
                         disabled={loading}
+                        className="text-sm"
                       />
                     </FormControl>
                     <div className="min-h-[1.25rem]">
@@ -285,6 +288,7 @@ export const SignupForm = () => {
                           onBlur={field.onBlur}
                           error={fieldState.error}
                           disabled={loading}
+                          className="text-sm"
                         />
                       </FormControl>
                       <div className="min-h-[1.25rem]">
@@ -325,6 +329,7 @@ export const SignupForm = () => {
                           onBlur={field.onBlur}
                           error={fieldState.error}
                           disabled={loading}
+                          className="text-sm"
                         />
                       </FormControl>
                       <div className="min-h-[1.25rem]">
@@ -353,6 +358,7 @@ export const SignupForm = () => {
                           type={showPassword ? "text" : "password"}
                           placeholder="**************"
                           disabled={loading}
+                          className="text-sm"
                         />
                         <Button
                           variant="ghost"
@@ -400,6 +406,7 @@ export const SignupForm = () => {
                           type={showConfirmPassword ? "text" : "password"}
                           placeholder="**************"
                           disabled={loading}
+                          className="text-sm"
                         />
 
                         <Button
@@ -613,6 +620,7 @@ export const AddressFields = <T extends AddressFormFields>({
                 name="street"
                 placeholder="123 Main Street"
                 disabled={loading}
+                className="text-sm"
               />
             </FormControl>
             <div className="min-h-[1.25rem]">
@@ -783,6 +791,7 @@ export const AddressFields = <T extends AddressFormFields>({
                     placeholder="Enter province/state"
                     {...field}
                     disabled={loading || !selectedCountry}
+                    className="text-sm"
                   />
                 </FormControl>
               )}
@@ -863,6 +872,7 @@ export const AddressFields = <T extends AddressFormFields>({
                     placeholder="Enter city"
                     {...field}
                     disabled={loading || !selectedCountry}
+                    className="text-sm"
                   />
                 </FormControl>
               )}
@@ -881,7 +891,12 @@ export const AddressFields = <T extends AddressFormFields>({
             <FormItem>
               <CustomFormLabel title="Postal Code" />
               <FormControl>
-                <Input placeholder="A1A 1A1" {...field} disabled={loading} />
+                <Input
+                  placeholder="A1A 1A1"
+                  {...field}
+                  disabled={loading}
+                  className="text-sm"
+                />
               </FormControl>
               <div className="min-h-[1.25rem]">
                 <FormMessage />
