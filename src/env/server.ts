@@ -6,6 +6,8 @@ export const env = createEnv({
     DATABASE_URL: z.url(),
     LOCATIONIQ_API_KEY: z.string().min(1),
     GOOGLE_MAPS_API_KEY: z.string().min(1),
+    GEOCODING_API_KEY: z.string().min(1),
+    GEOAPIFY_API_KEY: z.string().min(1),
     GOOGLE_CLIENT_ID: z.string().min(1),
     GOOGLE_CLIENT_SECRET: z.string().min(1),
     // FACEBOOK_CLIENT_ID: z.string().min(1),

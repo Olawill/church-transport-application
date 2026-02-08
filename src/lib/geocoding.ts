@@ -81,7 +81,7 @@ const geocodeAddressGoogle = async (address: {
 
     return null;
   } catch (error) {
-    console.error("Geocoding error:", error);
+    console.error("[GOOGLE]: Geocoding error:", error);
     return null;
   }
 };
@@ -104,8 +104,9 @@ const geocodeAddressLocationIQ = async (address: {
 
     const data = await response.json();
 
-    if (!data.length) {
-      throw new Error("No results");
+    if (!Array.isArray(data) || data.length === 0) {
+      console.warn("[LOCATIONIQ]: No geocoding results found");
+      return null;
     }
 
     return {
@@ -113,7 +114,80 @@ const geocodeAddressLocationIQ = async (address: {
       longitude: parseFloat(data[0].lon),
     };
   } catch (error) {
-    console.error("Geocoding error:", error);
+    console.error("[LOCATIONIQ]: Geocoding error:", error);
+    return null;
+  }
+};
+
+const geocodeAddressGeoCodeAPI = async (address: {
+  street: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  country?: string;
+}): Promise<GeocodeResult | null> => {
+  const addressString = `street=${encodeURIComponent(address.street)}&city=${encodeURIComponent(address.city)}&state=${encodeURIComponent(address.province)}&postalcode=${encodeURIComponent(address.postalCode)}&country=${encodeURIComponent(address.country || "Canada")}`;
+
+  try {
+    const options = {
+      method: "GET",
+      headers: {
+        accept: "application/json",
+        Authorization: `Bearer ${env.GEOCODING_API_KEY}`,
+      },
+    };
+    const response = await fetch(
+      `https://geocode.maps.co/search?&${addressString}&api_key=${env.GEOCODING_API_KEY}&format=json`,
+      options,
+    );
+
+    const data = await response.json();
+
+    if (!Array.isArray(data) || data.length === 0) {
+      console.warn("[GEOCODEAPI]: No geocoding results found");
+      return null;
+    }
+
+    return {
+      latitude: parseFloat(data[0].lat),
+      longitude: parseFloat(data[0].lon),
+    };
+  } catch (error) {
+    console.error("[GEOCODEAPI]: Geocoding error:", error);
+    return null;
+  }
+};
+
+const geocodeAddressGeoApify = async (address: {
+  street: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  country?: string;
+}): Promise<GeocodeResult | null> => {
+  const addressString = `street=${encodeURIComponent(address.street)}&city=${encodeURIComponent(address.city)}&state=${encodeURIComponent(address.province)}&postalcode=${encodeURIComponent(address.postalCode)}&country=${encodeURIComponent(address.country || "Canada")}`;
+
+  try {
+    const options = { method: "GET", headers: { accept: "application/json" } };
+    const response = await fetch(
+      `https://api.geoapify.com/v1/geocode/search?${addressString}&format=json&api_key=${env.GEOAPIFY_API_KEY}`,
+      options,
+    );
+
+    const rawData = await response.text();
+    const data = JSON.parse(rawData);
+
+    if (!data) {
+      console.warn("[GEOAPIFY]: No geocoding results found");
+      return null;
+    }
+
+    return {
+      latitude: parseFloat(data.results[0].lat),
+      longitude: parseFloat(data.results[0].lon),
+    };
+  } catch (error) {
+    console.error("[GEOAPIFY]: Geocoding error:", error);
     return null;
   }
 };
@@ -126,5 +200,10 @@ export const geocodeAddress = async (
   }
 
   const result = await geocodeAddressGoogle(address);
-  return result ?? geocodeAddressLocationIQ(address);
+  return (
+    result ??
+    geocodeAddressLocationIQ(address) ??
+    geocodeAddressGeoApify(address) ??
+    geocodeAddressGeoCodeAPI(address)
+  );
 };
