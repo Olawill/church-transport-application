@@ -10,7 +10,7 @@
     "generate": "bun prisma generate",
     "push": "bun prisma db push",
     "prisma:studio": "prisma studio",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate && prisma migrate deploy",
     "email:dev": "bun --bun email dev --port 3001",
     "inngest:dev": "npx inngest-cli@latest dev",
     "dev:all": "mprocs"
